@@ -27,10 +27,12 @@ from datetime import datetime, date, time
 from sys import version_info
 from itertools import compress
 from os import unlink
+from functools import partial
 
 from accelerator import _dsutil
 
 TMP_FN = "_tmp_test.gz"
+COMPRESSION = "gzip"
 
 inf, ninf = float("inf"), float("-inf")
 
@@ -87,11 +89,13 @@ for name, data, bad_cnt, res_data in (
 	r_name = "Read" + name[6:] if name.startswith("Parsed") else "Read" + name
 	r_typ = getattr(_dsutil, r_name)
 	w_typ = getattr(_dsutil, "Write" + name)
+	r_mk = partial(r_typ, compression=COMPRESSION)
+	w_mk = partial(w_typ, compression=COMPRESSION)
 	none_support = ("Bits" not in name)
 	# verify that failures in init are handled reasonably.
 	for typ in (r_typ, w_typ,):
 		try:
-			with typ("DOES/NOT/EXIST") as fh:
+			with typ("DOES/NOT/EXIST", compression=COMPRESSION) as fh:
 				if typ is w_typ:
 					# File is not created until written.
 					fh.flush()
@@ -99,7 +103,7 @@ for name, data, bad_cnt, res_data in (
 		except IOError:
 			pass
 		try:
-			typ(TMP_FN, nonexistent_keyword="test")
+			typ(TMP_FN, nonexistent_keyword="test", compression=COMPRESSION)
 			assert False
 		except TypeError:
 			pass
@@ -109,7 +113,8 @@ for name, data, bad_cnt, res_data in (
 	for test_none_support in (False, True):
 		if test_none_support and not none_support:
 			continue
-		with w_typ(TMP_FN, none_support=test_none_support) as fh:
+		with w_mk(TMP_FN, none_support=test_none_support) as fh:
+			assert fh.compression == COMPRESSION
 			count = 0
 			for ix, value in enumerate(data):
 				try:
@@ -127,7 +132,7 @@ for name, data, bad_cnt, res_data in (
 				assert fh.min == want_min, "%s: claims min %r, not %r" % (name, fh.min, want_min,)
 				assert fh.max == want_max, "%s: claims max %r, not %r" % (name, fh.max, want_max,)
 	# Okay, errors look good
-	with r_typ(TMP_FN) as fh:
+	with r_mk(TMP_FN) as fh:
 		res = list(fh)
 		assert res == res_data, res
 		if version_info > (3, 6, 0) and 'Time' in name:
@@ -140,7 +145,7 @@ for name, data, bad_cnt, res_data in (
 	for ix, default in enumerate(data):
 		# Verify that defaults are accepted where expected
 		try:
-			with w_typ(TMP_FN, default=default, none_support=none_support) as fh:
+			with w_mk(TMP_FN, default=default, none_support=none_support) as fh:
 				pass
 			assert ix >= bad_cnt, repr(default)
 		except AssertionError:
@@ -148,7 +153,7 @@ for name, data, bad_cnt, res_data in (
 		except Exception:
 			assert ix < bad_cnt, repr(default)
 		if ix >= bad_cnt:
-			with w_typ(TMP_FN, default=default, none_support=none_support) as fh:
+			with w_mk(TMP_FN, default=default, none_support=none_support) as fh:
 				count = 0
 				for value in data:
 					try:
@@ -158,7 +163,7 @@ for name, data, bad_cnt, res_data in (
 						assert 0, "No default: %r" % (value,)
 				assert fh.count == count, "%s: %d lines written, claims %d" % (name, count, fh.count,)
 			# No errors when there is a default
-			with r_typ(TMP_FN) as fh:
+			with r_mk(TMP_FN) as fh:
 				res = list(fh)
 				assert res == [res_data[ix - bad_cnt]] * bad_cnt + res_data, res
 			# Great, all default values came out right in the file!
@@ -168,7 +173,7 @@ for name, data, bad_cnt, res_data in (
 		sliced_res = []
 		total_count = 0
 		for sliceno in range(slices):
-			with w_typ(TMP_FN, hashfilter=(sliceno, slices, spread_None), none_support=none_support) as fh:
+			with w_mk(TMP_FN, hashfilter=(sliceno, slices, spread_None), none_support=none_support) as fh:
 				count = 0
 				for ix, value in enumerate(data):
 					try:
@@ -184,7 +189,7 @@ for name, data, bad_cnt, res_data in (
 					got_min, got_max = fh.min, fh.max
 				fh.flush() # we overwrite the same file, so make sure we write.
 			total_count += count
-			with r_typ(TMP_FN) as fh:
+			with r_mk(TMP_FN) as fh:
 				tmp = list(fh)
 			assert len(tmp) == count, "%s (%d, %d): %d lines written, claims %d" % (name, sliceno, slices, len(tmp), count,)
 			for v in tmp:
@@ -206,11 +211,11 @@ for name, data, bad_cnt, res_data in (
 		assert len(res) == len(res_data), "%s (%d): %d lines written, should be %d" % (name, slices, len(res), len(res_data),)
 		assert set(res) == set(res_data), "%s (%d): Wrong data: %r != %r" % (name, slices, res, res_data,)
 		# verify reading back with hashfilter gives the same as writing with it
-		with w_typ(TMP_FN, none_support=none_support) as fh:
+		with w_mk(TMP_FN, none_support=none_support) as fh:
 			for value in data[bad_cnt:]:
 				fh.write(value)
 		for sliceno in range(slices):
-			with r_typ(TMP_FN, hashfilter=(sliceno, slices, spread_None)) as fh:
+			with r_mk(TMP_FN, hashfilter=(sliceno, slices, spread_None)) as fh:
 				slice_values = list(compress(res_data, fh))
 			assert slice_values == sliced_res[sliceno], "Bad reader hashfilter: slice %d of %d gave %r instead of %r" % (sliceno, slices, slice_values, sliced_res[sliceno],)
 	for slices in range(1, 24):
@@ -223,10 +228,10 @@ for name, data, bad_cnt, res_data in (
 			for _ in range(2):
 				# first lap verifies with normal writing,
 				# second lap with invalid values writing the default.
-				with w_typ(TMP_FN, **kw) as fh:
+				with w_mk(TMP_FN, **kw) as fh:
 					for _ in range(slices * 3):
 						fh.write(value)
-				with r_typ(TMP_FN) as fh:
+				with r_mk(TMP_FN) as fh:
 					tmp = list(fh)
 					assert tmp == [None, None, None], "Bad spread_None %sfor %d slices" % ("from default " if "default" in kw else "", slices,)
 				kw["default"] = None
@@ -236,15 +241,15 @@ print("Empty and None values in stringlike types")
 for name, value in (
 	("Bytes", b""), ("Ascii", ""), ("Unicode", ""),
 ):
-	with getattr(_dsutil, "Write" + name)(TMP_FN) as fh:
+	with getattr(_dsutil, "Write" + name)(TMP_FN, compression=COMPRESSION) as fh:
 		fh.write(value)
 		fh.write(value)
-	with getattr(_dsutil, "Read" + name)(TMP_FN) as fh:
+	with getattr(_dsutil, "Read" + name)(TMP_FN, compression=COMPRESSION) as fh:
 		assert list(fh) == [value, value], name + " fails with just empty strings"
-	with getattr(_dsutil, "Write" + name)(TMP_FN, none_support=True) as fh:
+	with getattr(_dsutil, "Write" + name)(TMP_FN, none_support=True, compression=COMPRESSION) as fh:
 		fh.write(None)
 		fh.write(None)
-	with getattr(_dsutil, "Read" + name)(TMP_FN) as fh:
+	with getattr(_dsutil, "Read" + name)(TMP_FN, compression=COMPRESSION) as fh:
 		assert list(fh) == [None, None], name + " fails with just Nones"
 
 print("Hash testing, false things")
@@ -273,7 +278,7 @@ for v in (0, 1, 2, 9007199254740991, -42):
 
 print("Number boundary test")
 Z = 128 * 1024 # the internal buffer size in _dsutil
-with _dsutil.WriteNumber(TMP_FN) as fh:
+with _dsutil.WriteNumber(TMP_FN, compression=COMPRESSION) as fh:
 	todo = Z - 100
 	while todo > 0:
 		fh.write(42)
@@ -282,26 +287,26 @@ with _dsutil.WriteNumber(TMP_FN) as fh:
 	v = 0x2e6465726f6220657261206577202c6567617373656d20676e6f6c207974746572702061207369207374696220646e6173756f6874206120796c6c6175746341203f7468676972202c6c6c657720736120746867696d206577202c65726568206567617373656d2074726f68732061206576616820732774656c20796548
 	want = [42] * fh.count + [v]
 	fh.write(v)
-with _dsutil.ReadNumber(TMP_FN) as fh:
+with _dsutil.ReadNumber(TMP_FN, compression=COMPRESSION) as fh:
 	assert want == list(fh)
 
 print("Number want_count large end test")
-with _dsutil.WriteNumber(TMP_FN) as fh:
+with _dsutil.WriteNumber(TMP_FN, compression=COMPRESSION) as fh:
 	fh.write(2 ** 1000)
 	fh.write(7)
-with _dsutil.ReadNumber(TMP_FN, want_count=1) as fh:
+with _dsutil.ReadNumber(TMP_FN, want_count=1, compression=COMPRESSION) as fh:
 	assert [2 ** 1000] == list(fh)
 
 print("Large ascii strings (with a size between blocks)")
 data = ["a" * (128 * 1024 - 6), "b" * (128 * 1024 - 6), "c" * (2090 * 1024), "d"]
-with _dsutil.WriteAscii(TMP_FN) as fh:
+with _dsutil.WriteAscii(TMP_FN, compression=COMPRESSION) as fh:
 	for v in data:
 		fh.write(v)
-with _dsutil.ReadAscii(TMP_FN) as fh:
+with _dsutil.ReadAscii(TMP_FN, compression=COMPRESSION) as fh:
 	assert data == list(fh)
 
 print("Callback tests")
-with _dsutil.WriteNumber(TMP_FN) as fh:
+with _dsutil.WriteNumber(TMP_FN, compression=COMPRESSION) as fh:
 	for n in range(1000):
 		fh.write(n)
 def callback(num_lines):
@@ -321,18 +326,18 @@ for cb_interval, want_count, expected_cb_count in (
 	for cb_offset in (0, 50000000, -10000):
 		cb_count = 0
 		good_num_lines = range(cb_interval + cb_offset, (1000 if want_count == -1 else want_count) + cb_offset, cb_interval)
-		with _dsutil.ReadNumber(TMP_FN, want_count=want_count, callback=callback, callback_interval=cb_interval, callback_offset=cb_offset) as fh:
+		with _dsutil.ReadNumber(TMP_FN, want_count=want_count, callback=callback, callback_interval=cb_interval, callback_offset=cb_offset, compression=COMPRESSION) as fh:
 			lst = list(fh)
 			assert len(lst) == 1000 if want_count == -1 else want_count
 		assert cb_count in expected_cb_count
 def callback2(num_lines):
 	raise StopIteration
-with _dsutil.ReadNumber(TMP_FN, callback=callback2, callback_interval=1) as fh:
+with _dsutil.ReadNumber(TMP_FN, callback=callback2, callback_interval=1, compression=COMPRESSION) as fh:
 	lst = list(fh)
 	assert lst == [0]
 def callback3(num_lines):
 	1 / 0
-with _dsutil.ReadNumber(TMP_FN, callback=callback3, callback_interval=1) as fh:
+with _dsutil.ReadNumber(TMP_FN, callback=callback3, callback_interval=1, compression=COMPRESSION) as fh:
 	good = False
 	try:
 		lst = list(fh)
