@@ -33,6 +33,7 @@ from accelerator.compat import NoneType, unicode, imap, itervalues, PY2
 
 from accelerator.extras import OptionEnum, DotDict
 from accelerator.dsutil import typed_writer, typed_reader
+from accelerator.error import NoSuchDatasetError
 from . import dataset_type
 
 depend_extra = (dataset_type,)
@@ -51,6 +52,10 @@ produced. Any columns that do not have the same type over all the typed
 datasets will be discarded in this case. You can set discard_untyped to
 discard all untyped columns, or set it to False to get an error if any
 columns were not preservable (except columns renamed over).
+
+With filter_bad any discarded lines will be saved in a separate dataset
+named "bad", but only the columns actually typed, and always as bytes
+(to avoid problems with columns that vary in type over chains).
 '''
 
 TYPENAME = OptionEnum(dataset_type.convfuncs.keys())
@@ -70,7 +75,7 @@ options = {
 	'rename'                    : {}, # {'OLDNAME': 'NEWNAME'} doesn't shadow OLDNAME. (Other COLNAMEs use NEWNAME.) Use {'OLDNAME': None} to discard OLDNAME.
 	'caption'                   : 'typed dataset',
 	'discard_untyped'           : bool, # Make unconverted columns inaccessible ("new" dataset)
-	'filter_bad'                : False, # Implies discard_untyped
+	'filter_bad'                : False, # Discard lines where any column fails typing, saving them in a dataset named "bad"
 	'numeric_comma'             : False, # floats as "3,14"
 	'length'                    : -1, # Go back at most this many datasets. You almost always want -1 (which goes until previous.source)
 	'as_chain'                  : False, # one dataset per slice if rehashing (avoids rewriting at the end)
@@ -224,7 +229,21 @@ def prepare(job, slices):
 			previous=datasets.previous,
 			meta_only=True,
 		)
-	return dw, dws, lines, chain, column2type, sorted(columns), rev_rename
+	if options.filter_bad:
+		try:
+			previous = datasets.previous.job.dataset('bad')
+		except (AttributeError, NoSuchDatasetError,):
+			previous = None
+		bad_columns = {name: ('bytes', True) for name in options.column2type}
+		dw_bad = job.datasetwriter(
+			name='bad',
+			columns=bad_columns,
+			previous=previous,
+			meta_only=True,
+		)
+	else:
+		dw_bad = None
+	return dw, dw_bad, dws, lines, chain, column2type, sorted(columns), rev_rename
 
 
 def map_init(vars, name, z='badmap_size'):
@@ -254,7 +273,7 @@ def analysis(sliceno, slices, prepare_res):
 				break
 		else:
 			raise Exception("Failed to enable numeric_comma, please install at least one of the following locales: " + " ".join(try_locales))
-	dw, dws, lines, chain, column2type, _, rev_rename = prepare_res
+	dw, dw_bad, dws, lines, chain, column2type, _, rev_rename = prepare_res
 	if dws:
 		dw = dws[sliceno]
 		if not dw:
@@ -279,6 +298,8 @@ def analysis(sliceno, slices, prepare_res):
 		rehashing=rehashing,
 		hash_lines=None,
 		dw=dw,
+		dw_bad=dw_bad,
+		save_bad=False,
 		chain=chain,
 		lines=lines,
 		column2type=column2type,
@@ -366,6 +387,11 @@ def analysis_lap(vars):
 			out_fns = [vars.dw.column_filename(colname, sliceno=s) for s in range(vars.slices)]
 		else:
 			out_fns = [vars.dw.column_filename(colname)]
+		if options.filter_bad and not vars.first_lap and colname in options.column2type:
+			out_fns.append(vars.dw_bad.column_filename(colname, sliceno=vars.sliceno))
+			vars.save_bad = True
+		else:
+			vars.save_bad = False
 		one_column(vars, vars.rev_rename.get(colname, colname), coltype, out_fns)
 	return vars.res_bad_count, vars.res_default_count, vars.res_minmax
 
@@ -455,7 +481,8 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		default_count = cstuff.mk_uint64(c_slices)
 		gzip_mode = "wb%d" % (options.compression,)
 		if in_fns:
-			res = c(*cstuff.bytesargs(in_fns, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
+			assert len(out_fns) == c_slices + vars.save_bad
+			res = c(*cstuff.bytesargs(in_fns, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
 			assert not res, 'Failed to convert ' + colname
 		vars.res_bad_count[colname] = list(bad_count)
 		vars.res_default_count[colname] = sum(default_count)
@@ -500,7 +527,11 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		dont_minmax_types = {'bytes', 'ascii', 'unicode', 'json', 'complex32', 'complex64'}
 		real_coltype = dataset_type.typerename.get(coltype, coltype)
 		do_minmax = real_coltype not in dont_minmax_types
+		if vars.save_bad:
+			bad_fh = typed_writer('bytes')(out_fns.pop(), none_support=True)
 		fhs = [typed_writer(real_coltype)(fn) for fn in out_fns]
+		if vars.save_bad:
+			fhs.append(bad_fh)
 		write = fhs[0].write
 		col_min = col_max = None
 		it = itertools.chain.from_iterable(d._column_iterator(vars.sliceno, colname, _type='bytes') for d in vars.chain)
@@ -511,6 +542,8 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			if skip_bad:
 				if badmap[ix // 8] & (1 << (ix % 8)):
 					bad_count[chosen_slice] += 1
+					if vars.save_bad:
+						bad_fh.write(v)
 					continue
 			try:
 				v = pyfunc(v)
@@ -543,7 +576,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	return real_coltype
 
 def synthesis(slices, analysis_res, prepare_res):
-	dw, dws, lines, _, column2type, columns, rev_rename = prepare_res
+	dw, dw_bad, dws, lines, _, column2type, columns, rev_rename = prepare_res
 	analysis_res = list(analysis_res)
 	if options.filter_bad:
 		bad_line_count_per_slice = [sum(data[1]) for data in analysis_res]
@@ -583,6 +616,9 @@ def synthesis(slices, analysis_res, prepare_res):
 			fn = 'badmap%d' % (sliceno,)
 			if exists(fn):
 				unlink(fn)
+		for s, cnt in enumerate(bad_line_count_per_slice):
+			dw_bad.set_lines(s, cnt)
+		dw_bad.set_compressions('gzip')
 	if options.defaults and sum(sum(data[2].values()) for data in analysis_res):
 		print('Defaulted values')
 		for colname in sorted(options.defaults):
