@@ -335,7 +335,7 @@ def test_filter_bad_across_types():
 		)
 		typed_ds = Dataset(jid)
 		got = list(typed_ds.iterate(0, cols_to_check))
-		assert got == want, "Exptected %r, got %r from %s (from %r%s)" % (want, got, typed_ds, source_ds, ' with defaults' if defaults else '')
+		assert got == want, "Expected %r, got %r from %s (from %r%s)" % (want, got, typed_ds, source_ds, ' with defaults' if defaults else '')
 		# make more lines "ok" for the second lap
 		defaults = {'number:int': '0', 'float64': '0', 'json': '"replacement"'}
 		add_want(3)
