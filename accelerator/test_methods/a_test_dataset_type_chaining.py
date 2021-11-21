@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019 Carl Drougge                                          #
+# Copyright (c) 2019-2021 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -105,6 +105,10 @@ def synthesis(job, slices):
 	opts.column2type['c'] = 'number:int'
 	opts.filter_bad = True
 	typed_and_hashed_Ehalf = subjobs.build('dataset_type', datasets=dict(source=untyped_E, previous=typed_D), options=opts)
+	typed_and_hashed_Ehalf_bad = Dataset(typed_and_hashed_Ehalf, 'bad')
+	assert len(typed_and_hashed_Ehalf_bad.chain()) == 1, typed_and_hashed_Ehalf_bad
+	assert set(typed_and_hashed_Ehalf_bad.columns) == set(opts.column2type), typed_and_hashed_Ehalf_bad
+	assert sum(typed_and_hashed_Ehalf_bad.lines) == 50, typed_and_hashed_Ehalf_bad
 	typed_and_hashed_Ehalf = Dataset(typed_and_hashed_Ehalf)
 	assert len(typed_and_hashed_Ehalf.chain()) == slices + 4, typed_and_hashed_Ehalf
 	untyped_Ehalf = write('Ehalf', untyped_D, 10000, 10100, filter=lambda ix: ix % 2 == 0)

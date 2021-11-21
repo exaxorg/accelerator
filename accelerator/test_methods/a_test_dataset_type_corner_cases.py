@@ -90,6 +90,10 @@ def _verify(name, types, data, coltype, want, default, want_fail, kw):
 		typed_ds = Dataset(jid)
 		got = list(typed_ds.iterate(0, 'data'))
 		check(got, '%s (typed as %s from %r)' % (typed_ds, typ, bytes_ds,))
+		if opts.get('filter_bad'):
+			bad_ds = Dataset(jid, 'bad')
+			got_bad = list(bad_ds.iterate(0, 'data'))
+			assert got_bad == [b'nah'], "%s should have had a single b'nah', but had %r" % (bad_ds, got_bad,)
 		if 'filter_bad' not in opts and not callable(want):
 			opts['filter_bad'] = True
 			opts['column2type']['extra'] = 'int32_10'
@@ -97,6 +101,10 @@ def _verify(name, types, data, coltype, want, default, want_fail, kw):
 			typed_ds = Dataset(jid)
 			got = list(typed_ds.iterate(0, 'data'))
 			check(got, '%s (typed as %s from %r with every other line skipped from filter_bad)' % (typed_ds, typ, bytes_ds,), True)
+			want_bad = [t for t in bytes_ds.iterate(0) if t[1] == b'skip']
+			bad_ds = Dataset(jid, 'bad')
+			got_bad = list(bad_ds.iterate(0))
+			assert got_bad == want_bad, "Expected %r, got %r from %s" % (want_bad, got_bad, bad_ds,)
 		used_type(typ)
 
 def test_numbers():
@@ -305,6 +313,7 @@ def test_filter_bad_across_types():
 		[False, b'eleventh', b'11a', '1-', '"k",',  '1,',  b'elva',],       # float64, int32_10 and number:int bad
 		[True,  b'twelfth',  b'12',  '12', '"l"',   '12',  b'tolv',],
 	]
+	want_bad = [tuple(l[1:]) for l in data if not l[0]]
 	dw = DatasetWriter(name="filter bad across types", columns=columns, allow_missing_slices=True)
 	cols_to_check = ['int32_10', 'bytes', 'json', 'unicode:utf-8']
 	if PY3:
@@ -336,7 +345,14 @@ def test_filter_bad_across_types():
 		typed_ds = Dataset(jid)
 		got = list(typed_ds.iterate(0, cols_to_check))
 		assert got == want, "Expected %r, got %r from %s (from %r%s)" % (want, got, typed_ds, source_ds, ' with defaults' if defaults else '')
+		bad_ds = Dataset(jid, 'bad')
+		got_bad = list(bad_ds.iterate(0, sorted(columns)))
+		assert got_bad == want_bad, "Expected %r, got %r from %s (from %r%s)" % (want_bad, got_bad, bad_ds, source_ds, ' with defaults' if defaults else '')
 		# make more lines "ok" for the second lap
+		if not defaults:
+			want_bad.pop(0) # number:int
+			want_bad.pop(1) # float64
+			want_bad.pop(1) # json
 		defaults = {'number:int': '0', 'float64': '0', 'json': '"replacement"'}
 		add_want(3)
 		add_want(5)

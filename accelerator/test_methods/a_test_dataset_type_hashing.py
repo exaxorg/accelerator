@@ -224,7 +224,8 @@ def test(src_ds, opts, expect_lines):
 			expect_hl = None
 			msg += ' (hashed on <untyped column>)'
 	print(msg)
-	just_typed = subjobs.build('dataset_type', options=opts, datasets=dict(source=src_ds)).dataset()
+	type_job = subjobs.build('dataset_type', options=opts, datasets=dict(source=src_ds))
+	just_typed = type_job.dataset()
 	assert just_typed.hashlabel == expect_hl, just_typed
 	assert set(just_typed.columns) == cols, just_typed
 	assert sum(just_typed.lines) == expect_lines, just_typed
@@ -232,6 +233,11 @@ def test(src_ds, opts, expect_lines):
 		assert just_typed.hashlabel is None, just_typed
 	else:
 		assert just_typed.hashlabel == rename(src_ds.hashlabel), just_typed
+	if opts.get('filter_bad'):
+		bad_ds = type_job.dataset('bad')
+		assert set(bad_ds.columns) == set(opts.column2type), bad_ds
+		assert sum(bad_ds.lines) + expect_lines == sum(src_ds.lines), bad_ds
+		assert bad_ds.lines == [len(list(bad_ds.iterate(sliceno))) for sliceno in range(len(bad_ds.lines))], bad_ds
 	del opts.discard_untyped
 	rev_rename = {v: k for k, v in opts.get('rename', {}).items()}
 	discard = set(src_ds.columns) - set(rev_rename.get(n, n) for n in cols)
