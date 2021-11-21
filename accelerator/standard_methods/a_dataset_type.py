@@ -349,7 +349,7 @@ def analysis_lap(vars):
 			vars.rehashing = False
 			real_coltype = one_column(vars, colname, coltype, [out_fn], True)
 			vars.rehashing = True
-			assert vars.res_bad_count[colname] == [0] # imlicitly has a default
+			assert vars.res_bad_count[colname] == [0] # implicitly has a default
 			vars.slicemap_fd = map_init(vars, 'slicemap%d' % (vars.sliceno,), 'slicemap_size')
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			slicemap = Int16BytesWrapper(slicemap)
