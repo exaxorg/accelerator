@@ -108,11 +108,11 @@ def _verify(name, types, data, coltype, want, default, want_fail, kw):
 		used_type(typ)
 
 def test_numbers():
-	verify('floats', ['float32', 'float64', 'number'], [b'1.50', b'-inf', b'5e-1'], [1.5, float('-inf'), 0.5], all_source_types=True)
+	verify('floats', ['complex32', 'complex64', 'float32', 'float64', 'number'], [b'1.50', b'-inf', b'5e-1'], [1.5, float('-inf'), 0.5], all_source_types=True)
 	if options.numeric_comma:
-		verify('numeric_comma', ['float32', 'float64', 'number'], [b'1,5', b'1.0', b'9'], [1.5, 42.0, 9.0], '42', numeric_comma=True)
-	verify('float32 rounds', ['float32'], [b'1.2'], [1.2000000476837158])
-	verify('filter_bad', ['int32_10', 'int64_10', 'bits32_10', 'bits64_10', 'float32', 'float64', 'number'], [b'4', b'nah', b'1', b'0'], [4, 1, 0], filter_bad=True)
+		verify('numeric_comma', ['complex32', 'complex64', 'float32', 'float64', 'number'], [b'1,5', b'1.0', b'9'], [1.5, 42.0, 9.0], '42', numeric_comma=True)
+	verify('float32 rounds', ['complex32', 'float32'], [b'1.2'], [1.2000000476837158])
+	verify('filter_bad', ['int32_10', 'int64_10', 'bits32_10', 'bits64_10', 'complex32', 'complex64', 'float32', 'float64', 'number'], [b'4', b'nah', b'1', b'0'], [4, 1, 0], filter_bad=True)
 
 	all_source_types = True
 	for base, values in (
@@ -173,8 +173,14 @@ def test_numbers():
 		for ix, v in ((0, float('inf')), (1, float('-inf')), (-1, float('inf'))):
 			assert got[ix] == v, msg
 		for ix in range(2, 6):
-			assert isnan(got[ix]), msg
-	verify('special floats', ['float32', 'float64', 'number'], [b'+Inf', b'-inF', b'nan', b'NaN', b'NAN', b'Nan', b'INF'], check_special)
+			v = got[ix]
+			if isinstance(v, complex):
+				v = v.real
+			assert isnan(v), msg
+	verify('special floats', ['complex32', 'complex64', 'float32', 'float64', 'number'], [b'+Inf', b'-inF', b'nan', b'NaN', b'NAN', b'Nan', b'INF'], check_special)
+	verify('complex', ['complex32', 'complex64'], [b'0.25-5j', b'-0.5j', b'infj'], [0.25-5j, -0.5j, complex(0, float('inf'))])
+	if options.numeric_comma:
+		verify('complex numeric_comma', ['complex32', 'complex64'], [b'-0,5+1,5j', b'-0,5+1.5j', b',5j'], [-0.5+1.5j, 42j, 0.5j], '42j', numeric_comma=True)
 
 def test_bytes():
 	want = [b'foo', b'\\bar', b'bl\xe4', b'\x00\t \x08', b'a\xa0b\x255\x00']
