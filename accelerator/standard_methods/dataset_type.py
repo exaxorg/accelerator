@@ -708,6 +708,8 @@ static const uint32_t noneval_date = 0;
 static const uint8_t noneval_bool = 255;
 '''
 
+numeric_comma = False
+
 def _conv_json(_):
 	dec = json.JSONDecoder().decode
 	def conv_json(v):
@@ -715,8 +717,12 @@ def _conv_json(_):
 	return conv_json
 
 def _conv_complex(t):
-	def conv_complex(v):
-		return complex(v.decode('utf-8'))
+	if numeric_comma:
+		def conv_complex(v):
+			return complex(v.decode('utf-8').replace('.', 'dot').replace(',', '.'))
+	else:
+		def conv_complex(v):
+			return complex(v.decode('utf-8'))
 	return conv_complex
 
 ConvTuple = namedtuple('ConvTuple', 'size conv_code_str pyfunc')
