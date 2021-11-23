@@ -93,6 +93,12 @@ def main(argv, cfg):
 	if args.chain:
 		datasets = list(chain.from_iterable(ds.chain() for ds in datasets))
 
+	def columns_for_ds(ds, columns=columns):
+		if columns:
+			return [n for n in columns if n in ds.columns]
+		else:
+			return sorted(ds.columns)
+
 	if columns or grep_columns:
 			bad = False
 			need_cols = set(columns)
@@ -275,15 +281,12 @@ def main(argv, cfg):
 
 	headers = {}
 	if args.headers:
-		if columns:
-			current_headers = columns
-		else:
-			current_headers = None
-			for ds in datasets:
-				candidate_headers = sorted(ds.columns)
-				if candidate_headers != current_headers:
-					headers[ds] = current_headers = candidate_headers
-			current_headers = headers.pop(datasets[0])
+		current_headers = None
+		for ds in datasets:
+			candidate_headers = columns_for_ds(ds)
+			if candidate_headers != current_headers:
+				headers[ds] = current_headers = candidate_headers
+		current_headers = headers.pop(datasets[0])
 		def show_headers(headers):
 			if args.format != 'json':
 				show_items = headers_prefix + headers
