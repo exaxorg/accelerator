@@ -120,6 +120,7 @@ def synthesis(job, slices):
 	# start with testing basic output, chaining, column selection and headers.
 	a = mk_ds('a', ['int32', 'int64'], [100, 200], [101, 201])
 	b = mk_ds('b', ['int32'], [1000], [1001], previous=a)
+	c = mk_ds('c', ['float64', 'int32'], [1.42, 3], previous=b)
 	grep_text(['', a], [[100, 200], [101, 201]])
 	grep_json(['', a], [{'int32': 100, 'int64': 200}, {'int32': 101, 'int64': 201}])
 	grep_text(['-S', '', a], [[0, 100, 200], [1, 101, 201]])
@@ -132,6 +133,14 @@ def synthesis(job, slices):
 	])
 	grep_text(['-t', '2', '', a], [[100, '"200"'], [101, '"201"']], sep='2') # stupid separator leads to escaping
 	grep_text(['-t', '2', '-f', 'raw', '', a], [[100, 200], [101, 201]], sep='2') # but not in the raw format
+
+	# missing columns
+	grep_text(['-M', '-c', '', c, 'int32'], [[100], [101], [1000], [1001], [3]]) # not anything missing
+	grep_text(['-M', '-c', '-g', 'int64', '', c], [[100, 200], [101, 201]])
+	grep_text(['-M', '-c', '-H', '', c, 'int32', 'float64'], [['int32'], [100], [101], [1000], [1001], ['int32', 'float64'], [3, 1.42]])
+	grep_text(['-M', '-c', '-H', '', c, 'non-existant'], [])
+	grep_text(['-M', '-c', '-g', 'float64', '-g', 'int64', '-H', '', c], [['int32', 'int64'], [100, 200], [101, 201], ['float64', 'int32'], [1.42, 3]])
+	grep_text(['-M', '-c', '-H', '', c, 'int64', 'float64'], [['int64'], [200], [201], ['float64'], [1.42]])
 
 	# try some colour
 	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [frame(HDR_HI, ['[DATASET]', '[SLICE]', 'int32', 'int64']), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
