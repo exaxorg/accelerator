@@ -94,17 +94,17 @@ def main(argv, cfg):
 		datasets = list(chain.from_iterable(ds.chain() for ds in datasets))
 
 	if columns or grep_columns:
-		bad = False
-		need_cols = set(columns)
-		if grep_columns:
-			need_cols.update(grep_columns)
-		for ds in datasets:
-			missing = need_cols - set(ds.columns)
-			if missing:
-				print('ERROR: %s does not have columns %r' % (ds, missing,), file=sys.stderr)
-				bad = True
-		if bad:
-			return 1
+			bad = False
+			need_cols = set(columns)
+			if grep_columns:
+				need_cols.update(grep_columns)
+			for ds in datasets:
+				missing = need_cols - set(ds.columns)
+				if missing:
+					print('ERROR: %s does not have columns %r' % (ds, missing,), file=sys.stderr)
+					bad = True
+			if bad:
+				return 1
 
 	# never and always override env settings, auto (default) sets from env/tty
 	if args.colour == 'never':
