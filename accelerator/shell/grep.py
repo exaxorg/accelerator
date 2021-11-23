@@ -47,6 +47,7 @@ def main(argv, cfg):
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
 	parser.add_argument('-H', '--headers',      action='store_true', help="print column names before output (and on each change)", )
 	parser.add_argument('-O', '--ordered',      action='store_true', help="output in order (one slice at a time)", )
+	parser.add_argument('-M', '--allow-missing-columns', action='store_true', help="datasets are allowed to not have (some) columns", )
 	parser.add_argument('-g', '--grep',         action='append',     help="grep this column only, can be specified multiple times", metavar='COLUMN')
 	parser.add_argument('-s', '--slice',        action='append',     help="grep this slice only, can be specified multiple times",  type=int)
 	parser.add_argument('-D', '--show-dataset', action='store_true', help="show dataset on matching lines", )
@@ -79,7 +80,7 @@ def main(argv, cfg):
 
 	grep_columns = set(args.grep or ())
 	if grep_columns == set(columns):
-		grep_columns = None
+		grep_columns = set()
 
 	if args.slice:
 		want_slices = []
@@ -100,6 +101,18 @@ def main(argv, cfg):
 			return sorted(ds.columns)
 
 	if columns or grep_columns:
+		if args.allow_missing_columns:
+			keep_datasets = []
+			for ds in datasets:
+				if not columns_for_ds(ds):
+					continue
+				if grep_columns and not columns_for_ds(ds, grep_columns):
+					continue
+				keep_datasets.append(ds)
+			if not keep_datasets:
+				return 0
+			datasets = keep_datasets
+		else:
 			bad = False
 			need_cols = set(columns)
 			if grep_columns:
@@ -236,10 +249,11 @@ def main(argv, cfg):
 					lens = (l + esc - unesc for l, unesc, esc in zip(lens, lens_unesc, lens_esc))
 				data.extend(show_items)
 				return separate(data, lens).encode('utf-8', errors)
-		used_columns = columns or sorted(ds.columns)
-		if grep_columns and grep_columns != set(used_columns):
-			grep_iter = izip(*(mk_iter(col) for col in grep_columns))
-			conv_items = [mk_conv(col) for col in grep_columns]
+		used_columns = columns_for_ds(ds)
+		used_grep_columns = grep_columns and columns_for_ds(ds, grep_columns)
+		if grep_columns and set(used_grep_columns) != set(used_columns):
+			grep_iter = izip(*(mk_iter(col) for col in used_grep_columns))
+			conv_items = [mk_conv(col) for col in used_grep_columns]
 		else:
 			grep_iter = repeat(None)
 			conv_items = [mk_conv(col) for col in used_columns]
