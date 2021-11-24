@@ -142,12 +142,29 @@ def synthesis(job, slices):
 	grep_text(['-M', '-c', '-g', 'float64', '-g', 'int64', '-H', '', c], [['int32', 'int64'], [100, 200], [101, 201], ['float64', 'int32'], [1.42, 3]])
 	grep_text(['-M', '-c', '-H', '', c, 'int64', 'float64'], [['int64'], [200], [201], ['float64'], [1.42]])
 
+	# context
+	ctx = job.datasetwriter(name='ctx', columns={'a': 'int32'}, allow_missing_slices=True)
+	ctx.set_slice(0)
+	for v in range(100):
+		if v == 32:
+			ctx.set_slice(1)
+		ctx.write(v)
+	ctx = ctx.finish()
+	ctx2 = job.datasetwriter(name='ctx2', columns={'a': 'ascii', 'b': 'ascii'}, allow_missing_slices=True, previous=ctx)
+	ctx2.set_slice(1)
+	for v in range(26):
+		ctx2.write(chr(65 + v), chr(97 + v))
+	ctx2 = ctx2.finish()
+	# only one before 33 because of slicing, only one after 98 because the ds ends (even though ctx2 continues in slice 1)
+	grep_text(['-c', '-A', '3', '-B', '2', '(33|98|Z)', ctx2], [[32], [33], [34], [35], [36], [96], [97], [98], [99], ['X', 'x'], ['Y', 'y'], ['Z', 'z']])
+
 	# try some colour
 	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [frame(HDR_HI, ['[DATASET]', '[SLICE]', 'int32', 'int64']), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
 	os.putenv('CLICOLOR_FORCE', '1')
 	grep_text(['-t', ',', '-L', '-S', '-H', '', a], [frame(HDR_HI, ['[SLICE]', '[LINE]', 'int32', 'int64']), [0, 0, 100, 200], [1, 0, 101, 201]], sep=COMMA_HI)
 	grep_text(['-t', ',', '-L', '-S', '-H', '--colour=never', '', a], [['[SLICE]', '[LINE]', 'int32', 'int64'], [0, 0, 100, 200], [1, 0, 101, 201]], sep=',')
 	grep_text(['-t', ',', '-D', '-H', '', b], [frame(HDR_HI, ['[DATASET]', 'int32']), [b, 1000], [b, 1001]], sep=COMMA_HI)
+	grep_text(['-t', ',', '-C', '1', 'F', ctx2], [['E', 'e'], ['\x1b[31mF\x1b[39m', 'f'], ['G', 'g']], sep=COMMA_HI)
 	grep_text(['-t', ',', '-D', '-H', '-c', '', b], [frame(HDR_HI, ['[DATASET]', 'int32', 'int64']), [a, 100, 200], [a, 101, 201], frame(HDR_HI, ['[DATASET]', 'int32']), [b, 1000], [b, 1001]], sep=COMMA_HI)
 	grep_json(['-s', '0', '', a], [{'int32': 100, 'int64': 200}]) # no colour in json
 	grep_text(['-s', '0', '', b, a], [['1000'], ['100', '200']], sep=TAB_HI)
