@@ -26,6 +26,8 @@ import sys
 import re
 from multiprocessing import Process, JoinableQueue
 from itertools import chain, repeat
+from collections import deque
+from argparse import RawTextHelpFormatter, Action
 import errno
 from os import write
 import json
@@ -37,10 +39,17 @@ from accelerator.colourwrapper import colour
 from .parser import name2ds
 from accelerator import g
 
+
 def main(argv, cfg):
+	# -C overrides -A and -B (which in turn override -C)
+	class ContextAction(Action):
+		def __call__(self, parser, namespace, values, option_string=None):
+			namespace.before_context = namespace.after_context = values
+
 	parser = ArgumentParser(
 		usage="%(prog)s [options] pattern ds [ds [...]] [column [column [...]]",
 		prog=argv.pop(0),
+		formatter_class=RawTextHelpFormatter,
 	)
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
@@ -56,10 +65,22 @@ def main(argv, cfg):
 	supported_formats = ('csv', 'raw', 'json',)
 	parser.add_argument('-f', '--format', default='csv', choices=supported_formats, help="output format, csv (default) / " + ' / '.join(supported_formats[1:]), metavar='FORMAT', )
 	parser.add_argument('-t', '--separator', help="field separator, default tab / tab-like spaces", )
+	parser.add_argument('-B', '--before-context', type=int, default=0, metavar='NUM', help="print NUM lines of leading context", )
+	parser.add_argument('-A', '--after-context',  type=int, default=0, metavar='NUM', help="print NUM lines of trailing context", )
+	parser.add_argument('-C', '--context',        type=int, default=0, metavar='NUM', action=ContextAction,
+		help="print NUM lines of context\n" +
+		     "context is only taken from the same slice of the same\n" +
+		     "dataset, and may intermix with output from other\n" +
+		     "slices. Use -O to avoid that, or -S -L to see it.",
+	)
 	parser.add_argument('pattern')
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
 	parser.add_argument('columns', nargs='*', default=[])
 	args = parser.parse_intermixed_args(argv)
+
+	if args.before_context < 0 or args.after_context < 0:
+		print('Context must be >= 0', file=sys.stderr)
+		return 1
 
 	pat_s = re.compile(args.pattern, re.IGNORECASE if args.ignore_case else 0)
 	datasets = [name2ds(cfg, args.dataset)]
@@ -258,11 +279,23 @@ def main(argv, cfg):
 			grep_iter = repeat(None)
 			conv_items = [mk_conv(col) for col in used_columns]
 		lines_iter = izip(*(mk_iter(col) for col in used_columns))
+		if args.before_context:
+			before = deque((), args.before_context)
+		else:
+			before = None
+		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if any(chk(conv(item)) for conv, item in izip(conv_items, grep_items or items)):
+				while before:
+					write(1, show(*before.popleft()) + b'\n')
+				to_show = 1 + args.after_context
+			if to_show:
 				# This will be atomic if the line is not too long
 				# (at least up to PIPE_BUF bytes, should be at least 512).
 				write(1, show(lineno, items) + b'\n')
+				to_show -= 1
+			elif before is not None:
+				before.append((lineno, items))
 
 	def one_slice(sliceno, q, wait_for):
 		try:
