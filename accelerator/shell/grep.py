@@ -215,7 +215,7 @@ def main(argv, cfg):
 				prefix['dataset'] = ds
 			if args.show_sliceno:
 				prefix['sliceno'] = sliceno
-			def show():
+			def show(lineno, items):
 				d = dict(zip(used_columns, items))
 				if args.show_lineno:
 					prefix['lineno'] = lineno
@@ -230,7 +230,7 @@ def main(argv, cfg):
 			if args.show_sliceno:
 				prefix.append(str(sliceno))
 			prefix = tuple(prefix)
-			def show():
+			def show(lineno, items):
 				data = list(prefix)
 				if args.show_lineno:
 					data.append(unicode(lineno))
@@ -262,7 +262,7 @@ def main(argv, cfg):
 			if any(chk(conv(item)) for conv, item in izip(conv_items, grep_items or items)):
 				# This will be atomic if the line is not too long
 				# (at least up to PIPE_BUF bytes, should be at least 512).
-				write(1, show() + b'\n')
+				write(1, show(lineno, items) + b'\n')
 
 	def one_slice(sliceno, q, wait_for):
 		try:
