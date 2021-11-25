@@ -255,11 +255,7 @@ def main(argv, cfg):
 				data = list(prefix)
 				if args.show_lineno:
 					data.append(unicode(lineno))
-				if PY2:
-					show_items = (v if isinstance(v, unicode) else str(v).decode('utf-8', 'replace') for v in items)
-				else:
-					show_items = map(str, items)
-				show_items = list(show_items)
+				show_items = list(map(unicode, items))
 				lens = (len(item) for item in data + show_items)
 				if highlight_matches:
 					show_items = list(map(colour_item, show_items))
