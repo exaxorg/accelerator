@@ -56,7 +56,8 @@ def main(argv, cfg):
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
-	parser.add_argument('-l', '--list-matching',action='store_true', help="only print matching datasets (or slices with -S)", )
+	parser.add_argument('-o', '--only-matching',action='store_true', help="only print matching part (or columns with -l)", )
+	parser.add_argument('-l', '--list-matching',action='store_true', help="only print matching datasets (or slices with -S)\nwhen used with -o, only print matching columns", )
 	parser.add_argument('-H', '--headers',      action='store_true', help="print column names before output (and on each change)", )
 	parser.add_argument('-O', '--ordered',      action='store_true', help="output in order (one slice at a time)", )
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', help="datasets are allowed to not have (some) columns", )
@@ -118,6 +119,15 @@ def main(argv, cfg):
 	if len(want_slices) == 1:
 		# it will be automatically ordered, so let's not work for it.
 		args.ordered = False
+
+	if args.only_matching:
+		if args.list_matching:
+			args.list_matching = False
+			only_matching = 'columns'
+		else:
+			only_matching = 'part'
+	else:
+		only_matching = False
 
 	if args.chain:
 		datasets = list(chain.from_iterable(ds.chain() for ds in datasets))
@@ -475,6 +485,8 @@ def main(argv, cfg):
 				pos = b
 			parts.append(item[pos:])
 			return ''.join(parts)
+		def filter_item(item):
+			return ''.join(pat_s.findall(item))
 		if args.format == 'json':
 			prefix = {}
 			dumps = json.JSONEncoder(ensure_ascii=False, default=json_default).encode
@@ -483,7 +495,12 @@ def main(argv, cfg):
 			if args.show_sliceno:
 				prefix['sliceno'] = sliceno
 			def show(lineno, items):
-				d = dict(zip(used_columns, items))
+				if only_matching == 'part':
+					items = [filter_item(unicode(item)) for item in items]
+				if only_matching == 'columns':
+					d = {k: v for k, v in zip(used_columns, items) if filter_item(unicode(v))}
+				else:
+					d = dict(zip(used_columns, items))
 				if args.show_lineno:
 					prefix['lineno'] = lineno
 				if prefix:
@@ -501,7 +518,13 @@ def main(argv, cfg):
 				data = list(prefix)
 				if args.show_lineno:
 					data.append(unicode(lineno))
-				show_items = list(map(unicode, items))
+				show_items = map(unicode, items)
+				if only_matching:
+					if only_matching == 'columns':
+						show_items = (item if filter_item(item) else '' for item in show_items)
+					else:
+						show_items = map(filter_item, show_items)
+				show_items = list(show_items)
 				lens = (len(item) for item in data + show_items)
 				if highlight_matches:
 					show_items = list(map(colour_item, show_items))
