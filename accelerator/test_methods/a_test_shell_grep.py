@@ -190,6 +190,12 @@ def synthesis(job, slices):
 		grep_text(['-f', 'raw', 'xf0', bytespickle], [["b'\\xf0'"]])
 		grep_json(['', bytespickle], [{'pickle': "b'\\xf0'"}, {'pickle': "b'\\t'"}])
 
+	# --only-matching, both the part (default) and columns (with -l) in both csv and json
+	grep_text(['-o', '-c', '1', b], [['1', ''], ['11', '1'], ['1'], ['11']])
+	grep_text(['-o', '-l', '-c', '1', b], [['100', ''], ['101', '201'], ['1000'], ['1001']])
+	grep_json(['-o', '-c', '1', b], [{'int32': '1', 'int64': ''}, {'int32': '11', 'int64': '1'}, {'int32': '1'}, {'int32': '11'}])
+	grep_json(['-o', '-l', '-c', '1', b], [{'int32': 100}, {'int32': 101, 'int64': 201}, {'int32': 1000}, {'int32': 1001}])
+
 	# check all possible byte values in all output formats
 	allbytes = mk_ds('allbytes', ['ascii', 'bytes'],
 		['control chars', mk_bytes(0, 32)],
