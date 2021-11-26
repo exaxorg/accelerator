@@ -26,7 +26,7 @@ import sys
 import re
 from multiprocessing import Process, JoinableQueue
 from itertools import chain, repeat
-from collections import deque
+from collections import deque, OrderedDict
 from argparse import RawTextHelpFormatter, Action
 import errno
 from os import write
@@ -313,22 +313,29 @@ def main(argv, cfg):
 	if args.show_lineno:
 		headers_prefix.append('[LINE]')
 
-	headers = {}
+	# {ds: headers} for each ds where headers change (not including the first).
+	# this is every ds where sync between slices has to happen when not --ordered.
+	headers = OrderedDict()
 	if args.headers:
 		current_headers = None
 		for ds in datasets:
 			candidate_headers = columns_for_ds(ds)
 			if candidate_headers != current_headers:
 				headers[ds] = current_headers = candidate_headers
-		current_headers = headers.pop(datasets[0])
-		def show_headers(headers):
+		def gen_headers(headers):
 			if args.format != 'json':
 				show_items = headers_prefix + headers
 				if escape_item:
 					show_items = list(map(escape_item, show_items))
 				coloured = (colour(item, 'grep/header') for item in show_items)
-				print(separate(coloured, map(len, show_items)))
-		show_headers(current_headers)
+				txt = separate(coloured, map(len, show_items))
+				return txt.encode('utf-8', 'surrogatepass') + b'\n'
+			else:
+				return b''
+		# remove the starting ds, so no header changes means no special handling.
+		current_headers = headers.pop(datasets[0])
+		write(1, gen_headers(current_headers))
+		headers_iter = iter(map(gen_headers, headers.values()))
 
 	queues = []
 	children = []
@@ -354,7 +361,7 @@ def main(argv, cfg):
 		if ds in headers:
 			for q in queues:
 				q.join()
-			show_headers(headers.pop(ds))
+			write(1, next(headers_iter))
 			for q in queues:
 				q.put(None)
 		for sliceno in want_slices:
