@@ -200,13 +200,6 @@ def main(argv, cfg):
 		errors = 'replace' if PY2 else 'surrogateescape'
 
 	def grep(ds, sliceno):
-		def no_conv(v):
-			return v
-		def mk_conv(col):
-			if ds.columns[col].type in ('bytes', 'unicode', 'ascii',):
-				if not ds.columns[col].none_support:
-					return no_conv
-			return unicode
 		chk = pat_s.search
 		def mk_iter(col):
 			if ds.columns[col].type == 'ascii':
@@ -270,10 +263,8 @@ def main(argv, cfg):
 		used_grep_columns = grep_columns and columns_for_ds(ds, grep_columns)
 		if grep_columns and set(used_grep_columns) != set(used_columns):
 			grep_iter = izip(*(mk_iter(col) for col in used_grep_columns))
-			conv_items = [mk_conv(col) for col in used_grep_columns]
 		else:
 			grep_iter = repeat(None)
-			conv_items = [mk_conv(col) for col in used_columns]
 		lines_iter = izip(*(mk_iter(col) for col in used_columns))
 		if args.before_context:
 			before = deque((), args.before_context)
@@ -281,7 +272,7 @@ def main(argv, cfg):
 			before = None
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
-			if any(chk(conv(item)) for conv, item in izip(conv_items, grep_items or items)):
+			if any(chk(unicode(item)) for item in grep_items or items):
 				while before:
 					write(1, show(*before.popleft()) + b'\n')
 				to_show = 1 + args.after_context
