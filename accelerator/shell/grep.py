@@ -263,9 +263,49 @@ def main(argv, cfg):
 				write(1, hdr_txt)
 				self.q_out.put(None) # let the output continue
 
+	# Fully ordered output, each slice waits for the previous slice.
+	# For each ds, waits for None (anything really) before starting,
+	# sends None when done.
+
+	class OrderedOutputter(Outputter):
+		def start(self, ds):
+			self.wait = True
+			self.ds = ds
+
+		def maybe_wait(self):
+			if self.wait:
+				self.q_in.get()
+				self.wait = False
+
+		def end(self, ds):
+			self.maybe_wait()
+			# We are done with this ds, so let next slice continue
+			self.q_out.put(None)
+
+		def put(self, data):
+			self.maybe_wait()
+			# This will be atomic if the line is not too long
+			# (at least up to PIPE_BUF bytes, should be at least 512).
+			write(1, data)
+
+	# Same as above but for the first slice so it prints headers when needed.
+	class OrderedHeaderOutputter(OrderedOutputter):
+		def maybe_wait(self):
+			if self.wait:
+				self.q_in.get()
+				self.wait = False
+				if self.ds in headers:
+					hdr_txt = next(headers_iter)
+					write(1, hdr_txt)
+
 	# Choose the right outputter for the kind of sync we need.
 	def outputter(q_in, q_out, first_slice=False):
-		if headers:
+		if args.ordered:
+			if first_slice:
+				cls = OrderedHeaderOutputter
+			else:
+				cls = OrderedOutputter
+		elif headers:
 			if first_slice:
 				cls = HeaderOutputter
 			else:
@@ -409,34 +449,34 @@ def main(argv, cfg):
 
 	q_in = q_out = first_q_out = None
 	children = []
-	if not args.ordered:
-		if headers:
-			q_in = first_q_out = mp.LockFreeQueue()
-		for sliceno in want_slices[1:]:
-			if q_in:
-				q_out = mp.LockFreeQueue()
-			p = Process(
-				target=one_slice,
-				args=(sliceno, q_in, q_out,),
-				name='slice-%d' % (sliceno,),
-			)
-			p.daemon = True
-			p.start()
-			children.append(p)
-			if q_in and q_in is not first_q_out:
-				q_in.close()
-			q_in = q_out
-		want_slices = want_slices[:1]
+	if args.ordered or headers:
+		q_in = first_q_out = mp.LockFreeQueue()
+	for sliceno in want_slices[1:]:
+		if q_in:
+			q_out = mp.LockFreeQueue()
+		p = Process(
+			target=one_slice,
+			args=(sliceno, q_in, q_out,),
+			name='slice-%d' % (sliceno,),
+		)
+		p.daemon = True
+		p.start()
+		children.append(p)
+		if q_in and q_in is not first_q_out:
+			q_in.close()
+		q_in = q_out
+	want_slices = want_slices[:1]
 	if q_in:
 		q_out = first_q_out
 		q_in.make_reader()
 		q_out.make_writer()
+		if args.ordered:
+			q_in.put_local(None)
 
 	out = outputter(q_in, q_out, first_slice=True)
 	for ds in datasets:
 		out.start(ds)
-		for sliceno in want_slices:
-			grep(ds, sliceno, out)
+		grep(ds, want_slices[0], out)
 		out.end(ds)
 	out.finish()
 	for c in children:

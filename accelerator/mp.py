@@ -70,6 +70,7 @@ class LockFreeQueue:
 		self.r, self.w = os.pipe()
 		self._buf = b''
 		self._partial = {}
+		self._local = []
 
 	def make_writer(self):
 		os.close(self.r)
@@ -112,6 +113,8 @@ class LockFreeQueue:
 
 	def get(self, block=True, timeout=0):
 		assert self.w == -1, "call make_reader first"
+		if self._local:
+			return self._local.pop(0)
 		self._late_setup()
 		if timeout:
 			deadline = monotonic() + timeout
@@ -162,6 +165,9 @@ class LockFreeQueue:
 					self._r_sel.select(time_left)
 				else:
 					self._r_sel.select()
+
+	def put_local(self, msg):
+		self._local.append(msg)
 
 	def put(self, msg):
 		assert self.r == -1, "call make_writer first"
