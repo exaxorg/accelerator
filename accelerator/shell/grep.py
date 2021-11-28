@@ -572,7 +572,8 @@ def main(argv, cfg):
 		try:
 			out = outputter(q_in, q_out)
 			for ds in datasets:
-				grep(ds, sliceno, out)
+				if seen_list is None or ds not in seen_list:
+					grep(ds, sliceno, out)
 			out.finish()
 		except IOError as e:
 			if e.errno == errno.EPIPE:
@@ -614,9 +615,12 @@ def main(argv, cfg):
 
 	q_in = q_out = first_q_out = q_list = None
 	children = []
+	seen_list = None
 	if args.list_matching:
 		q_list = mp.LockFreeQueue()
 		separate_process_slices = want_slices
+		if not args.show_sliceno:
+			seen_list = mp.MpSet()
 	else:
 		separate_process_slices = want_slices[1:]
 		if args.ordered or headers:
@@ -644,10 +648,6 @@ def main(argv, cfg):
 
 	if args.list_matching:
 		q_list.make_reader()
-		if args.show_sliceno:
-			seen_list = None
-		else:
-			seen_list = set()
 		while True:
 			try:
 				ds, sliceno = q_list.get()
