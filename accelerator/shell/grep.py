@@ -56,6 +56,7 @@ def main(argv, cfg):
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
+	parser.add_argument('-l', '--list-matching',action='store_true', help="only print matching datasets (or slices with -S)", )
 	parser.add_argument('-H', '--headers',      action='store_true', help="print column names before output (and on each change)", )
 	parser.add_argument('-O', '--ordered',      action='store_true', help="output in order (one slice at a time)", )
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', help="datasets are allowed to not have (some) columns", )
@@ -434,7 +435,9 @@ def main(argv, cfg):
 
 	# Choose the right outputter for the kind of sync we need.
 	def outputter(q_in, q_out, first_slice=False):
-		if args.ordered:
+		if args.list_matching:
+			cls = Outputter
+		elif args.ordered:
 			if first_slice:
 				cls = OrderedHeaderOutputter
 			else:
@@ -523,6 +526,9 @@ def main(argv, cfg):
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if any(chk(unicode(item)) for item in grep_items or items):
+				if q_list:
+					q_list.put((ds, sliceno))
+					return
 				while before:
 					out.put(show(*before.popleft()) + b'\n')
 				to_show = 1 + args.after_context
@@ -538,6 +544,8 @@ def main(argv, cfg):
 			q_in.make_reader()
 		if q_out:
 			q_out.make_writer()
+		if q_list:
+			q_list.make_writer()
 		try:
 			out = outputter(q_in, q_out)
 			for ds in datasets:
@@ -581,11 +589,16 @@ def main(argv, cfg):
 		write(1, gen_headers(current_headers))
 		headers_iter = iter(map(gen_headers, headers.values()))
 
-	q_in = q_out = first_q_out = None
+	q_in = q_out = first_q_out = q_list = None
 	children = []
-	if args.ordered or headers:
-		q_in = first_q_out = mp.LockFreeQueue()
-	for sliceno in want_slices[1:]:
+	if args.list_matching:
+		q_list = mp.LockFreeQueue()
+		separate_process_slices = want_slices
+	else:
+		separate_process_slices = want_slices[1:]
+		if args.ordered or headers:
+			q_in = first_q_out = mp.LockFreeQueue()
+	for sliceno in separate_process_slices:
 		if q_in:
 			q_out = mp.LockFreeQueue()
 		p = Process(
@@ -599,7 +612,6 @@ def main(argv, cfg):
 		if q_in and q_in is not first_q_out:
 			q_in.close()
 		q_in = q_out
-	want_slices = want_slices[:1]
 	if q_in:
 		q_out = first_q_out
 		q_in.make_reader()
@@ -607,9 +619,27 @@ def main(argv, cfg):
 		if args.ordered:
 			q_in.put_local(None)
 
-	out = outputter(q_in, q_out, first_slice=True)
-	for ds in datasets:
-		grep(ds, want_slices[0], out)
-	out.finish()
+	if args.list_matching:
+		q_list.make_reader()
+		if args.show_sliceno:
+			seen_list = None
+		else:
+			seen_list = set()
+		while True:
+			try:
+				ds, sliceno = q_list.get()
+			except QueueEmpty:
+				break
+			if seen_list is None:
+				print(ds, sliceno)
+			elif ds not in seen_list:
+				seen_list.add(ds)
+				print(ds)
+	else:
+		out = outputter(q_in, q_out, first_slice=True)
+		for ds in datasets:
+			grep(ds, want_slices[0], out)
+		out.finish()
+
 	for c in children:
 		c.join()
