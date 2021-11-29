@@ -26,7 +26,7 @@ import sys
 import re
 from multiprocessing import Process
 from itertools import chain, repeat
-from collections import deque, OrderedDict
+from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action
 import errno
 from os import write
@@ -647,6 +647,7 @@ def main(argv, cfg):
 			q_in.put_local(None)
 
 	if args.list_matching:
+		ordered_res = defaultdict(set)
 		q_list.make_reader()
 		while True:
 			try:
@@ -654,10 +655,22 @@ def main(argv, cfg):
 			except QueueEmpty:
 				break
 			if seen_list is None:
-				print(ds, sliceno)
+				if args.ordered:
+					ordered_res[ds].add(sliceno)
+				else:
+					print(ds, sliceno)
 			elif ds not in seen_list:
 				seen_list.add(ds)
-				print(ds)
+				if not args.ordered:
+					print(ds)
+		if args.ordered:
+			for ds in datasets:
+				if seen_list is None:
+					for sliceno in sorted(ordered_res[ds]):
+						print(ds, sliceno)
+				else:
+					if ds in seen_list:
+						print(ds)
 	else:
 		out = outputter(q_in, q_out, first_slice=True)
 		for ds in datasets:
