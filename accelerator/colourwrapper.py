@@ -47,12 +47,18 @@ class Colour:
 	You can also use colour(v, '#RRGGBB[bg]'), but terminal support is not
 	great.
 
+	Finally you can use names you put in the config file, some of which
+	have default values. This also has a fallback system, so 'foo/bar' will
+	fall back to 'bar' if 'foo/bar' is not defined. The defaults can be
+	found in shell/__init__.py (search for "configuration defaults").
+
 	The functions take force=True to return escape sequences even if colour
 	is disabled and reset=True to reset all attributes before (and after)
 	this sequence. (By default only the changed attributes are reset.)
 	"""
 
 	def __init__(self):
+		self._names = {}
 		self._all = dict(
 			BOLD='1',
 			FAINT='2',
@@ -112,6 +118,16 @@ class Colour:
 	def _single(self, attr, value, reset=False, force=False):
 		return self(value, attr, reset=reset, force=force)
 
+	def _expand_names(self, things):
+		for thing in things:
+			if thing not in self._names and '/' in thing:
+				thing = thing.split('/', 1)[1]
+			if thing in self._names:
+				for a in self._names[thing]:
+					yield a
+			else:
+				yield thing
+
 	# When we drop python 2 we can change this to use normal keywords
 	def __call__(self, value, *attrs, **kw):
 		bad_kw = set(kw) - {'force', 'reset'}
@@ -125,7 +141,7 @@ class Colour:
 			else:
 				pre = []
 			post = set()
-			for a in attrs:
+			for a in self._expand_names(attrs):
 				want = a.upper()
 				default = self._all['DEFAULTBG' if want.endswith('BG') else 'DEFAULT']
 				if want.startswith('#'):

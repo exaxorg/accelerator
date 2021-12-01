@@ -382,6 +382,7 @@ def main():
 	sys.stdout = AutoFlush(sys.stdout)
 	sys.stderr = AutoFlush(sys.stderr)
 
+	# configuration defaults
 	aliases = {
 		'cat': 'grep ""',
 	}
