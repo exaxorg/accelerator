@@ -110,8 +110,10 @@ def synthesis(job, slices):
 				dw.write(*line)
 		return dw.finish()
 	HDR_HI = '\x1b[94;1m'
-	COMMA_HI = '\x1b[36;4m,\x1b[24;39m'
-	TAB_HI = '\x1b[36;4m\t\x1b[24;39m'
+	SEP_HI = '\x1b[36;4m'
+	SEP_HI_POST = '\x1b[24;39m'
+	COMMA_HI = SEP_HI + ',' + SEP_HI_POST
+	TAB_HI = SEP_HI + '\t' + SEP_HI_POST
 	os.unsetenv('NO_COLOR')
 	os.unsetenv('CLICOLOR')
 	os.unsetenv('CLICOLOR_FORCE')
