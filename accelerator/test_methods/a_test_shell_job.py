@@ -41,6 +41,7 @@ def ax_job(*a):
 	return res.split('\n')
 
 def synthesis(job):
+	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
 	os.putenv('CLICOLOR_FORCE', '1')
 	res = ax_job(job)
 	assert res[0] == job.path, res[0]

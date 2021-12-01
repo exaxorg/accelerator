@@ -115,6 +115,7 @@ def synthesis(job, slices):
 	os.unsetenv('NO_COLOR')
 	os.unsetenv('CLICOLOR')
 	os.unsetenv('CLICOLOR_FORCE')
+	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
 
 	# start with testing basic output, chaining, column selection and headers.
 	a = mk_ds('a', ['int32', 'int64'], [100, 200], [101, 201])

@@ -29,6 +29,7 @@ options = dict(
 	want={'spec': 'ds'},
 )
 
+import os
 from subprocess import check_output
 
 def ax_ds(*a):
@@ -40,6 +41,7 @@ def ax_ds(*a):
 	return res.split('\n')
 
 def synthesis(job):
+	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
 	for spec, ds in options.want.items():
 		res = ax_ds(spec)
 		got_ds = res[0]
