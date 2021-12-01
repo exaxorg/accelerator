@@ -94,4 +94,4 @@ def main(argv, cfg):
 		for package, names in sorted(by_package.items()):
 			print('%s:' % (package,))
 			items = [(name, methods[name].description.text) for name in names]
-			printdesc(items, columns)
+			printdesc(items, columns, 'method')

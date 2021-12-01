@@ -53,7 +53,7 @@ def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False):
 		if want != got:
 			raise Exception('%r gave wrong result on line %d:\nWant: %r\nGot:  %r' % (cmd, lineno, want, got,))
 
-def frame(pre, a, post='\x1b[39m'):
+def frame(pre, a, post='\x1b[22;39m'):
 	return [pre + el + post for el in a]
 
 def grep_json(args, want):
@@ -109,7 +109,7 @@ def synthesis(job, slices):
 			if line:
 				dw.write(*line)
 		return dw.finish()
-	HDR_HI = '\x1b[34m'
+	HDR_HI = '\x1b[94;1m'
 	COMMA_HI = '\x1b[36;4m,\x1b[24;39m'
 	TAB_HI = '\x1b[36;4m\t\x1b[24;39m'
 	os.unsetenv('NO_COLOR')

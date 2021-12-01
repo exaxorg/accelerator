@@ -181,7 +181,7 @@ def main(argv, cfg):
 					minval, maxval = chain.min(n), chain.max(n)
 				else:
 					minval, maxval = c.min, c.max
-				hashdot = colour.bold("*") if n == ds.hashlabel else " "
+				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
 				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), quote(c.location), c.compression).rstrip())
 			print("    {0:n} columns".format(len(ds.columns)))
 		print("    {0:n} lines".format(sum(ds.lines)))

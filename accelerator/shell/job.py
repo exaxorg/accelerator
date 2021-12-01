@@ -49,7 +49,7 @@ def show(url, job, show_output):
 	try:
 		post = job.json_load('post.json')
 	except FileNotFoundError:
-		print(colour.red('WARNING: Job did not finish'))
+		print(colour('WARNING: Job did not finish', 'job/warning'))
 		post = None
 	if post and post.subjobs:
 		print()
@@ -62,7 +62,7 @@ def show(url, job, show_output):
 		for fn in sorted(post.files):
 			print('   ', job.filename(fn))
 	if post and not call(url + '/job_is_current/' + url_quote(job)):
-		print(colour.blue('Job is not current'))
+		print(colour('Job is not current', 'job/info'))
 	print()
 	out = job.output()
 	if show_output:

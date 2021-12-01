@@ -132,11 +132,11 @@ def main(argv, cfg):
 			for item, item_len in zip(items, lens):
 				things.append(item)
 				spaces = 8 - (item_len % 8)
-				things.append(colour(' ' * spaces, 'cyan', 'underline'))
+				things.append(colour(' ' * spaces, 'grep/separator'))
 			return ''.join(things[:-1])
 		separator = '\t'
 	else:
-		separator_coloured = colour(separator, 'cyan', 'underline')
+		separator_coloured = colour(separator, 'grep/separator')
 		def separate(items, lens):
 			return separator_coloured.join(items)
 
@@ -185,7 +185,7 @@ def main(argv, cfg):
 			parts = []
 			for m in pat_s.finditer(item):
 				a, b = m.span()
-				parts.extend((item[pos:a], colour.red(item[a:b])))
+				parts.extend((item[pos:a], colour(item[a:b], 'grep/highlight')))
 				pos = b
 			parts.append(item[pos:])
 			return ''.join(parts)
@@ -289,7 +289,8 @@ def main(argv, cfg):
 				show_items = headers_prefix + headers
 				if escape_item:
 					show_items = list(map(escape_item, show_items))
-				print(separate(map(colour.blue, show_items), map(len, show_items)))
+				coloured = (colour(item, 'grep/header') for item in show_items)
+				print(separate(coloured, map(len, show_items)))
 		show_headers(current_headers)
 
 	queues = []

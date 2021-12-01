@@ -59,7 +59,7 @@ def main(argv, cfg):
 				try:
 					module = import_module(modname)
 				except Exception as e:
-					print('%s%s: %s%s' % (colour.RED, item, e, colour.RESET), file=sys.stderr)
+					print(colour('%s: %s' % (item, e,), 'script/warning'), file=sys.stderr)
 					continue
 				scripts.append((name, getattr(module, 'description', '')))
 
@@ -69,4 +69,4 @@ def main(argv, cfg):
 				print(path + '/')
 			else:
 				print(package)
-			printdesc(sorted(scripts), columns, full=not args.short)
+			printdesc(sorted(scripts), columns, 'script', full=not args.short)

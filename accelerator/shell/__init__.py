@@ -216,13 +216,13 @@ cmd_board_server.help = '''runs a webserver for displaying results'''
 def cmd_intro(argv):
 	from accelerator import __version__ as ax_version
 	def cmd(txt, *a):
-		print('  ' + colour(txt, 'bold', *a))
-	def msg(txt='', *a):
+		print('  ' + colour(txt, 'intro/highlight', *a))
+	def msg(txt='', c='intro/info'):
 		if txt:
-			print(colour(txt, 'brightblue', *a))
+			print(colour(txt, c))
 		else:
 			print()
-	msg('Welcome to exax ' + ax_version, 'bold')
+	msg('Welcome to exax ' + ax_version, 'intro/header')
 	msg()
 	msg('Run')
 	cmd('ax init --examples /tmp/axtest')
@@ -245,7 +245,7 @@ def cmd_intro(argv):
 	cmd('ax method')
 	msg()
 	msg('For a longer intro, see')
-	cmd('https://exax.org/documentation/2019/10/30/initialise.html', 'brightblue')
+	cmd('https://exax.org/documentation/2019/10/30/initialise.html', 'intro/info')
 cmd_intro.help = '''show introduction text'''
 
 def cmd_version(argv):
@@ -288,7 +288,7 @@ def split_args(argv):
 		prev = arg
 	return argv, []
 
-def parse_user_config():
+def parse_user_config(alias_d, colour_d):
 	from accelerator.compat import open
 	from os import environ
 	cfgdir = environ.get('XDG_CONFIG_HOME')
@@ -308,10 +308,11 @@ def parse_user_config():
 		cfg.optionxform = str # case sensitive (don't downcase aliases)
 		cfg.read_file(fh)
 		if 'alias' in cfg:
-			return cfg['alias']
-	return None
+			alias_d.update(cfg['alias'])
+		if 'colour' in cfg:
+			colour_d.update({k: v.split() for k, v in cfg['colour'].items()})
 
-def printdesc(items, columns, full=False):
+def printdesc(items, columns, colour_prefix, full=False):
 	ddot = ' ...'
 	def chopline(description, max_len):
 		if len(description) > max_len:
@@ -349,7 +350,7 @@ def printdesc(items, columns, full=False):
 		]
 	for name, description in items:
 		max_len = columns - len(ddot) - len(name)
-		preamble = colour.bold('  ' + name)
+		preamble = colour('  ' + name, colour_prefix + '/highlight')
 		if description and max_len > 10:
 			lines = description.split('\n')
 			if full:
@@ -386,7 +387,17 @@ def main():
 	aliases = {
 		'cat': 'grep ""',
 	}
-	aliases.update(parse_user_config() or ())
+	colour_d = {
+		'warning': ('RED',),
+		'highlight': ('BOLD',),
+		'grep/highlight': ('RED',),
+		'info': ('BRIGHTBLUE',),
+		'separator': ('CYAN', 'UNDERLINE',),
+		'header': ('BRIGHTBLUE', 'BOLD',),
+	}
+	parse_user_config(aliases, colour_d)
+	colour._names.update(colour_d)
+
 	while argv and argv[0] in aliases:
 		try:
 			expanded = shlex.split(aliases[argv[0]])
@@ -404,8 +415,8 @@ def main():
 	epilog.append('aliases:')
 	epilog.extend('  %s = %s' % item for item in sorted(aliases.items()))
 	epilog.append('')
-	epilog.append('use "' + colour.bold('%(prog)s <command> --help') + '" for <command> usage')
-	epilog.append('try "' + colour.bold('%(prog)s intro') + '" for an introduction')
+	epilog.append('use "' + colour('%(prog)s <command> --help', 'help/highlight') + '" for <command> usage')
+	epilog.append('try "' + colour('%(prog)s intro', 'help/highlight') + '" for an introduction')
 	parser = ArgumentParser(
 		usage='%(prog)s [--config CONFIG_FILE] command [args]',
 		epilog='\n'.join(epilog),
