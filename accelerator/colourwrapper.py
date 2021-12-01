@@ -83,8 +83,8 @@ class Colour:
 			self._off = dict.fromkeys(self._on, b'')
 		else:
 			self._off = dict.fromkeys(self._on, '')
-		self.__all__ = [k for k in dir(self) if not k.startswith('_')]
 		self.enable()
+		self.__all__ = [k for k in dir(self) if not k.startswith('_')]
 
 	def configure_from_environ(self, environ=None, stdout=None):
 		# trying to support both https://no-color.org/ and https://bixense.com/clicolors/
