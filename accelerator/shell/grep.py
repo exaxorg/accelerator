@@ -69,6 +69,7 @@ def main(argv, cfg):
 	supported_formats = ('csv', 'raw', 'json',)
 	parser.add_argument('-f', '--format', default='csv', choices=supported_formats, help="output format, csv (default) / " + ' / '.join(supported_formats[1:]), metavar='FORMAT', )
 	parser.add_argument('-t', '--separator', help="field separator, default tab / tab-like spaces", )
+	parser.add_argument('-T', '--tab-length', type=int, metavar='LENGTH', help="field alignment, always uses spaces as separator", )
 	parser.add_argument('-B', '--before-context', type=int, default=0, metavar='NUM', help="print NUM lines of leading context", )
 	parser.add_argument('-A', '--after-context',  type=int, default=0, metavar='NUM', help="print NUM lines of trailing context", )
 	parser.add_argument('-C', '--context',        type=int, default=0, metavar='NUM', action=ContextAction,
@@ -181,17 +182,22 @@ def main(argv, cfg):
 		highlight_matches = False
 
 	separator = args.separator
-	if separator is None and not sys.stdout.isatty():
+	if args.tab_length:
+		separator = None
+	elif separator is None and not sys.stdout.isatty():
 		separator = '\t'
 
 	if separator is None:
 		# special case where we try to be like a tab, but with spaces.
 		# this is useful because terminals typically don't style tabs.
+		# and also so you can change the length of tabs.
+		if (args.tab_length or 0) < 1:
+			args.tab_length = 8
 		def separate(items, lens):
 			things = []
 			for item, item_len in zip(items, lens):
 				things.append(item)
-				spaces = 8 - (item_len % 8)
+				spaces = args.tab_length - (item_len % args.tab_length)
 				things.append(colour(' ' * spaces, 'grep/separator'))
 			return ''.join(things[:-1])
 		separator = '\t'
