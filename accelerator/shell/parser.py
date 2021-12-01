@@ -163,7 +163,7 @@ def _name2job(cfg, n):
 		except OSError as e:
 			raise JobNotFound('Failed to read %s: %s' % (path, e,))
 		return Job(n)
-	if '/' not in n:
+	if n not in ('.', '..') and '/' not in n:
 		# Must be a method then
 		return method2job(cfg, n)
 	if exists(join(n, 'setup.json')):
