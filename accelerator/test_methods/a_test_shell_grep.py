@@ -29,15 +29,16 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from subprocess import check_output
+from subprocess import check_output, Popen
 import datetime
 import os
+import errno
 import json
 
 from accelerator.compat import PY2, PY3, izip_longest
 from accelerator.dsutil import _convfuncs
 
-def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False):
+def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False, check_output=check_output):
 	if not unordered:
 		args = ['--ordered'] + args
 	cmd = options.command_prefix + ['grep'] + args
@@ -52,6 +53,27 @@ def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False):
 	for lineno, (want, got) in enumerate(zip(want, res), 1):
 		if want != got:
 			raise Exception('%r gave wrong result on line %d:\nWant: %r\nGot:  %r' % (cmd, lineno, want, got,))
+
+# like subprocess.check_output except stdout is a pty
+def check_output_pty(cmd):
+	a, b = os.openpty()
+	p = Popen(cmd, stdout=a)
+	os.close(a)
+	res = []
+	while not res or data:
+		try:
+			data = os.read(b, 1024)
+		except OSError as e:
+			# On Linux a pty will return
+			# OSError: [Errno 5] Input/output error
+			# instead of b'' for EOF. Don't know why.
+			# Let's try to be a little restrictive in what we catch.
+			if e.errno != errno.EIO:
+				raise
+			data = b''
+		res.append(data)
+	os.close(b)
+	return b''.join(res)
 
 def frame(pre, a, post='\x1b[22;39m'):
 	return [pre + el + post for el in a]
@@ -175,6 +197,31 @@ def synthesis(job, slices):
 	os.putenv('NO_COLOR', '')
 	grep_text(['--colour', 'always', '0', b], [['1\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m'], ['1\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m1']], sep=TAB_HI)
 	os.unsetenv('NO_COLOR')
+
+	# test the tab-replacing separator handling
+	grep_text(['--color=always', '--tab-length=8', '-H', '-S', '^1', a, c], [
+			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int32']) + frame(SEP_HI, ['   '], SEP_HI_POST) + frame(HDR_HI, ['int64']),
+			['0' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m00' + SEP_HI + '     ' + SEP_HI_POST + '200'],
+			['1' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m01' + SEP_HI + '     ' + SEP_HI_POST + '201'],
+			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['float64']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int32']),
+			['0' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42' + SEP_HI + '    ' + SEP_HI_POST + '3'],
+		], sep='',
+	)
+	# different length
+	grep_text(['--color=always', '--tab-length=3', '-H', '-S', '^1', a, c], [
+			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['int32']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int64']),
+			['0' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m00' + SEP_HI + '   ' + SEP_HI_POST + '200'],
+			['1' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m01' + SEP_HI + '   ' + SEP_HI_POST + '201'],
+			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['float64']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['int32']),
+			['0' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42' + SEP_HI + '  ' + SEP_HI_POST + '3'],
+		], sep='',
+	)
+	# with a PTY, to see that this defaults to colour and expanded tabs
+	grep_text(['-S', '^1', c, 'int32', 'float64'], [
+			['0' + SEP_HI + '       ' + SEP_HI_POST + '3' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42'],
+		], sep='', check_output=check_output_pty,
+	)
+
 	if PY3: # no pickle type on PY2
 		pickle = mk_ds('pickle', ['pickle'], [TricksyObject()], [''], [{'foo'}])
 		grep_text(['', pickle], [['foo'], [''], ["{'foo'}"]])
