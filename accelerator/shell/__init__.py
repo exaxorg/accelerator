@@ -398,13 +398,18 @@ def main():
 	parse_user_config(aliases, colour_d)
 	colour._names.update(colour_d)
 
+	used_aliases = []
 	while argv and argv[0] in aliases:
+		alias = argv[0]
 		try:
-			expanded = shlex.split(aliases[argv[0]])
+			expanded = shlex.split(aliases[alias])
 		except ValueError as e:
 			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
 		more_main_argv, argv = split_args(expanded + argv[1:])
 		main_argv.extend(more_main_argv)
+		used_aliases.append(alias)
+		if alias in used_aliases[:-1]:
+			raise ValueError('Alias loop: %r' % (used_aliases,))
 
 	epilog = ['commands:', '']
 	cmdlen = max(len(cmd) for cmd in COMMANDS)
