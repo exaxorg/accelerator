@@ -401,6 +401,8 @@ def main():
 	used_aliases = []
 	while argv and argv[0] in aliases:
 		alias = argv[0]
+		if alias == 'noalias': # save the user from itself
+			break
 		try:
 			expanded = shlex.split(aliases[alias])
 		except ValueError as e:
@@ -412,6 +414,9 @@ def main():
 		used_aliases.append(alias)
 		if alias in used_aliases[:-1]:
 			raise ValueError('Alias loop: %r' % (used_aliases,))
+
+	while argv and argv[0] == 'noalias':
+		argv.pop(0)
 
 	epilog = ['commands:', '']
 	cmdlen = max(len(cmd) for cmd in COMMANDS)
