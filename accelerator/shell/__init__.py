@@ -407,6 +407,8 @@ def main():
 			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
 		more_main_argv, argv = split_args(expanded + argv[1:])
 		main_argv.extend(more_main_argv)
+		if expanded and alias == expanded[0]:
+			break
 		used_aliases.append(alias)
 		if alias in used_aliases[:-1]:
 			raise ValueError('Alias loop: %r' % (used_aliases,))
