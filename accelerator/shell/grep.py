@@ -32,6 +32,7 @@ import errno
 from os import write
 import json
 import datetime
+import operator
 
 from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, izip, PY2
@@ -56,6 +57,7 @@ def main(argv, cfg):
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
+	parser.add_argument('-v', '--invert-match', action='store_true', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', help="only print matching part (or columns with -l)", )
 	parser.add_argument('-l', '--list-matching',action='store_true', help="only print matching datasets (or slices with -S)\nwhen used with -o, only print matching columns", )
 	parser.add_argument('-H', '--headers',      action='store_true', help="print column names before output (and on each change)", )
@@ -563,9 +565,13 @@ def main(argv, cfg):
 				prefix.append(str(sliceno))
 			prefix = tuple(prefix)
 			show = make_show(prefix, used_columns)
+		if args.invert_match:
+			maybe_invert = operator.not_
+		else:
+			maybe_invert = bool
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
-			if any(chk(unicode(item)) for item in grep_items or items):
+			if maybe_invert(any(chk(unicode(item)) for item in grep_items or items)):
 				if q_list:
 					q_list.put((ds, sliceno))
 					return
