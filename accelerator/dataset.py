@@ -1521,10 +1521,9 @@ class DatasetWriter(object):
 		_datasets_written.append(self.name)
 		return res
 
-class DatasetChain(_ListTypePreserver):
+class DatasetList(_ListTypePreserver):
 	"""
-	These are lists of datasets returned from Dataset.chain.
-	They exist to provide some convenience methods on chains.
+	These are lists of datasets with some convenience methods.
 	"""
 
 	def _minmax(self, column, minmax):
@@ -1585,6 +1584,9 @@ class DatasetChain(_ListTypePreserver):
 	def iterate(self, sliceno, columns=None, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate the datasets in this chain. See Dataset.iterate_list for usage"""
 		return Dataset.iterate_list(sliceno, columns, self, range=range, sloppy_range=sloppy_range, hashlabel=hashlabel, pre_callback=pre_callback, post_callback=post_callback, filters=filters, translators=translators, status_reporting=status_reporting, rehash=rehash, slice=slice, copy_mode=copy_mode)
+
+class DatasetChain(DatasetList):
+	pass
 
 
 def range_check_function(bottom, top):

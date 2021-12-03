@@ -40,8 +40,8 @@ if not before_install:
 			return None
 	__version__ = get_version()
 	del get_version
-	from .dataset import SkipSlice, SkipDataset
-	__all__.extend((SkipSlice, SkipDataset,))
+	from .dataset import SkipSlice, SkipDataset, DatasetList
+	__all__.extend((SkipSlice, SkipDataset, DatasetList,))
 	from .error import AcceleratorError, UserError, ServerError
 	from .error import UrdError, UrdPermissionError, UrdConflictError
 	from .error import NoSuchWhateverError, NoSuchJobError, NoSuchWorkdirError
