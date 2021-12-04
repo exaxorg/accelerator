@@ -27,7 +27,7 @@ import re
 from multiprocessing import Process
 from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
-from argparse import RawTextHelpFormatter, Action
+from argparse import RawTextHelpFormatter, Action, SUPPRESS
 import errno
 from os import write
 import json
@@ -39,6 +39,7 @@ from accelerator.compat import unicode, izip, PY2
 from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
 from .parser import name2ds
+from accelerator.error import NoSuchWhateverError
 from accelerator import g
 from accelerator import mp
 
@@ -50,7 +51,11 @@ def main(argv, cfg):
 			namespace.before_context = namespace.after_context = values
 
 	parser = ArgumentParser(
-		usage="%(prog)s [options] pattern ds [ds [...]] [column [column [...]]",
+		usage="%(prog)s [options] [-e] pattern [...] [-d] ds [...] [[-n] column [...]]",
+		description="""positional arguments:
+  pattern               (-e, --regexp)
+  dataset               (-d, --dataset) can be specified as for "ax ds"
+  columns               (-n, --column)""",
 		prog=argv.pop(0),
 		formatter_class=RawTextHelpFormatter,
 	)
@@ -80,31 +85,45 @@ def main(argv, cfg):
 		     "dataset, and may intermix with output from other\n" +
 		     "slices. Use -O to avoid that, or -S -L to see it.",
 	)
-	parser.add_argument('pattern')
-	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
-	parser.add_argument('columns', nargs='*', default=[])
+	parser.add_argument('-e', '--regexp',  default=[], action='append', dest='patterns', help=SUPPRESS)
+	parser.add_argument('-d', '--dataset', default=[], action='append', dest='datasets', help=SUPPRESS)
+	parser.add_argument('-n', '--column',  default=[], action='append', dest='columns', help=SUPPRESS)
+	parser.add_argument('words', nargs='*', help=SUPPRESS)
 	args = parser.parse_intermixed_args(argv)
 
 	if args.before_context < 0 or args.after_context < 0:
 		print('Context must be >= 0', file=sys.stderr)
 		return 1
 
-	pat_s = re.compile(args.pattern, re.IGNORECASE if args.ignore_case else 0)
-	datasets = [name2ds(cfg, args.dataset)]
-	columns = []
+	columns = args.columns
 
-	for ds_or_col in args.columns:
-		if columns:
-			columns.append(ds_or_col)
+	try:
+		args.datasets = [name2ds(cfg, ds) for ds in args.datasets]
+	except NoSuchWhateverError as e:
+		print(e, file=sys.stderr)
+		return 1
+
+	for word in args.words:
+		if not args.patterns:
+			args.patterns.append(word)
+		elif columns and args.datasets:
+			columns.append(word)
 		else:
 			try:
-				datasets.append(name2ds(cfg, ds_or_col))
-			except Exception:
-				columns.append(ds_or_col)
+				args.datasets.append(name2ds(cfg, word))
+			except NoSuchWhateverError as e:
+				if not args.datasets:
+					print(e, file=sys.stderr)
+					return 1
+				columns.append(word)
 
-	if not datasets:
+	if not args.patterns or not args.datasets:
 		parser.print_help(file=sys.stderr)
 		return 1
+
+	datasets = args.datasets
+	pat_s = re.compile(args.patterns[0], re.IGNORECASE if args.ignore_case else 0)
+	assert len(args.patterns) == 1, "Several patterns doesn't work quite yet"
 
 	grep_columns = set(args.grep or ())
 	if grep_columns == set(columns):
@@ -177,7 +196,7 @@ def main(argv, cfg):
 		highlight_matches = colour.enabled
 
 	# Don't highlight everything when just trying to cat
-	if args.pattern == '':
+	if args.patterns == ['']:
 		highlight_matches = False
 	# Don't highlight anything with -l
 	if args.list_matching:

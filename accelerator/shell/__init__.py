@@ -405,7 +405,7 @@ def main():
 
 	# configuration defaults
 	aliases = {
-		'cat': 'grep ""',
+		'cat': 'grep -e ""',
 	}
 	colour_d = {
 		'warning': ('RED',),
