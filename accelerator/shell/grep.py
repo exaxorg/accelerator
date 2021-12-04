@@ -122,8 +122,13 @@ def main(argv, cfg):
 		return 1
 
 	datasets = args.datasets
-	pat_s = re.compile(args.patterns[0], re.IGNORECASE if args.ignore_case else 0)
-	assert len(args.patterns) == 1, "Several patterns doesn't work quite yet"
+	patterns = []
+	for pattern in args.patterns:
+		try:
+			patterns.append(re.compile(pattern, re.IGNORECASE if args.ignore_case else 0))
+		except re.error as e:
+			print("Bad pattern %r:\n%s" % (pattern, e,), file=sys.stderr)
+			return 1
 
 	grep_columns = set(args.grep or ())
 	if grep_columns == set(columns):
@@ -494,7 +499,9 @@ def main(argv, cfg):
 	# Make printer for the selected output options
 	def make_show(prefix, used_columns):
 		def matching_ranges(item):
-			ranges = [m.span() for m in pat_s.finditer(item)]
+			ranges = []
+			for p in patterns:
+				ranges.extend(m.span() for m in p.finditer(item))
 			if not ranges:
 				return
 			# merge overlapping/adjacent ranges
@@ -559,7 +566,11 @@ def main(argv, cfg):
 
 	def grep(ds, sliceno, out):
 		out.start(ds)
-		chk = pat_s.search
+		if len(patterns) == 1:
+			chk = patterns[0].search
+		else:
+			def chk(s):
+				return any(p.search(s) for p in patterns)
 		def mk_iter(col):
 			if ds.columns[col].type == 'ascii':
 				it = ds._column_iterator(sliceno, col, _type='unicode')
