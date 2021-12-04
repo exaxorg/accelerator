@@ -195,7 +195,7 @@ def synthesis(job, slices):
 	grep_text(['--color=never', '0', b], [[1000], [1001]])
 	os.unsetenv('CLICOLOR_FORCE')
 	os.putenv('NO_COLOR', '')
-	grep_text(['--colour', 'always', '0', b], [['1\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m'], ['1\x1b[31m0\x1b[39m\x1b[31m0\x1b[39m1']], sep=TAB_HI)
+	grep_text(['--colour', 'always', '0', b], [['1\x1b[31m000\x1b[39m'], ['1\x1b[31m00\x1b[39m1']], sep=TAB_HI)
 	os.unsetenv('NO_COLOR')
 
 	# test the tab-replacing separator handling

@@ -474,8 +474,23 @@ def main(argv, cfg):
 
 	# Make printer for the selected output options
 	def make_show(prefix, used_columns):
+		def matching_ranges(item):
+			ranges = [m.span() for m in pat_s.finditer(item)]
+			if not ranges:
+				return
+			# merge overlapping/adjacent ranges
+			ranges.sort()
+			ranges = iter(ranges)
+			start, stop = next(ranges)
+			for a, b in ranges:
+				if a <= stop:
+					stop = max(stop, b)
+				else:
+					yield start, stop
+					start, stop = a, b
+			yield start, stop
 		def filter_item(item):
-			return ''.join(pat_s.findall(item))
+			return ''.join(item[a:b] for a, b in matching_ranges(item))
 		if args.format == 'json':
 			dumps = json.JSONEncoder(ensure_ascii=False, default=json_default).encode
 			def show(lineno, items):
@@ -495,8 +510,7 @@ def main(argv, cfg):
 			def colour_item(item):
 				pos = 0
 				parts = []
-				for m in pat_s.finditer(item):
-					a, b = m.span()
+				for a, b in matching_ranges(item):
 					parts.extend((item[pos:a], colour(item[a:b], 'grep/highlight')))
 					pos = b
 				parts.append(item[pos:])
