@@ -1585,6 +1585,19 @@ class DatasetList(_ListTypePreserver):
 		"""Iterate the datasets in this chain. See Dataset.iterate_list for usage"""
 		return Dataset.iterate_list(sliceno, columns, self, range=range, sloppy_range=sloppy_range, hashlabel=hashlabel, pre_callback=pre_callback, post_callback=post_callback, filters=filters, translators=translators, status_reporting=status_reporting, rehash=rehash, slice=slice, copy_mode=copy_mode)
 
+	def range(self, colname, start=None, stop=None):
+		"""Filter out only datasets where colname has values in range(start, stop)"""
+		res = self.__class__()
+		for ds in self:
+			if colname not in ds.columns:
+				raise DatasetUsageError('Dataset %s does not have column %r' % (ds.quoted, colname,))
+			col = ds.columns[colname]
+			if col.min is not None:
+				if (stop is None or col.min < stop) and (start is None or col.max >= start):
+					res.append(ds)
+		return res
+
+
 class DatasetChain(DatasetList):
 	pass
 
