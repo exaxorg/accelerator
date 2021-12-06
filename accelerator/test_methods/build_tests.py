@@ -165,11 +165,26 @@ def main(urd):
 	# make sure .datasets works with these names (only possible after job finishes)
 	assert [ds.name for ds in dsnamejob.datasets] == dsnamejob.load()
 	urd.build("test_dataset_column_names")
-	urd.build("test_dataset_merge")
+	mergejob = urd.build("test_dataset_merge")
 	urd.build("test_dataset_filter_columns")
 	urd.build("test_dataset_empty_colname")
 	urd.build("test_dataset_nan")
 	urd.build('test_dataset_parsing_writer')
+
+	print()
+	print("Testing ['lists'] of datasets and jobs")
+	urd.build(
+		"test_arg_lists",
+		dslist=[
+			mergejob.dataset('a0'),
+			mergejob.dataset('a1'),
+			mergejob.dataset('b0'),
+			mergejob.dataset('b1'),
+			mergejob.dataset('c0'),
+			mergejob.dataset('c1'),
+		],
+		joblist=[source, reimp_csv_uncompressed],
+	)
 
 	print()
 	print("Testing csvimport with more difficult files")
