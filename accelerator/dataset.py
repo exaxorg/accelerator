@@ -1579,7 +1579,7 @@ class DatasetList(_ListTypePreserver):
 
 	def none_support(self, column):
 		"""If any dataset in the chain has None support for this column"""
-		return True in (ds.columns[column].none_support for ds in self if column in ds.columns)
+		return any(ds.columns[column].none_support for ds in self if column in ds.columns)
 
 	def iterate(self, sliceno, columns=None, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate the datasets in this chain. See Dataset.iterate_list for usage"""
