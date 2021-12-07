@@ -768,7 +768,8 @@ class Dataset(unicode):
 			return
 		if range:
 			range_k, (range_bottom, range_top,) = next(iteritems(range))
-			range_check = range_check_function(range_bottom, range_top)
+			range_none_support = any(d[0].columns[range_k].none_support for d in to_iter)
+			range_check = range_check_function(range_bottom, range_top, none_support=range_none_support)
 			if range_k in columns and range_k not in translators and not translation_func:
 				has_range_column = True
 				range_i = columns.index(range_k)
@@ -1602,21 +1603,33 @@ class DatasetChain(DatasetList):
 	pass
 
 
-def range_check_function(bottom, top):
-	"""Returns a function that checks if bottom <= arg < top, allowing bottom and/or top to be None"""
+def range_check_function(bottom, top, none_support=False):
+	"""Returns a function that checks if bottom <= arg < top, allowing bottom
+	and/or top to be None. Skips None values if none_support is true."""
 	import operator
 	if top is None:
 		if bottom is None:
 			# Can't currently happen (checked before calling this), but let's do something reasonable
-			return lambda _: True
+			range_f = lambda _: True
 		else:
-			return partial(operator.le, bottom)
+			if none_support:
+				def range_f(v):
+					return v is not None and v >= bottom
+			else:
+				range_f = partial(operator.le, bottom)
 	elif bottom is None:
-		return partial(operator.gt, top)
+		if none_support:
+			def range_f(v):
+				return v is not None and v < top
+		else:
+			range_f = partial(operator.gt, top)
+	elif none_support:
+		def range_f(v):
+			return v is not None and v >= bottom and v < top
 	else:
 		def range_f(v):
 			return v >= bottom and v < top
-		return range_f
+	return range_f
 
 class SkipDataset(Exception):
 	"""Raise this in pre_callback to skip iterating the coming dataset
