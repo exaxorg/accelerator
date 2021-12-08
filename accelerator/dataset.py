@@ -32,6 +32,7 @@ from functools import partial
 from contextlib import contextmanager
 from operator import itemgetter
 from math import isnan
+import datetime
 
 from accelerator.compat import unicode, uni, ifilter, imap, iteritems
 from accelerator.compat import builtins, open, getarglist, izip, izip_longest
@@ -1603,33 +1604,34 @@ class DatasetChain(DatasetList):
 	pass
 
 
+def _fmt_range_value(name, value, d):
+	if isinstance(value, (datetime.datetime, datetime.date, datetime.time,)):
+		d[name] = value
+		return name
+	else:
+		return repr(value)
+
 def range_check_function(bottom, top, none_support=False):
 	"""Returns a function that checks if bottom <= arg < top, allowing bottom
 	and/or top to be None. Skips None values if none_support is true."""
-	import operator
-	if top is None:
-		if bottom is None:
-			# Can't currently happen (checked before calling this), but let's do something reasonable
-			range_f = lambda _: True
-		else:
-			if none_support:
-				def range_f(v):
-					return v is not None and v >= bottom
-			else:
-				range_f = partial(operator.le, bottom)
-	elif bottom is None:
-		if none_support:
-			def range_f(v):
-				return v is not None and v < top
-		else:
-			range_f = partial(operator.gt, top)
-	elif none_support:
-		def range_f(v):
-			return v is not None and v >= bottom and v < top
-	else:
-		def range_f(v):
-			return v >= bottom and v < top
-	return range_f
+	if_l = []
+	d = {}
+	def add_if(op, v):
+		if if_l:
+			if_l.append(' and ')
+		if_l.extend(('v', op, v))
+	if none_support:
+		add_if(' is not ', 'None')
+	if bottom is not None:
+		add_if(' >= ', _fmt_range_value('bottom', bottom, d))
+	if top is not None:
+		add_if(' < ', _fmt_range_value('top', top, d))
+	if not if_l:
+		return lambda _: True
+	f_str = 'def generated_range_check(v):\n    return ' + ''.join(if_l)
+	eval(compile(f_str, '<generated range check>', 'exec'), d)
+	return d['generated_range_check']
+
 
 class SkipDataset(Exception):
 	"""Raise this in pre_callback to skip iterating the coming dataset
