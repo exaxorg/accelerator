@@ -775,7 +775,7 @@ class Dataset(unicode):
 				has_range_column = True
 				range_i = columns.index(range_k)
 				if want_tuple:
-					range_f = lambda t: range_check(t[range_i])
+					range_f = range_check_function(range_bottom, range_top, none_support=range_none_support, index=range_i)
 				else:
 					range_f = range_check
 			else:
@@ -1611,15 +1611,16 @@ def _fmt_range_value(name, value, d):
 	else:
 		return repr(value)
 
-def range_check_function(bottom, top, none_support=False):
+def range_check_function(bottom, top, none_support=False, index=None):
 	"""Returns a function that checks if bottom <= arg < top, allowing bottom
 	and/or top to be None. Skips None values if none_support is true."""
 	if_l = []
 	d = {}
+	v_str = 'v' if index is None else 'v[%d]' % (index,)
 	def add_if(op, v):
 		if if_l:
 			if_l.append(' and ')
-		if_l.extend(('v', op, v))
+		if_l.extend((v_str, op, v))
 	if none_support:
 		add_if(' is not ', 'None')
 	if bottom is not None:
