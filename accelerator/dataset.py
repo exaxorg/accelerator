@@ -1571,9 +1571,12 @@ class DatasetList(_ListTypePreserver):
 		from itertools import chain
 		return Counter(chain.from_iterable(ds.columns.keys() for ds in self))
 
-	def column_count(self, column):
-		"""How many datasets in this chain contain column"""
-		return sum(column in ds.columns for ds in self)
+	def column_count(self, column, types=None, none_support=None):
+		"""How many datasets in this chain contain column
+		Optionally only considers column to exists if it is of a desired type,
+		and/or has/lacks none support.
+		"""
+		return len(self.with_column(column, types, none_support))
 
 	def with_column(self, column, types=None, none_support=None):
 		"""Chain without any datasets that don't contain column.
