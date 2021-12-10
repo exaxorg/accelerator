@@ -1575,9 +1575,19 @@ class DatasetList(_ListTypePreserver):
 		"""How many datasets in this chain contain column"""
 		return sum(column in ds.columns for ds in self)
 
-	def with_column(self, column):
-		"""Chain without any datasets that don't contain column"""
-		return self.__class__(ds for ds in self if column in ds.columns)
+	def with_column(self, column, types=None, none_support=None):
+		"""Chain without any datasets that don't contain column.
+		Optionally only considers column to exists if it is of a desired type,
+		and/or has/lacks none support.
+		"""
+		if isinstance(types, str_types):
+			types = (types,)
+		res = self.__class__()
+		for ds in self:
+			col = ds.columns.get(column)
+			if col and (not types or col.type in types) and (none_support is None or col.none_support == none_support):
+				res.append(ds)
+		return res
 
 	def none_support(self, column):
 		"""If any dataset in the chain has None support for this column"""
