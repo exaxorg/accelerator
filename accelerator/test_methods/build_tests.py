@@ -222,6 +222,7 @@ def main(urd):
 	selfchain = urd.build("test_selfchain")
 	urd.build("test_rechain", jobs=dict(selfchain=selfchain))
 	urd.build("test_dataset_callbacks")
+	urd.build("test_dataset_range")
 
 	print()
 	print("Testing dataset sorting and rehashing (with subjobs again)")
