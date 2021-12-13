@@ -121,13 +121,14 @@ class Colour:
 
 	def _expand_names(self, things):
 		for thing in things:
+			orig_thing = thing
 			if thing not in self._names and '/' in thing:
 				thing = thing.split('/', 1)[1]
 			if thing in self._names:
 				for a in self._names[thing]:
-					yield a
+					yield orig_thing, a
 			else:
-				yield thing
+				yield orig_thing, thing
 
 	# When we drop python 2 we can change this to use normal keywords
 	def __call__(self, value, *attrs, **kw):
@@ -142,7 +143,8 @@ class Colour:
 			else:
 				pre = []
 			post = set()
-			for a in self._expand_names(attrs):
+			a_it = self._expand_names(attrs)
+			for a_src, a in a_it:
 				want = a.upper()
 				default = self._all['DEFAULTBG' if want.endswith('BG') else 'DEFAULT']
 				if want.startswith('#'):
@@ -152,16 +154,16 @@ class Colour:
 					else:
 						prefix = '38'
 					if len(want) != 7:
-						raise ColourError('Bad colour spec %r' % (a,))
+						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
 					try:
 						r, g, b = (str(int(w, 16)) for w in (want[1:3], want[3:5], want[5:7]))
 					except ValueError:
-						raise ColourError('Bad colour spec %r' % (a,))
+						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
 					pre.extend((prefix, '2', r, g, b))
 					post.add(default)
 				else:
 					if want not in self._all:
-						raise ColourError('Unknown colour/attr %r' % (a,))
+						raise ColourError('Unknown colour/attr %r (from %r)' % (a, a_src,))
 					pre.append(self._all[want])
 					post.add(self._all.get('NOT' + want, default))
 			pre = '\x1b[' + ';'.join(pre) + 'm'
