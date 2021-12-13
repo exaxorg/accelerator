@@ -24,6 +24,7 @@ import sys, os
 from functools import partial
 
 from accelerator.compat import PY2
+from accelerator.error import ColourError
 
 class Colour:
 	"""Constants and functions for colouring output.
@@ -151,16 +152,16 @@ class Colour:
 					else:
 						prefix = '38'
 					if len(want) != 7:
-						raise Exception('Bad colour spec %r' % (a,))
+						raise ColourError('Bad colour spec %r' % (a,))
 					try:
 						r, g, b = (str(int(w, 16)) for w in (want[1:3], want[3:5], want[5:7]))
 					except ValueError:
-						raise Exception('Bad colour spec %r' % (a,))
+						raise ColourError('Bad colour spec %r' % (a,))
 					pre.extend((prefix, '2', r, g, b))
 					post.add(default)
 				else:
 					if want not in self._all:
-						raise Exception('Unknown colour/attr %r' % (a,))
+						raise ColourError('Unknown colour/attr %r' % (a,))
 					pre.append(self._all[want])
 					post.add(self._all.get('NOT' + want, default))
 			pre = '\x1b[' + ';'.join(pre) + 'm'

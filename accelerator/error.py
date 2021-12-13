@@ -79,3 +79,7 @@ class JobError(AcceleratorError):
 			res.append("  %s:" % (component,))
 			res.append("    %s" % (msg.replace("\n", "\n    "),))
 		return "\n".join(res)
+
+class ColourError(AcceleratorError):
+	"""Raised when colourwrapper can not parse an attribute spec"""
+	pass
