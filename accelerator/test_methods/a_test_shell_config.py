@@ -59,3 +59,11 @@ def synthesis(job):
 	with open('accelerator/config', 'a') as fh:
 		fh.write('\tjob/warning = BOLD #030405')
 	assert '\x1b[1;38;2;3;4;5mWARNING: Job did not finish\x1b[22;39m' in ax_cmd('job', job)
+	# test literals in the config
+	with open('accelerator/config', 'w') as fh:
+		fh.write(config.replace('CYAN', '<FOO >BAR'))
+	assert 'FOOWARNING: Job did not finishBAR' in ax_cmd('job', job)
+	# combining literals with named attributes, and escapes
+	with open('accelerator/config', 'a') as fh:
+		fh.write('\tjob/warning = BOLD BLUE <\\x18\\\\\\eFOO\T >\\?\\\\eBAR\E UNDERLINE')
+	assert '\x1b[1;34m\x18\\\x1bFOO\t\x1b[4mWARNING: Job did not finish\x1b[22;24;39m\\?\\eBAR\x1b' in ax_cmd('job', job)
