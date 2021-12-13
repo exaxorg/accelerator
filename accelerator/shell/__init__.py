@@ -27,6 +27,7 @@ import os
 from os.path import dirname, basename, realpath, join
 import locale
 from glob import glob
+import re
 import shlex
 import signal
 from argparse import RawDescriptionHelpFormatter
@@ -288,6 +289,25 @@ def split_args(argv):
 		prev = arg
 	return argv, []
 
+_unesc_re = re.compile(r'\\([abefnrtv\\]|x[0-9a-f]{2})', re.IGNORECASE)
+_unesc_v = {
+	'a': '\a',
+	'b': '\b',
+	'e': '\x1b',
+	'f': '\f',
+	'n': '\n',
+	'r': '\r',
+	't': '\t',
+	'v': '\v',
+	'\\': '\\',
+}
+def _unesc(m):
+	v = m.group(1)
+	if len(v) > 1:
+		return chr(int(v[1:], 16))
+	else:
+		return _unesc_v.get(v.lower(), v)
+
 def parse_user_config(alias_d, colour_d):
 	from accelerator.compat import open
 	from os import environ
@@ -310,7 +330,7 @@ def parse_user_config(alias_d, colour_d):
 		if 'alias' in cfg:
 			alias_d.update(cfg['alias'])
 		if 'colour' in cfg:
-			colour_d.update({k: v.split() for k, v in cfg['colour'].items()})
+			colour_d.update({k: [_unesc_re.sub(_unesc, e) for e in v.split()] for k, v in cfg['colour'].items()})
 
 def printdesc(items, columns, colour_prefix, full=False):
 	ddot = ' ...'

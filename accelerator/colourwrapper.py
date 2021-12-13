@@ -53,6 +53,12 @@ class Colour:
 	fall back to 'bar' if 'foo/bar' is not defined. The defaults can be
 	found in shell/__init__.py (search for "configuration defaults").
 
+	In the configuration file you can also use <pre >post to just put
+	those literal strings around the value. e.g.
+	[colour]
+		grep/header = <\e[4:3m >\e[24m
+	if your terminal supports such extended codes.
+
 	The functions take force=True to return escape sequences even if colour
 	is disabled and reset=True to reset all attributes before (and after)
 	this sequence. (By default only the changed attributes are reset.)
@@ -130,6 +136,19 @@ class Colour:
 			else:
 				yield orig_thing, thing
 
+	def _literal_split(self, pieces):
+		have = []
+		for piece in pieces:
+			if piece.startswith('<'):
+				if have:
+					yield '\x1b[' + ';'.join(have) + 'm'
+					have = []
+				yield piece[1:]
+			else:
+				have.append(piece)
+		if have:
+			yield '\x1b[' + ';'.join(have) + 'm'
+
 	# When we drop python 2 we can change this to use normal keywords
 	def __call__(self, value, *attrs, **kw):
 		bad_kw = set(kw) - {'force', 'reset'}
@@ -143,8 +162,21 @@ class Colour:
 			else:
 				pre = []
 			post = set()
+			literal_post = ''
 			a_it = self._expand_names(attrs)
 			for a_src, a in a_it:
+				if a.startswith('>'):
+					raise ColourError('A >post needs a preceding <pre (expanded %r from %r)' % (a, a_src,))
+				if a.startswith('<'):
+					try:
+						a_post_src, a_post = next(a_it)
+					except StopIteration:
+						a_post_src = a_post = ''
+					if not a_post.startswith('>') or a_src != a_post_src:
+						raise ColourError('A <pre needs a following >post (expanded %r from %r)' % (a, a_src,))
+					literal_post += a_post[1:]
+					pre.append(a)
+					continue
 				want = a.upper()
 				default = self._all['DEFAULTBG' if want.endswith('BG') else 'DEFAULT']
 				if want.startswith('#'):
@@ -166,10 +198,13 @@ class Colour:
 						raise ColourError('Unknown colour/attr %r (from %r)' % (a, a_src,))
 					pre.append(self._all[want])
 					post.add(self._all.get('NOT' + want, default))
-			pre = '\x1b[' + ';'.join(pre) + 'm'
+			pre = ''.join(self._literal_split(pre))
 			if kw.get('reset'):
-				post = ()
-			post = '\x1b[' + ';'.join(sorted(post)) + 'm'
+				post = '\x1b[m' + literal_post
+			elif post:
+				post = '\x1b[' + ';'.join(sorted(post)) + 'm' + literal_post
+			else:
+				post = literal_post
 		else:
 			pre = post = ''
 		if isinstance(value, bytes):
