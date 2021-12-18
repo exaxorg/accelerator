@@ -25,6 +25,7 @@ All datasets in previous get a dataset here, even if empty.
 '''
 
 from collections import defaultdict
+import itertools
 import re
 
 from accelerator.compat import unicode, izip
@@ -67,6 +68,27 @@ def prepare(job):
 	else:
 		hashlabel = None
 	for name, types in columns.items():
+		# this relies on internal knowledge that copy_mode is compatible for these types.
+		if 'unicode' in types:
+			types.discard('ascii')
+		if 'number' in types:
+			types.discard('bits32')
+			types.discard('bits64')
+			types.discard('int32')
+			types.discard('int64')
+			types.discard('float32')
+			types.discard('float64')
+		if 'bits64' in types:
+			types.discard('bits32')
+		if 'complex64' in types:
+			types.discard('complex32')
+		if 'float64' in types:
+			types.discard('float32')
+		if 'int64' in types:
+			types.discard('bits32')
+			types.discard('int32')
+		if len(types) > 1 and not (types - {'bits32', 'bits64', 'int32', 'int64', 'float32', 'float64'}):
+			types = {'number'}
 		if len(types) > 1:
 			raise Exception("Column %r has incompatible types: %r" % (name, types,))
 		columns[name] = (types.pop(), none_support[name],)
@@ -102,6 +124,7 @@ def prepare(job):
 def analysis(sliceno, prepare_res):
 	writers, columns, chain = prepare_res
 	key_it = chain.iterate(sliceno, options.column)
-	values_it = chain.iterate(sliceno, columns, copy_mode=True, status_reporting=False)
+	# we can't just use chain.iterate because of protections against changing types with copy_mode
+	values_it = itertools.chain.from_iterable(ds.iterate(sliceno, columns, copy_mode=True, status_reporting=False) for ds in chain)
 	for key, values in izip(key_it, values_it):
 		writers[unicode(key)].write(*values)
