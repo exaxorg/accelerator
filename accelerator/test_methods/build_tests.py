@@ -166,6 +166,7 @@ def main(urd):
 	assert [ds.name for ds in dsnamejob.datasets] == dsnamejob.load()
 	urd.build("test_dataset_column_names")
 	mergejob = urd.build("test_dataset_merge")
+	urd.build('test_dataset_fanout')
 	urd.build("test_dataset_filter_columns")
 	urd.build("test_dataset_empty_colname")
 	urd.build("test_dataset_nan")
