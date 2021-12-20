@@ -978,6 +978,10 @@ class Dataset(unicode):
 		bare_sizes = [z for _, z in sizes if z]
 		if sum(bare_sizes) / (len(bare_sizes) or 1) > 524288: # arbitrary guess of good size
 			return
+		if sum(bare_sizes) == 0:
+			# dataset is empty, so it needs no location
+			self._data.columns[n] = self._data.columns[n]._replace(location=None)
+			return
 		offsets = []
 		pos = 0
 		with open(fn % ('m',), 'wb') as m_fh:
