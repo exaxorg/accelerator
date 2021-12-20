@@ -991,7 +991,10 @@ class Dataset(unicode):
 						data = p_fh.read()
 					assert len(data) == size, "Slice %d is %d bytes, not %d?" % (sliceno, len(data), size,)
 					m_fh.write(data)
-				offsets.append(pos)
+					offsets.append(pos)
+				else:
+					# no need to waste space storing an offset that won't be used
+					offsets.append(False)
 				if size is not None:
 					os.unlink(fn % (sliceno,))
 					pos += size
