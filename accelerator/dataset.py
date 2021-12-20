@@ -937,6 +937,8 @@ class Dataset(unicode):
 				none_support=none_support,
 			)
 			self._maybe_merge(n)
+		if sum(self.lines) == 0:
+			os.rmdir(self._name('dir'))
 		self._update_caches()
 		self._save()
 
