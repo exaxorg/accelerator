@@ -967,6 +967,10 @@ class Dataset(unicode):
 		fn = self.column_filename(n)
 		def getsize(sliceno):
 			try:
+				if self.lines[sliceno] == 0:
+					# if it's not used it shouldn't exist, so make sure it doesn't
+					os.unlink(fn % (sliceno,))
+					return None
 				return os.path.getsize(fn % (sliceno,))
 			except FileNotFoundError:
 				return None
