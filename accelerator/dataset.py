@@ -1105,7 +1105,7 @@ class DatasetWriter(object):
 				raise DatasetUsageError("Don't specify any arguments (except optionally name) in analysis")
 			return _datasetwriters[name]
 		else:
-			if name in _datasetwriters:
+			if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
 				raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
 			fs_name = _fs_name(name) + '.d'
 			if not os.path.exists('DS'):

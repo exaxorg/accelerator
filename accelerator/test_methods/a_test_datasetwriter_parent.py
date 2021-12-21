@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020 Carl Drougge                                          #
+# Copyright (c) 2020-2021 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -81,7 +81,7 @@ def synthesis(slices, job):
 	try:
 		job.datasetwriter(name='parent')
 		raise Exception('already finished dataset name reuse allowed')
-	except OSError:
+	except DatasetUsageError:
 		pass
 	try:
 		job.datasetwriter(parent=(job, 'nah'))
