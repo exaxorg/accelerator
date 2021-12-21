@@ -939,6 +939,8 @@ class Dataset(unicode):
 			self._maybe_merge(n)
 		if sum(self.lines) == 0:
 			os.rmdir(self._name('dir'))
+		else:
+			self._maybe_merge_fully(columns)
 		self._update_caches()
 		self._save()
 
@@ -1005,6 +1007,37 @@ class Dataset(unicode):
 			offsets=offsets,
 			location=c.location % ('m',),
 		)
+
+	def _maybe_merge_fully(self, columns):
+		z = 0
+		compressions = set()
+		for n in columns:
+			dc = self._data.columns[n]
+			if not dc.offsets:
+				return
+			compressions.add(dc.compression)
+			if len(compressions) > 1:
+				# we may have more picky compressors later, let's not assume.
+				return
+			c_fn = self.column_filename(n)
+			z += os.path.getsize(c_fn)
+			if z > 16 * 524288: # arbitrary guess of good size
+				return
+		m_fn = self._name('merged')
+		m_location = '%s/%s' % (self.job, m_fn,)
+		with open(m_fn, 'wb') as m_fh:
+			for n in columns:
+				dc = self._data.columns[n]
+				c_fn = self.column_filename(n)
+				with open(c_fn, 'rb') as c_fh:
+					data = c_fh.read()
+				assert len(data) > max(dc.offsets), '%s is too short' % (c_fn,)
+				os.unlink(c_fn)
+				pos = m_fh.tell()
+				m_offsets = [False if o is False else o + pos for o in dc.offsets]
+				self._data.columns[n] = dc._replace(location=m_location, offsets=m_offsets)
+				m_fh.write(data)
+		os.rmdir(self._name('dir'))
 
 	def _save(self):
 		if not os.path.exists('DS'):
