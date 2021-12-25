@@ -1445,6 +1445,10 @@ class DatasetWriter(object):
 		self._minmax[sliceno] = minmax
 
 	def close(self):
+		if self._split:
+			# this is needed to actually dispose of the writer objects
+			# when the gc is disabled (as it typically is here).
+			self._split.__globals__.clear()
 		if self._started == 2:
 			for sliceno, writers in enumerate(self._allwriters):
 				self._close(sliceno, writers)
