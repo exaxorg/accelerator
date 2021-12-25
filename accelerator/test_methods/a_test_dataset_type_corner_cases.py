@@ -466,6 +466,22 @@ def test_column_discarding():
 	assert sorted(abc_bASc.columns) == ['a', 'b', 'c'], '%s: %r' % (abc_bASc, sorted(abc_bASc.columns),)
 	assert list(abc_bASc.iterate(None)) == [('a', True, 'b',)], abc_bASc
 
+def test_discarding_rehash_with_empty_slices():
+	dw = DatasetWriter(name='discarding rehash with empty slices', hashlabel='a')
+	dw.add('a', 'ascii')
+	dw.add('b', 'ascii')
+	w = dw.get_split_write()
+	w('a', '42')
+	w('42', 'b')
+	source = dw.finish()
+	typed = subjobs.build(
+		'dataset_type',
+		source=source,
+		column2type=dict(a='int32_10'),
+		filter_bad=True,
+	).dataset()
+	assert list(typed.iterate(None)) == [(42, 'b',)]
+
 def synthesis():
 	test_bytes()
 	test_ascii()
@@ -473,6 +489,7 @@ def synthesis():
 	test_numbers()
 	test_datetimes()
 	test_column_discarding()
+	test_discarding_rehash_with_empty_slices()
 
 	verify('json', ['json'],
 		[b'null', b'[42, {"a": "b"}]', b'\r  {  "foo":\r"bar" \r   }\t ', b'nope'],
