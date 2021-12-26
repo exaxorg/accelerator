@@ -1449,9 +1449,11 @@ class DatasetWriter(object):
 			# this is needed to actually dispose of the writer objects
 			# when the gc is disabled (as it typically is here).
 			self._split.__globals__.clear()
+			self._split = self._split_dict = self._split_list = None
 		if self._started == 2:
 			for sliceno, writers in enumerate(self._allwriters):
 				self._close(sliceno, writers)
+			self._allwriters_[:] = ()
 		else:
 			if hasattr(self, 'writers'):
 				self._close(self.sliceno, self.writers)
