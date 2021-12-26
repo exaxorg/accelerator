@@ -93,11 +93,13 @@ def synthesis(job, slices):
 	opts.as_chain = True
 	opts.hashlabel = 'a'
 	previous = None
+	used_slices = []
 	for ix, src in enumerate(src_chain, 1):
+		used_slices.append(min(slices, sum(src.lines)))
 		previous = subjobs.build('dataset_type', datasets=dict(source=src, previous=previous), options=opts)
 		ds = Dataset(previous)
-		assert len(ds.chain()) == ix * slices, ds
-		verify_sorted([src], ds.chain(length=slices))
+		assert len(ds.chain()) == sum(used_slices), ds
+		verify_sorted([src], ds.chain(length=used_slices[-1]))
 		verify_sorted(src_chain[:ix], ds.chain())
 
 	# And one with as_chain just on the last job, discarding half the rows from bad typing.
@@ -110,6 +112,6 @@ def synthesis(job, slices):
 	assert set(typed_and_hashed_Ehalf_bad.columns) == set(opts.column2type), typed_and_hashed_Ehalf_bad
 	assert sum(typed_and_hashed_Ehalf_bad.lines) == 50, typed_and_hashed_Ehalf_bad
 	typed_and_hashed_Ehalf = Dataset(typed_and_hashed_Ehalf)
-	assert len(typed_and_hashed_Ehalf.chain()) == slices + 4, typed_and_hashed_Ehalf
+	assert len(typed_and_hashed_Ehalf.chain()) == used_slices[-1] + 4, typed_and_hashed_Ehalf
 	untyped_Ehalf = write('Ehalf', untyped_D, 10000, 10100, filter=lambda ix: ix % 2 == 0)
-	verify_sorted([untyped_Ehalf], typed_and_hashed_Ehalf.chain(length=slices))
+	verify_sorted([untyped_Ehalf], typed_and_hashed_Ehalf.chain(length=used_slices[-1]))
