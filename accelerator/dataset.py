@@ -390,7 +390,7 @@ class Dataset(unicode):
 		if sliceno is None:
 			from accelerator.g import slices
 			from itertools import chain
-			return chain(*[one_slice(s) for s in range(slices) if self.lines[s]])
+			return chain.from_iterable(one_slice(s) for s in range(slices) if self.lines[s])
 		else:
 			return one_slice(sliceno)
 
