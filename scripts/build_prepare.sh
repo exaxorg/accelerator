@@ -58,7 +58,7 @@ for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
 	V="${V/\/opt\/python\//}"
 	case "$V" in
 		cp27-*)
-			/opt/python/"$V"/bin/pip install virtualenv "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0" "configparser==3.5.0" "monotonic==1.0"
+			/opt/python/"$V"/bin/pip install virtualenv "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0" "configparser==3.5.0" "monotonic==1.0" "selectors2==2.0.0"
 			;;
 		cp3[5-8]-*)
 			/opt/python/"$V"/bin/pip install "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0"

@@ -39,7 +39,7 @@ import fcntl
 import struct
 import pickle
 import errno
-from accelerator.compat import QueueEmpty, monotonic
+from accelerator.compat import QueueEmpty, monotonic, selectors
 
 
 assert select.PIPE_BUF >= 512, "POSIX says PIPE_BUF is at least 512, you have %d" % (select.PIPE_BUF,)
@@ -53,8 +53,15 @@ def _nb(fd):
 	fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
 
+def _mk_sel(fd, ev):
+	sel = selectors.DefaultSelector()
+	sel.register(fd, ev)
+	return sel
+
+
 class LockFreeQueue:
 	def __init__(self):
+		self._r_sel = self._w_sel = None
 		self.r, self.w = os.pipe()
 		_nb(self.r)
 		_nb(self.w)
@@ -65,12 +72,20 @@ class LockFreeQueue:
 	def make_writer(self):
 		os.close(self.r)
 		self.r = -1
+		self._w_sel = _mk_sel(self.w, selectors.EVENT_WRITE)
 
 	def make_reader(self):
 		os.close(self.w)
 		self.w = -1
+		self._r_sel = _mk_sel(self.r, selectors.EVENT_READ)
 
 	def close(self):
+		if self._r_sel:
+			self._r_sel.close()
+			self._r_sel = None
+		if self._w_sel:
+			self._w_sel.close()
+			self._w_sel = None
 		if self.r != -1:
 			os.close(self.r)
 			self.r = -1
@@ -123,15 +138,15 @@ class LockFreeQueue:
 				if eof:
 					raise QueueEmpty()
 				if not block:
-					if not select.select([self.r], [], [], 0)[0]:
+					if not self._r_sel.select(0):
 						raise QueueEmpty()
 				elif timeout:
 					time_left = deadline - monotonic()
 					if time_left <= 0:
 						raise QueueEmpty()
-					select.select([self.r], [], [], time_left)
+					self._r_sel.select(time_left)
 				else:
-					select.select([self.r], [], [])
+					self._r_sel.select()
 
 	def put(self, msg):
 		pid = os.getpid()
@@ -145,7 +160,7 @@ class LockFreeQueue:
 			part = struct.pack('<HI', len(part), pid) + part
 			offset += MAX_PART
 			while True:
-				select.select([], [self.w], [])
+				self._w_sel.select()
 				try:
 					wlen = os.write(self.w, part)
 				except OSError as e:

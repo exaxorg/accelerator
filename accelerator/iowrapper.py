@@ -21,7 +21,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
-from select import select
 from multiprocessing import Process
 from subprocess import Popen
 from time import sleep
@@ -30,6 +29,7 @@ from pty import openpty
 import errno
 
 from accelerator.workarounds import nonblocking
+from accelerator.compat import selectors
 from accelerator.compat import setproctitle
 from accelerator.colourwrapper import colour
 from accelerator import statmsg
@@ -121,6 +121,9 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncp
 			os.write(out_fd, data)
 		except OSError:
 			missed[0] = True
+	masters_selector = selectors.DefaultSelector()
+	for fd in masters:
+		masters_selector.register(fd, selectors.EVENT_READ)
 	# set output nonblocking, so we can't be blocked by terminal io.
 	# errors generated here go to stderr, which is the real stderr
 	# in the main iowrapper (so it can block) and goes to the main
@@ -132,12 +135,13 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncp
 				# Some output failed to print last time around.
 				# Wait up to one second for new data and then try
 				# to write a message about that (before the new data).
-				ready, _, _ = select(masters, [], [], 1.0)
+				ready = masters_selector.select(1.0)
 				missed[0] = False
 				try_print()
 			else:
-				ready, _, _ = select(masters, [], [])
-			for fd in ready:
+				ready = masters_selector.select()
+			for key, _ in ready:
+				fd = key.fd
 				try:
 					data = os.read(fd, 65536)
 				except OSError as e:
@@ -171,6 +175,7 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncp
 					if fd in fd2fd:
 						os.close(fd2fd[fd])
 						del fd2fd[fd]
+					masters_selector.unregister(fd)
 					masters.remove(fd)
 					os.close(fd)
 					if not is_main:

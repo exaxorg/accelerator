@@ -135,6 +135,7 @@ setup(
 		'waitress>=1.0',
 		'configparser>=3.5.0, <5.0; python_version<"3"',
 		'monotonic>=1.0; python_version<"3"',
+		'selectors2>=2.0; python_version<"3"',
 	],
 	python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
 
