@@ -253,8 +253,6 @@ def main(argv, cfg):
 					q.task_done()
 					q.get()
 				grep(ds, sliceno)
-		except KeyboardInterrupt:
-			return
 		except IOError as e:
 			if e.errno == errno.EPIPE:
 				return
@@ -314,17 +312,14 @@ def main(argv, cfg):
 			children.append(p)
 		want_slices = want_slices[:1]
 
-	try:
-		for ds in datasets:
-			if ds in headers:
-				for q in queues:
-					q.join()
-				show_headers(headers.pop(ds))
-				for q in queues:
-					q.put(None)
-			for sliceno in want_slices:
-				grep(ds, sliceno)
-		for c in children:
-			c.join()
-	except KeyboardInterrupt:
-		print()
+	for ds in datasets:
+		if ds in headers:
+			for q in queues:
+				q.join()
+			show_headers(headers.pop(ds))
+			for q in queues:
+				q.put(None)
+		for sliceno in want_slices:
+			grep(ds, sliceno)
+	for c in children:
+		c.join()
