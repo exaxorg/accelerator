@@ -176,16 +176,21 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 	per_slice = []
 	temp_files = {}
 	no_children_no_messages = False
+	reap_time = monotonic() + 5
+	exit_count = 0
 	while len(per_slice) < slices:
-		still_alive = []
-		for p in children:
-			if p.is_alive():
-				still_alive.append(p)
-			else:
-				p.join()
-				if p.exitcode:
-					raise Exception("%s terminated with exitcode %d" % (p.name, p.exitcode,))
-		children = still_alive
+		if exit_count > 0 or reap_time <= monotonic():
+			still_alive = []
+			for p in children:
+				if p.is_alive():
+					still_alive.append(p)
+				else:
+					exit_count -= 1
+					p.join()
+					if p.exitcode:
+						raise Exception("%s terminated with exitcode %d" % (p.name, p.exitcode,))
+			children = still_alive
+			reap_time = monotonic() + 5
 		# If a process dies badly we may never get a message here.
 		# (iowrapper tries to tell us though.)
 		# No need to handle that very quickly though, 10 seconds is fine.
@@ -195,6 +200,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 			if not msg:
 				# Notification from iowrapper, so we wake up (quickly) even if
 				# the process died badly (e.g. from running out of memory).
+				exit_count += 1
 				continue
 			s_no, s_t, s_temp_files, s_dw_lens, s_dw_minmax, s_dw_compressions, s_tb = msg
 		except QueueEmpty:
