@@ -28,6 +28,7 @@ from os.path import dirname, basename, realpath, join
 import locale
 from glob import glob
 import shlex
+import signal
 from argparse import RawDescriptionHelpFormatter
 
 from accelerator.compat import ArgumentParser
@@ -438,3 +439,11 @@ def main():
 			return 1
 		else:
 			raise
+	except KeyboardInterrupt:
+		# Exiting with KeyboardInterrupt causes python to print a traceback.
+		# We don't want that, but we do want to exit from SIGINT (so the
+		# calling process can know that happened).
+		signal.signal(signal.SIGINT, signal.SIG_DFL)
+		os.kill(os.getpid(), signal.SIGINT)
+		# If that didn't work let's re-raise the KeyboardInterrupt.
+		raise
