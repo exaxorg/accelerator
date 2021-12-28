@@ -23,7 +23,7 @@ from __future__ import unicode_literals
 
 import sys
 import errno
-from os import getcwd, chdir
+import os
 from os.path import dirname, basename, realpath, join
 import locale
 from glob import glob
@@ -47,14 +47,14 @@ def find_cfgs(basedir='.', wildcard=False):
 		pattern = 'accelerator*.conf'
 	else:
 		pattern = cfgname
-	orgdir = getcwd()
+	orgdir = os.getcwd()
 	basedir = realpath(basedir)
 	while basedir != '/':
 		try:
-			chdir(basedir)
+			os.chdir(basedir)
 			fns = sorted(glob(pattern))
 		finally:
-			chdir(orgdir)
+			os.chdir(orgdir)
 		if cfgname in fns:
 			fns.remove(cfgname)
 			fns.insert(0, cfgname)
@@ -114,7 +114,7 @@ def setup(config_fn=None, debug_cmd=False):
 	unpath(dirname(__file__))
 	if config_fn is False:
 		return
-	user_cwd = getcwd()
+	user_cwd = os.getcwd()
 	if config_fn:
 		load_cfg(config_fn)
 	else:
@@ -126,7 +126,7 @@ def setup(config_fn=None, debug_cmd=False):
 		sys.path.insert(0, cfg['project_directory'])
 		# For consistency we also always want the project dir
 		# as working directory.
-		chdir(cfg['project_directory'])
+		os.chdir(cfg['project_directory'])
 
 def cmd_grep(argv):
 	from accelerator.shell.grep import main
