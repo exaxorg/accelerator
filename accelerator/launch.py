@@ -36,7 +36,7 @@ from accelerator.compat import pickle, iteritems, setproctitle, QueueEmpty
 from accelerator.compat import getarglist, monotonic
 from accelerator.extras import job_params, ResultIterMagic
 from accelerator.build import JobError
-from accelerator.mp import LockFreeQueue
+from accelerator.mp import LockFreeQueue, SimplifiedProcess
 from accelerator import g
 from accelerator import blob
 from accelerator import statmsg
@@ -165,8 +165,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 			# The rest will wait on this queue
 			delayed_start = os.pipe()
 			delayed_start_todo = slices - i
-		p = Process(target=call_analysis, args=(analysis_func, i, delayed_start, q, preserve_result, pid, output_fds), kwargs=kw, name='analysis-%d' % (i,))
-		p.start()
+		p = SimplifiedProcess(target=call_analysis, args=(analysis_func, i, delayed_start, q, preserve_result, pid, output_fds), kwargs=kw, name='analysis-%d' % (i,))
 		children.append(p)
 	for fd in output_fds:
 		os.close(fd)
@@ -186,7 +185,6 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 					still_alive.append(p)
 				else:
 					exit_count -= 1
-					p.join()
 					if p.exitcode:
 						raise Exception("%s terminated with exitcode %d" % (p.name, p.exitcode,))
 			children = still_alive

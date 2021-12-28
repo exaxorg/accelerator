@@ -22,6 +22,7 @@ from __future__ import division
 import os
 import sys
 import select
+import signal
 import fcntl
 import struct
 import pickle
@@ -187,3 +188,49 @@ class LockFreeQueue:
 			return True
 		except OSError:
 			return False
+
+
+# This is a partial replacement for multiprocessing.Process.
+# It doesn't work if you use the rest of the mp machinery (like Queues)
+# and always uses os.fork(). It exists because multiprocessing.Process
+# has scaling issues with many children.
+
+class SimplifiedProcess:
+	def __init__(self, target, args=(), kwargs={}, name=None):
+		sys.stdout.flush()
+		sys.stderr.flush()
+		self.pid = os.fork()
+		if self.pid:
+			self.name = name
+			self._alive = True
+			return
+		rc = 1
+		try:
+			target(*args, **kwargs)
+			rc = 0
+		except KeyboardInterrupt:
+			signal.signal(signal.SIGINT, signal.SIG_DFL)
+			os.kill(os.getpid(), signal.SIGINT)
+		finally:
+			os._exit(rc)
+
+	def is_alive(self):
+		self._wait(False)
+		return self._alive
+
+	def _wait(self, block):
+		if not self._alive:
+			return
+		pid, status = os.waitpid(self.pid, 0 if block else os.WNOHANG)
+		if pid:
+			assert pid == self.pid
+			self._alive = False
+			if os.WIFEXITED(status):
+				self.exitcode = os.WEXITSTATUS(status)
+			elif os.WIFSIGNALED(status):
+				self.exitcode = -os.WTERMSIG(status)
+			else:
+				self.exitcode = -999
+
+	def join(self):
+		self._wait(True)
