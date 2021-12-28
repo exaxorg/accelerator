@@ -434,7 +434,7 @@ def main():
 		print(e, file=sys.stderr)
 		return 1
 	except IOError as e:
-		if e.errno == errno.EPIPE and debug_cmd:
-			return
+		if e.errno == errno.EPIPE:
+			return 1
 		else:
 			raise
