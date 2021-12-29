@@ -743,6 +743,12 @@ def main(argv, cfg):
 		# we built the job on.
 		# If it's a ServerError we just want the line and message.
 		print_minimal_traceback()
+	except KeyboardInterrupt:
+		# For ^C we don't want to see stuff from this file and earlier,
+		# but we do want to see where in the user code we were stopped.
+		print_user_part_traceback()
+		# And we still want to die with SIGINT.
+		raise
 	except Exception:
 		# For the rest we still don't want to see stuff from this
 		# file and earlier.
