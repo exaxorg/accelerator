@@ -1101,6 +1101,7 @@ err:
 
 static void Write_dealloc(Write *self)
 {
+	Write_flush_(self);
 	Write_close_(self);
 	if (self->default_value) free(self->default_value);
 	FREE(self->name);
