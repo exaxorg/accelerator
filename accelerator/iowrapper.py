@@ -124,6 +124,7 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncp
 	masters_selector = selectors.DefaultSelector()
 	for fd in masters:
 		masters_selector.register(fd, selectors.EVENT_READ)
+	masters = set(masters)
 	# set output nonblocking, so we can't be blocked by terminal io.
 	# errors generated here go to stderr, which is the real stderr
 	# in the main iowrapper (so it can block) and goes to the main
