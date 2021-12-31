@@ -1045,16 +1045,6 @@ static PyObject *Write_flush(Write *self)
 
 static int Write_close_(Write *self)
 {
-	if (self->default_value) {
-		free(self->default_value);
-		self->default_value = 0;
-	}
-	FREE(self->name);
-	if (self->error_extra != default_error_extra) FREE(self->error_extra);
-	Py_CLEAR(self->hashfilter);
-	Py_CLEAR(self->default_obj);
-	Py_CLEAR(self->min_obj);
-	Py_CLEAR(self->max_obj);
 	if (self->closed) return 1;
 	if (!self->ctx) return 0;
 	int err = Write_flush_(self);
@@ -1080,7 +1070,10 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 	char *name = 0;
 	char *error_extra = default_error_extra;
 	PyObject *hashfilter = 0;
-	Write_close_(self);
+	if (self->name) {
+		PyErr_Format(PyExc_RuntimeError, "Can't re-init %s", Py_TYPE(self)->tp_name);
+		goto err;
+	}
 	static char *kwlist[] = {
 		"name", "compression", "hashfilter",
 		"error_extra", "none_support", 0
@@ -1097,9 +1090,6 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 	self->error_extra = error_extra;
 	err1(Write_parse_compression(self, compression));
 	err1(parse_hashfilter(hashfilter, &self->hashfilter, &self->sliceno, &self->slices, &self->spread_None));
-	self->closed = 0;
-	self->count = 0;
-	self->len = 0;
 	return 0;
 err:
 	return -1;
@@ -1112,6 +1102,13 @@ err:
 static void Write_dealloc(Write *self)
 {
 	Write_close_(self);
+	if (self->default_value) free(self->default_value);
+	FREE(self->name);
+	if (self->error_extra != default_error_extra) FREE(self->error_extra);
+	Py_CLEAR(self->hashfilter);
+	Py_CLEAR(self->default_obj);
+	Py_CLEAR(self->min_obj);
+	Py_CLEAR(self->max_obj);
 	PyObject_Del(self);
 }
 
@@ -1404,7 +1401,10 @@ MK_MINMAX_SET(Time    , unfmt_time((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)
 		PyObject *compression = 0;                                               	\
 		PyObject *default_obj = 0;                                               	\
 		PyObject *hashfilter = 0;                                                	\
-		Write_close_(self);                                                      	\
+		if (self->name) {                                                        	\
+			PyErr_Format(PyExc_RuntimeError, "Can't re-init %s", Py_TYPE(self)->tp_name); \
+			goto err;                                                        	\
+		}                                                                        	\
 		if (!PyArg_ParseTupleAndKeywords(                                        	\
 			args, kwds, "et|OOOeti", kwlist,                                 	\
 			Py_FileSystemDefaultEncoding, &name,                             	\
@@ -1443,9 +1443,6 @@ MK_MINMAX_SET(Time    , unfmt_time((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)
 			memcpy(self->default_value, &value, sizeof(T));                  	\
 		}                                                                        	\
 		err1(parse_hashfilter(hashfilter, &self->hashfilter, &self->sliceno, &self->slices, &self->spread_None)); \
-		self->closed = 0;                                                        	\
-		self->count = 0;                                                         	\
-		self->len = 0;                                                           	\
 		return 0;                                                                	\
 err:                                                                                     	\
 		return -1;                                                               	\
@@ -1700,7 +1697,10 @@ static int init_WriteNumber(PyObject *self_, PyObject *args, PyObject *kwds)
 	PyObject *compression = 0;
 	PyObject *default_obj = 0;
 	PyObject *hashfilter = 0;
-	Write_close_(self);
+	if (self->name) {
+		PyErr_Format(PyExc_RuntimeError, "Can't re-init %s", Py_TYPE(self)->tp_name);
+		goto err;
+	}
 	if (!PyArg_ParseTupleAndKeywords(
 		args, kwds, "et|OOOeti", kwlist,
 		Py_FileSystemDefaultEncoding, &name,
@@ -1735,9 +1735,6 @@ static int init_WriteNumber(PyObject *self_, PyObject *args, PyObject *kwds)
 		}
 	}
 	err1(parse_hashfilter(hashfilter, &self->hashfilter, &self->sliceno, &self->slices, &self->spread_None));
-	self->closed = 0;
-	self->count = 0;
-	self->len = 0;
 	return 0;
 err:
 	return -1;
