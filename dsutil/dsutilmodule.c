@@ -224,14 +224,6 @@ typedef struct read {
 
 static int Read_close_(Read *self)
 {
-	FREE(self->name);
-	Py_CLEAR(self->hashfilter);
-	self->count = 0;
-	self->want_count = -1;
-	self->break_count = -1;
-	Py_CLEAR(self->callback);
-	self->callback_interval = 0;
-	self->callback_offset = 0;
 	if (self->ctx) {
 		self->compressor->read_close(self->ctx);
 		self->ctx = 0;
@@ -374,8 +366,12 @@ static int Read_init(PyObject *self_, PyObject *args, PyObject *kwds)
 	PyObject *callback = 0;
 	PY_LONG_LONG callback_interval = 0;
 	PY_LONG_LONG callback_offset = 0;
-	Read_close_(self);
-	self->error = 0;
+	if (self->name) {
+		PyErr_Format(PyExc_RuntimeError, "Can't re-init %s", Py_TYPE(self)->tp_name);
+		goto err;
+	}
+	self->want_count = -1;
+	self->break_count = -1;
 	static char *kwlist[] = {
 		"name", "compression", "seek", "want_count", "hashfilter",
 		"callback", "callback_interval", "callback_offset", "fd", 0
@@ -450,6 +446,9 @@ err:
 static void Read_dealloc(Read *self)
 {
 	Read_close_(self);
+	FREE(self->name);
+	Py_CLEAR(self->hashfilter);
+	Py_CLEAR(self->callback);
 	PyObject_Del(self);
 }
 
