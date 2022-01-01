@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -152,6 +152,7 @@ def synthesis(job, slices):
 		grep_text(['', pickle], [['foo'], [''], ["{'foo'}"]])
 		grep_text(['.', pickle], [['foo'], ["{'foo'}"]])
 		grep_text(['bar', pickle], [['foo']])
+		grep_text(['-g', 'pickle', 'bar', pickle], [['foo']])
 		bytespickle = mk_ds('bytespickle', ['pickle'], [b'\xf0'], [b'\t'])
 		# pickles are str()d, not special cased like bytes columns
 		grep_text(['-f', 'raw', 'xf0', bytespickle], [["b'\\xf0'"]])
