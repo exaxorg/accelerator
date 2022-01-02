@@ -267,6 +267,17 @@ class MpSet:
 		self._broken = False
 
 	def _process(self):
+		fd_keep = {self._q_r.r, self._q_r.w, self._q_w.r, self._q_w.w}
+		fd = 3
+		fd_end = fd + 20
+		while fd < fd_end:
+			if fd not in fd_keep:
+				try:
+					os.close(fd)
+					fd_end = fd + 20
+				except OSError:
+					pass
+			fd += 1
 		self._q_r.make_writer()
 		self._q_w.make_reader()
 		s = set()
