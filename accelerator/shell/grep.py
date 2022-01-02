@@ -24,7 +24,6 @@ from __future__ import division, print_function
 
 import sys
 import re
-from multiprocessing import Process
 from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS
@@ -708,13 +707,11 @@ def main(argv, cfg):
 	for sliceno in separate_process_slices:
 		if q_in:
 			q_out = mp.LockFreeQueue()
-		p = Process(
+		p = mp.SimplifiedProcess(
 			target=one_slice,
 			args=(sliceno, q_in, q_out,),
 			name='slice-%d' % (sliceno,),
 		)
-		p.daemon = True
-		p.start()
 		children.append(p)
 		if q_in and q_in is not first_q_out:
 			q_in.close()
