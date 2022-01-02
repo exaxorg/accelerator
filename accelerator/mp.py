@@ -24,6 +24,7 @@ import sys
 import select
 import signal
 import fcntl
+import multiprocessing
 import struct
 import pickle
 import errno
@@ -253,3 +254,55 @@ class SimplifiedProcess:
 
 	def join(self):
 		self._wait(True)
+
+
+class MpSet:
+	def __init__(self):
+		self._lock = multiprocessing.Lock()
+		self._q_r = LockFreeQueue()
+		self._q_w = LockFreeQueue()
+		self._p = SimplifiedProcess(target=self._process, name='MpSet')
+		self._q_r.make_reader()
+		self._q_w.make_writer()
+		self._broken = False
+
+	def _process(self):
+		self._q_r.make_writer()
+		self._q_w.make_reader()
+		s = set()
+		while True:
+			try:
+				funcname, a = self._q_w.get()
+			except QueueEmpty:
+				return
+			try:
+				res = getattr(s, funcname)(*a)
+				err = None
+			except Exception as e:
+				res = None
+				err = e
+			self._q_r.put((res, err))
+
+	def _call(self, funcname, *a):
+		assert not self._broken
+		self._lock.acquire()
+		try:
+			self._q_w.put((funcname, a))
+			res, err = self._q_r.get()
+		except:
+			self._broken = True
+			raise
+		finally:
+			self._lock.release()
+		if err:
+			raise err
+		return res
+
+	def add(self, value):
+		return self._call('add', value)
+
+	def __contains__(self, value):
+		return self._call('__contains__', value)
+
+	def __len__(self):
+		return self._call('__len__')
