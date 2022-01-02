@@ -51,8 +51,9 @@ def _mk_sel(fd, ev):
 # without using any locks, instead relying on writes up to PIPE_BUF being
 # atomic. No threads are used.
 #
-# Only the creating process can .get(). .get() can take a timeout.
-# Only child processes can .put(). .put() blocks until the pipe will take
+# Only one process can .get() (after .make_reader()). .get() can take a timeout.
+# (There are no checks to enforce a single reader, so be careful.)
+# Any number of processeses can .put(). .put() blocks until the pipe will take
 # all the data.
 # A dying writer will never corrupt or deadlock the queue, but can cause a
 # memory leak in the reading process (until the queue object is destroyed).
@@ -67,7 +68,6 @@ class LockFreeQueue:
 		_nb(self.r)
 		_nb(self.w)
 		self._buf = b''
-		self._pid = os.getpid()
 		self._partial = {}
 
 	def make_writer(self):
@@ -97,7 +97,6 @@ class LockFreeQueue:
 	__del__ = close
 
 	def get(self, block=True, timeout=0):
-		assert os.getpid() == self._pid, "can only .get in creating process"
 		assert self.w == -1, "call make_reader first"
 		if timeout:
 			deadline = monotonic() + timeout
@@ -151,7 +150,6 @@ class LockFreeQueue:
 
 	def put(self, msg):
 		pid = os.getpid()
-		assert pid != self._pid, "can only .put in other processes"
 		assert self.r == -1, "call make_writer first"
 		msg = pickle.dumps(msg, pickle.HIGHEST_PROTOCOL)
 		msg = struct.pack('<I', len(msg)) + msg
