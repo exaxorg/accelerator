@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -36,7 +36,7 @@ from accelerator.compat import pickle, iteritems, setproctitle, QueueEmpty
 from accelerator.compat import getarglist, monotonic
 from accelerator.extras import job_params, ResultIterMagic
 from accelerator.build import JobError
-from accelerator.lockfree_queue import LockFreeQueue
+from accelerator.mp import LockFreeQueue
 from accelerator import g
 from accelerator import blob
 from accelerator import statmsg

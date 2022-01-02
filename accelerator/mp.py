@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -15,19 +15,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-# This provides some of the functionality of multiprocessing.Queue but
-# without using any locks, instead relying on writes up to PIPE_BUF being
-# atomic. No threads are used.
-#
-# Only the creating process can .get(). .get() can take a timeout.
-# Only child processes can .put(). .put() blocks until the pipe will take
-# all the data.
-# A dying writer will never corrupt or deadlock the queue, but can cause a
-# memory leak in the reading process (until the queue object is destroyed).
-# Large messages are probably quite inefficient.
-#
-# In short, you often can't use this. And when you do, you have to be careful.
 
 from __future__ import print_function
 from __future__ import division
@@ -58,6 +45,19 @@ def _mk_sel(fd, ev):
 	sel.register(fd, ev)
 	return sel
 
+
+# This provides some of the functionality of multiprocessing.Queue but
+# without using any locks, instead relying on writes up to PIPE_BUF being
+# atomic. No threads are used.
+#
+# Only the creating process can .get(). .get() can take a timeout.
+# Only child processes can .put(). .put() blocks until the pipe will take
+# all the data.
+# A dying writer will never corrupt or deadlock the queue, but can cause a
+# memory leak in the reading process (until the queue object is destroyed).
+# Large messages are probably quite inefficient.
+#
+# In short, you often can't use this. And when you do, you have to be careful.
 
 class LockFreeQueue:
 	def __init__(self):
