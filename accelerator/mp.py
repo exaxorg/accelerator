@@ -28,6 +28,7 @@ import multiprocessing
 import struct
 import pickle
 import errno
+from traceback import print_exc
 from accelerator.compat import QueueEmpty, monotonic, selectors
 
 
@@ -231,6 +232,10 @@ class SimplifiedProcess:
 		except KeyboardInterrupt:
 			signal.signal(signal.SIGINT, signal.SIG_DFL)
 			os.kill(os.getpid(), signal.SIGINT)
+		except Exception as e:
+			if not isinstance(e, OSError) or e.errno != errno.EPIPE:
+				print("Exception in %d %r:" % (os.getpid(), name), file=sys.stderr)
+				print_exc(file=sys.stderr)
 		except SystemExit as e:
 			if e.code is None:
 				rc = 0
