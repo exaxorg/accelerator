@@ -231,6 +231,13 @@ class SimplifiedProcess:
 		except KeyboardInterrupt:
 			signal.signal(signal.SIGINT, signal.SIG_DFL)
 			os.kill(os.getpid(), signal.SIGINT)
+		except SystemExit as e:
+			if e.code is None:
+				rc = 0
+			elif isinstance(e.code, int):
+				rc = e.code
+			else:
+				print(e.code, file=sys.stderr)
 		finally:
 			os._exit(rc)
 
