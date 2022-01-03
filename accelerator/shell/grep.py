@@ -765,3 +765,5 @@ def main(argv, cfg):
 
 	for c in children:
 		c.join()
+		if c.exitcode:
+			return 1
