@@ -66,6 +66,9 @@ def _mk_sel(fd, ev):
 #
 # In short, you often can't use this. And when you do, you have to be careful.
 
+class QueueClosedError(Exception):
+	pass
+
 class LockFreeQueue:
 	def __init__(self):
 		self._r_sel = self._w_sel = None
@@ -173,6 +176,8 @@ class LockFreeQueue:
 
 	def put(self, msg):
 		assert self.r == -1, "call make_writer first"
+		if self.w == -1:
+			raise QueueClosedError()
 		self._late_setup()
 		msg = pickle.dumps(msg, pickle.HIGHEST_PROTOCOL)
 		msg = struct.pack('<I', len(msg)) + msg
@@ -189,7 +194,8 @@ class LockFreeQueue:
 					if e.errno == errno.EAGAIN:
 						wlen = 0
 					else:
-						raise
+						self.close()
+						raise QueueClosedError()
 				if wlen:
 					if wlen != len(part):
 						print("OS violates PIPE_BUF guarantees, all is lost.", file=sys.stderr)
