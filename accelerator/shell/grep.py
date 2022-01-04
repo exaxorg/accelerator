@@ -207,6 +207,10 @@ def main(argv, cfg):
 	if args.list_matching:
 		highlight_matches = False
 
+	if args.format == 'json':
+		# headers was just a mistake, ignore it
+		args.headers = False
+
 	separator = args.separator
 	if args.tab_length:
 		separator = None
@@ -674,15 +678,12 @@ def main(argv, cfg):
 			if candidate_headers != current_headers:
 				headers[ds] = current_headers = candidate_headers
 		def gen_headers(headers):
-			if args.format != 'json':
-				show_items = headers_prefix + headers
-				if escape_item:
-					show_items = list(map(escape_item, show_items))
-				coloured = (colour(item, 'grep/header') for item in show_items)
-				txt = separate(coloured, map(len, show_items))
-				return txt.encode('utf-8', 'surrogatepass') + b'\n'
-			else:
-				return b''
+			show_items = headers_prefix + headers
+			if escape_item:
+				show_items = list(map(escape_item, show_items))
+			coloured = (colour(item, 'grep/header') for item in show_items)
+			txt = separate(coloured, map(len, show_items))
+			return txt.encode('utf-8', 'surrogatepass') + b'\n'
 		# remove the starting ds, so no header changes means no special handling.
 		current_headers = headers.pop(datasets[0])
 		if not args.list_matching:
