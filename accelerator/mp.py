@@ -124,7 +124,7 @@ class LockFreeQueue:
 		if timeout:
 			deadline = monotonic() + timeout
 		need_data = False
-		eof = False
+		eof = (self.r == -1)
 		while True:
 			if not eof:
 				try:
