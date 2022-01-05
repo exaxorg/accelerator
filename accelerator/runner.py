@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -302,7 +302,7 @@ def load_methods(all_packages, data):
 			if isinstance(e, MsgException):
 				print('%s: %s' % (modname, str(e),))
 			else:
-				print_exc()
+				print_exc(file=sys.stderr)
 			res_failed.append(modname)
 			for d in res_hashes, res_params, res_descriptions:
 				d.pop(key, None)
@@ -422,7 +422,7 @@ class Runner(object):
 				q = self._waiters.pop(cookie)
 				q.put(data)
 			except Exception:
-				print_exc()
+				print_exc(file=sys.stderr)
 				break
 		# All is lost, unblock anyone waiting
 		for q in itervalues(self._waiters):

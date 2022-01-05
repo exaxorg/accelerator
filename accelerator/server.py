@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -86,7 +86,7 @@ class XtdHandler(BaseWebHandler):
 		try:
 			self._handle_req( path, args )
 		except Exception:
-			traceback.print_exc()
+			traceback.print_exc(file=sys.stderr)
 			self.do_response(500, "text/plain", "ERROR")
 
 	def _handle_req(self, path, args):
@@ -260,7 +260,7 @@ class XtdHandler(BaseWebHandler):
 									os.symlink(jobid, ln)
 									os.rename(ln, os.path.join(dn, workdir + "-LATEST"))
 								except OSError:
-									traceback.print_exc()
+									traceback.print_exc(file=sys.stderr)
 							t = Thread(target=run, name="job runner", args=(jobidv, tlock,))
 							t.daemon = True
 							t.start()
@@ -332,7 +332,7 @@ class DeadlyThread(Thread):
 		try:
 			Thread.run(self)
 		except Exception:
-			traceback.print_exc()
+			traceback.print_exc(file=sys.stderr)
 		finally:
 			print("Thread %r died. That's bad." % (self.name,))
 			exitfunction(DeadlyThread)

@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -240,7 +240,7 @@ class FileWriteMove(object):
 			try:
 				os.unlink(self.tmp_filename)
 			except Exception:
-				print_exc()
+				print_exc(file=sys.stderr)
 
 class ResultIter(object):
 	def __init__(self, slices):

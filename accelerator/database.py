@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -24,6 +24,8 @@ from __future__ import division
 from collections import defaultdict
 from operator import attrgetter
 from collections import namedtuple
+from traceback import print_exc
+import sys
 
 from accelerator.compat import iteritems, itervalues
 
@@ -73,8 +75,7 @@ def _get_params(jobid):
 	try:
 		return jobid, (_job_params(jobid), list(job_post(jobid).subjobs))
 	except:
-		from traceback import print_exc
-		print_exc()
+		print_exc(file=sys.stderr)
 		raise
 
 class _ParamsDict(defaultdict):

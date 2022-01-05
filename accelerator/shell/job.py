@@ -24,6 +24,7 @@ from traceback import print_exc
 from datetime import datetime
 import errno
 from argparse import RawTextHelpFormatter
+import sys
 
 from accelerator.compat import ArgumentParser
 from accelerator.colourwrapper import colour
@@ -122,7 +123,7 @@ def main(argv, cfg):
 		except Exception as e:
 			if isinstance(e, OSError) and e.errno == errno.EPIPE:
 				raise
-			print_exc()
-			print("Failed to show %r" % (path,))
+			print_exc(file=sys.stderr)
+			print("Failed to show %r" % (path,), file=sys.stderr)
 			res = 1
 	return res

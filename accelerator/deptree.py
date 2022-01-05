@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -22,6 +22,7 @@ from __future__ import division
 
 from traceback import print_exc
 from datetime import datetime, date, time, timedelta
+import sys
 
 from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types, unicode
 
@@ -186,7 +187,7 @@ class DepTree:
 				except OptionException:
 					raise
 				except Exception:
-					print_exc()
+					print_exc(file=sys.stderr)
 					raise OptionException('Failed to convert option %s on method %s' % (k, method,))
 			else:
 				raise OptionException('Unknown option %s on method %s' % (k, method,))

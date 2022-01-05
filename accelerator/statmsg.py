@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -44,6 +44,7 @@ from threading import Lock
 from weakref import WeakValueDictionary
 import socket
 import os
+import sys
 
 from accelerator.compat import str_types, iteritems, monotonic
 from accelerator.colourwrapper import colour
@@ -157,7 +158,7 @@ def status_stacks_export():
 				msg, t, _ = last[0].stack[1]
 				current = (current[0], '%s %s' % (current[1], msg,), t,)
 	except Exception:
-		print_exc()
+		print_exc(file=sys.stderr)
 		res.append((0, 0, 'ERROR', monotonic()))
 	return res, current
 
@@ -245,8 +246,8 @@ def statmsg_sink(sock):
 				else:
 					print('UNKNOWN MESSAGE: %r' % (data,))
 		except Exception:
-			print('Failed to process %r:' % (data,))
-			print_exc()
+			print('Failed to process %r:' % (data,), file=sys.stderr)
+			print_exc(file=sys.stderr)
 
 
 def statmsg_endwait(pid, timeout):
