@@ -113,6 +113,10 @@ def main(argv, cfg):
 	else:
 		want_slices = list(range(g.slices))
 
+	if len(want_slices) == 1:
+		# it will be automatically ordered, so let's not work for it.
+		args.ordered = False
+
 	if args.chain:
 		datasets = list(chain.from_iterable(ds.chain() for ds in datasets))
 
