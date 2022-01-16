@@ -2,7 +2,7 @@
 
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -75,7 +75,7 @@ else:
 		version = env_version
 	else:
 		if env_version:
-			assert re.match(r'20\d\d\.\d\d\.\d\d\.dev\d+$', env_version)
+			assert re.match(r'20\d\d\.\d\d\.\d\d\.(?:dev|rc)\d+$', env_version)
 			version = env_version
 		else:
 			version = "%s.dev1+%s%s" % (version, commit[:10], dirty(),)

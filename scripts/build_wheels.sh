@@ -20,6 +20,7 @@ if [ "$#" != "2" ]; then
 fi
 
 set -x
+shopt -s extglob
 
 test -d /out/wheelhouse || exit 1
 test -d /accelerator/.git || exit 1
@@ -38,7 +39,7 @@ case "$1" in
 	20[2-9][0-9].[01][0-9].[0-3][0-9])
 		ACCELERATOR_BUILD=IS_RELEASE
 		;;
-	20[2-9][0-9].[01][0-9].[0-3][0-9].dev[1-9])
+	20[2-9][0-9].[01][0-9].[0-3][0-9].@(dev|rc)[1-9])
 		ACCELERATOR_BUILD=DEV
 		;;
 	*)
