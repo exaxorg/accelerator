@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -199,7 +199,22 @@ def main(argv, cfg):
 		escape_item = None
 		errors = 'replace' if PY2 else 'surrogateescape'
 
-	def grep(ds, sliceno):
+	class Outputter:
+		def put(self, data):
+			# This will be atomic if the line is not too long
+			# (at least up to PIPE_BUF bytes, should be at least 512).
+			write(1, data)
+
+		def start(self, ds):
+			pass
+
+		def end(self, ds):
+			pass
+
+		def finish(self):
+			pass
+
+	def grep(ds, sliceno, out):
 		chk = pat_s.search
 		def mk_iter(col):
 			if ds.columns[col].type == 'ascii':
@@ -274,25 +289,27 @@ def main(argv, cfg):
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if any(chk(unicode(item)) for item in grep_items or items):
 				while before:
-					write(1, show(*before.popleft()) + b'\n')
+					out.put(show(*before.popleft()) + b'\n')
 				to_show = 1 + args.after_context
 			if to_show:
-				# This will be atomic if the line is not too long
-				# (at least up to PIPE_BUF bytes, should be at least 512).
-				write(1, show(lineno, items) + b'\n')
+				out.put(show(lineno, items) + b'\n')
 				to_show -= 1
 			elif before is not None:
 				before.append((lineno, items))
 
 	def one_slice(sliceno, q, wait_for):
 		try:
+			out = Outputter()
 			if q:
 				q.get()
 			for ds in datasets:
 				if ds in wait_for:
 					q.task_done()
 					q.get()
-				grep(ds, sliceno)
+				out.start(ds)
+				grep(ds, sliceno, out)
+				out.end(ds)
+			out.finish()
 		except IOError as e:
 			if e.errno == errno.EPIPE:
 				return
@@ -357,6 +374,7 @@ def main(argv, cfg):
 			children.append(p)
 		want_slices = want_slices[:1]
 
+	out = Outputter()
 	for ds in datasets:
 		if ds in headers:
 			for q in queues:
@@ -364,7 +382,10 @@ def main(argv, cfg):
 			write(1, next(headers_iter))
 			for q in queues:
 				q.put(None)
+		out.start(ds)
 		for sliceno in want_slices:
-			grep(ds, sliceno)
+			grep(ds, sliceno, out)
+		out.end(ds)
+	out.finish()
 	for c in children:
 		c.join()
