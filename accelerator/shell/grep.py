@@ -199,7 +199,14 @@ def main(argv, cfg):
 		escape_item = None
 		errors = 'replace' if PY2 else 'surrogateescape'
 
+	# This contains some extra stuff to be a better base for the other
+	# outputters.
+	# When used directly it just prints all output immediately.
+
 	class Outputter:
+		def __init__(self, q):
+			self.q = q
+
 		def put(self, data):
 			# This will be atomic if the line is not too long
 			# (at least up to PIPE_BUF bytes, should be at least 512).
@@ -213,6 +220,39 @@ def main(argv, cfg):
 
 		def finish(self):
 			pass
+
+	# Partially ordered output, each header change acts as a fence.
+	# This is used in all slices except the first.
+
+	class HeaderWaitOutputter(Outputter):
+		def start(self, ds):
+			if ds in headers:
+				self.q.task_done()
+				self.q.get()
+
+	# Partially ordered output, each header change acts as a fence.
+	# This is used only in the first slice, and outputs the headers.
+
+	class HeaderOutputter(Outputter):
+		def start(self, ds):
+			if ds in headers:
+				for q in self.q:
+					q.join()
+				hdr_txt = next(headers_iter)
+				write(1, hdr_txt)
+				for q in self.q:
+					q.put(None)
+
+	# Choose the right outputter for the kind of sync we need.
+	def outputter(q, first_slice=False):
+		if headers:
+			if first_slice:
+				cls = HeaderOutputter
+			else:
+				cls = HeaderWaitOutputter
+		else:
+			cls = Outputter
+		return cls(q)
 
 	def grep(ds, sliceno, out):
 		chk = pat_s.search
@@ -297,15 +337,12 @@ def main(argv, cfg):
 			elif before is not None:
 				before.append((lineno, items))
 
-	def one_slice(sliceno, q, wait_for):
+	def one_slice(sliceno, q):
 		try:
-			out = Outputter()
+			out = outputter(q)
 			if q:
 				q.get()
 			for ds in datasets:
-				if ds in wait_for:
-					q.task_done()
-					q.get()
 				out.start(ds)
 				grep(ds, sliceno, out)
 				out.end(ds)
@@ -358,15 +395,14 @@ def main(argv, cfg):
 	children = []
 	if not args.ordered:
 		q = None
-		wait_for = set(headers)
 		for sliceno in want_slices[1:]:
-			if wait_for:
+			if headers:
 				q = JoinableQueue()
 				q.put(None)
 				queues.append(q)
 			p = Process(
 				target=one_slice,
-				args=(sliceno, q, wait_for),
+				args=(sliceno, q,),
 				name='slice-%d' % (sliceno,),
 			)
 			p.daemon = True
@@ -374,14 +410,8 @@ def main(argv, cfg):
 			children.append(p)
 		want_slices = want_slices[:1]
 
-	out = Outputter()
+	out = outputter(queues, first_slice=True)
 	for ds in datasets:
-		if ds in headers:
-			for q in queues:
-				q.join()
-			write(1, next(headers_iter))
-			for q in queues:
-				q.put(None)
 		out.start(ds)
 		for sliceno in want_slices:
 			grep(ds, sliceno, out)
