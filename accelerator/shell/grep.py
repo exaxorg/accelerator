@@ -315,6 +315,7 @@ def main(argv, cfg):
 		return cls(q_in, q_out)
 
 	def grep(ds, sliceno, out):
+		out.start(ds)
 		chk = pat_s.search
 		def mk_iter(col):
 			if ds.columns[col].type == 'ascii':
@@ -396,6 +397,7 @@ def main(argv, cfg):
 				to_show -= 1
 			elif before is not None:
 				before.append((lineno, items))
+		out.end(ds)
 
 	def one_slice(sliceno, q_in, q_out):
 		if q_in:
@@ -405,9 +407,7 @@ def main(argv, cfg):
 		try:
 			out = outputter(q_in, q_out)
 			for ds in datasets:
-				out.start(ds)
 				grep(ds, sliceno, out)
-				out.end(ds)
 			out.finish()
 		except IOError as e:
 			if e.errno == errno.EPIPE:
@@ -475,9 +475,7 @@ def main(argv, cfg):
 
 	out = outputter(q_in, q_out, first_slice=True)
 	for ds in datasets:
-		out.start(ds)
 		grep(ds, want_slices[0], out)
-		out.end(ds)
 	out.finish()
 	for c in children:
 		c.join()
