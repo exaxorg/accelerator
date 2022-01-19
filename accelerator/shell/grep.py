@@ -35,6 +35,7 @@ import datetime
 
 from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, izip, PY2
+from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
 from .parser import name2ds
 from accelerator import g
@@ -212,6 +213,7 @@ def main(argv, cfg):
 		def __init__(self, q_in, q_out):
 			self.q_in = q_in
 			self.q_out = q_out
+			self.buffer = []
 
 		def put(self, data):
 			# This will be atomic if the line is not too long
@@ -226,6 +228,9 @@ def main(argv, cfg):
 
 		def finish(self):
 			pass
+
+		def full(self):
+			return len(self.buffer) > 5000
 
 	# Partially ordered output, each header change acts as a fence.
 	# This is used in all slices except the first.
@@ -269,34 +274,73 @@ def main(argv, cfg):
 
 	class OrderedOutputter(Outputter):
 		def start(self, ds):
-			self.wait = True
-			self.ds = ds
-
-		def maybe_wait(self):
-			if self.wait:
-				self.q_in.get()
-				self.wait = False
+			# Each ds is separated by None in the buffer
+			self.buffer.append(None)
+			self.buffer.append(b'') # Avoid need for special case in .drain
+			self.pump()
 
 		def end(self, ds):
-			self.maybe_wait()
-			# We are done with this ds, so let next slice continue
-			self.q_out.put(None)
+			if not self.buffer:
+				# We are done with this ds, so let next slice continue
+				self.q_out.put(None)
+
+		def pump(self, wait=None):
+			if wait is None:
+				wait = self.full()
+			try:
+				self.q_in.get(wait)
+			except QueueEmpty:
+				if wait:
+					# previous slice has exited without sending all messages
+					raise
+				return
+			self.drain()
 
 		def put(self, data):
-			self.maybe_wait()
+			if self.buffer:
+				self.pump()
+				if self.buffer:
+					self.buffer.append(data)
+					return
 			# This will be atomic if the line is not too long
 			# (at least up to PIPE_BUF bytes, should be at least 512).
 			write(1, data)
 
+		def drain(self):
+			assert self.buffer[0] is None
+			for pos, data in enumerate(self.buffer[1:], 1):
+				if data is None:
+					# We are done with this ds, so let next slice continue
+					self.q_out.put(None)
+					break
+				elif data:
+					write(1, data)
+			else:
+				# We did not reach the next ds, so last item is real data and
+				# needs to be removed. (The buffer will then be empty and
+				# output will continue directly until reaching the next ds.)
+				pos += 1
+			self.buffer[:pos] = ()
+
+		def finish(self):
+			not_finished = bool(self.buffer)
+			while self.buffer:
+				self.pump(True)
+			if not_finished:
+				self.q_out.put(None)
+
 	# Same as above but for the first slice so it prints headers when needed.
+
 	class OrderedHeaderOutputter(OrderedOutputter):
-		def maybe_wait(self):
-			if self.wait:
-				self.q_in.get()
-				self.wait = False
-				if self.ds in headers:
-					hdr_txt = next(headers_iter)
-					write(1, hdr_txt)
+		def start(self, ds):
+			# Each ds is separated by None in the buffer
+			self.buffer.append(None)
+			if ds in headers:
+				# Headers changed, start with those.
+				self.buffer.append(next(headers_iter))
+			else:
+				self.buffer.append(b'') # Avoid need for special case in .drain
+			self.pump()
 
 	# Choose the right outputter for the kind of sync we need.
 	def outputter(q_in, q_out, first_slice=False):
