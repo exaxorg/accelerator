@@ -242,10 +242,66 @@ def main(argv, cfg):
 	class HeaderWaitOutputter(Outputter):
 		def start(self, ds):
 			if ds in headers:
-				self.q_in.get() # wait until previous slice is done
-				self.q_out.put(True) # say we are done
-				self.q_in.get() # wait until headers have been printed
-				self.q_out.put(None) # tell next slice to continue
+				self.add_wait()
+
+		def add_wait(self):
+			# Each sync point is separated by None in the buffer
+			self.buffer.append(None)
+			self.buffer.append(b'') # Avoid need for special case in .drain/.put
+			self.pump()
+
+		def put(self, data):
+			if self.buffer:
+				self.pump()
+				if self.buffer:
+					if len(self.buffer[-1]) + len(data) <= 512:
+						self.buffer[-1] += data
+					else:
+						self.buffer.append(data)
+					return
+			# This will be atomic if the line is not too long
+			# (at least up to PIPE_BUF bytes, should be at least 512).
+			write(1, data)
+
+		def pump(self, wait=None):
+			if wait is None:
+				wait = self.full()
+			try:
+				got = self.q_in.get(wait)
+			except QueueEmpty:
+				if wait:
+					# previous slice has exited without sending all messages
+					raise
+				return
+			if got is True:
+				# since pump is only called when we have outputted all
+				# currently allowed output or when the next message is an
+				# unblock for such output we can just unconditionally send
+				# the True on to the next slice here.
+				self.q_out.put(True)
+				self.pump(wait)
+				return
+			else:
+				self.q_out.put(None)
+				self.drain()
+
+		def drain(self):
+			assert self.buffer[0] is None, 'The buffer must always stop at a sync point (or empty)'
+			for pos, data in enumerate(self.buffer[1:], 1):
+				if data is None:
+					break
+				elif data:
+					write(1, data)
+			else:
+				# We did not reach the next fence, so last item is real data
+				# and needs to be removed. (The buffer will then be empty and
+				# output will continue directly until reaching the sync point.)
+				pos += 1
+			self.buffer[:pos] = ()
+
+		def finish(self):
+			while self.buffer:
+				self.pump(True)
 
 	# Partially ordered output, each header change acts as a fence.
 	# This is used only in the first slice, and outputs the headers.
@@ -257,16 +313,47 @@ def main(argv, cfg):
 	# (When the None returns it is ignored, because output is resumed
 	# as soon as the headers are printed.)
 
-	class HeaderOutputter(Outputter):
-		def start(self, ds):
-			if ds in headers:
-				self.q_out.put(True) # we are done
-				while self.q_in.get() is None:
-					# if it's None that's just the unblock, we ignore that
-					pass
-				hdr_txt = next(headers_iter)
-				write(1, hdr_txt)
-				self.q_out.put(None) # let the output continue
+	class HeaderOutputter(HeaderWaitOutputter):
+		def add_wait(self):
+			if not self.buffer:
+				self.q_out.put(True)
+			self.buffer.append(None)
+			self.buffer.append(b'') # Avoid need for special case in .drain/.put
+			self.pump()
+
+		def drain(self):
+			assert self.buffer[0] is None, 'The buffer must always stop at a sync point (or empty)'
+			for pos, data in enumerate(self.buffer[1:], 1):
+				if data is None:
+					self.q_out.put(True)
+					break
+				elif data:
+					write(1, data)
+			else:
+				pos += 1
+			self.buffer[:pos] = ()
+
+		def pump(self, wait=None):
+			if wait is None:
+				wait = self.full()
+			try:
+				got = self.q_in.get(wait)
+			except QueueEmpty:
+				if wait:
+					# previous slice has exited without sending all messages
+					raise
+				return
+			if got is True:
+				# The True we put in when reaching the fence has travelled
+				# all the way around the queue ring, it's time to print the
+				# new headers
+				write(1, next(headers_iter))
+				# and then unblock the other slices
+				self.q_out.put(None)
+				self.drain()
+				# No else, when the None comes back we just drop it.
+			if not wait:
+				self.pump(False)
 
 	# Fully ordered output, each slice waits for the previous slice.
 	# For each ds, waits for None (anything really) before starting,
