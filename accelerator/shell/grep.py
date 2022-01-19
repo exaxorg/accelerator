@@ -24,7 +24,7 @@ from __future__ import division, print_function
 
 import sys
 import re
-from multiprocessing import Process, JoinableQueue
+from multiprocessing import Process
 from itertools import chain, repeat
 from collections import deque, OrderedDict
 from argparse import RawTextHelpFormatter, Action
@@ -38,6 +38,7 @@ from accelerator.compat import unicode, izip, PY2
 from accelerator.colourwrapper import colour
 from .parser import name2ds
 from accelerator import g
+from accelerator import mp
 
 
 def main(argv, cfg):
@@ -204,8 +205,9 @@ def main(argv, cfg):
 	# When used directly it just prints all output immediately.
 
 	class Outputter:
-		def __init__(self, q):
-			self.q = q
+		def __init__(self, q_in, q_out):
+			self.q_in = q_in
+			self.q_out = q_out
 
 		def put(self, data):
 			# This will be atomic if the line is not too long
@@ -223,28 +225,42 @@ def main(argv, cfg):
 
 	# Partially ordered output, each header change acts as a fence.
 	# This is used in all slices except the first.
+	#
+	# The queue gets True when the previous slice is ready for the next
+	# header change, and None when the header is printed (and it's ok
+	# to resume output).
 
 	class HeaderWaitOutputter(Outputter):
 		def start(self, ds):
 			if ds in headers:
-				self.q.task_done()
-				self.q.get()
+				self.q_in.get() # wait until previous slice is done
+				self.q_out.put(True) # say we are done
+				self.q_in.get() # wait until headers have been printed
+				self.q_out.put(None) # tell next slice to continue
 
 	# Partially ordered output, each header change acts as a fence.
 	# This is used only in the first slice, and outputs the headers.
+	#
+	# When it is ready to output headers it sends True in the queue.
+	# When the True has travelled around the queue ring all slices are
+	# ready, the headers are printed, and None is sent to let the other
+	# slices resume output.
+	# (When the None returns it is ignored, because output is resumed
+	# as soon as the headers are printed.)
 
 	class HeaderOutputter(Outputter):
 		def start(self, ds):
 			if ds in headers:
-				for q in self.q:
-					q.join()
+				self.q_out.put(True) # we are done
+				while self.q_in.get() is None:
+					# if it's None that's just the unblock, we ignore that
+					pass
 				hdr_txt = next(headers_iter)
 				write(1, hdr_txt)
-				for q in self.q:
-					q.put(None)
+				self.q_out.put(None) # let the output continue
 
 	# Choose the right outputter for the kind of sync we need.
-	def outputter(q, first_slice=False):
+	def outputter(q_in, q_out, first_slice=False):
 		if headers:
 			if first_slice:
 				cls = HeaderOutputter
@@ -252,7 +268,7 @@ def main(argv, cfg):
 				cls = HeaderWaitOutputter
 		else:
 			cls = Outputter
-		return cls(q)
+		return cls(q_in, q_out)
 
 	def grep(ds, sliceno, out):
 		chk = pat_s.search
@@ -337,11 +353,13 @@ def main(argv, cfg):
 			elif before is not None:
 				before.append((lineno, items))
 
-	def one_slice(sliceno, q):
+	def one_slice(sliceno, q_in, q_out):
+		if q_in:
+			q_in.make_reader()
+		if q_out:
+			q_out.make_writer()
 		try:
-			out = outputter(q)
-			if q:
-				q.get()
+			out = outputter(q_in, q_out)
 			for ds in datasets:
 				out.start(ds)
 				grep(ds, sliceno, out)
@@ -352,12 +370,6 @@ def main(argv, cfg):
 				return
 			else:
 				raise
-		finally:
-			# Make sure we are joinable
-			try:
-				q.task_done()
-			except Exception:
-				pass
 
 	headers_prefix = []
 	if args.show_dataset:
@@ -391,26 +403,32 @@ def main(argv, cfg):
 		write(1, gen_headers(current_headers))
 		headers_iter = iter(map(gen_headers, headers.values()))
 
-	queues = []
+	q_in = q_out = first_q_out = None
 	children = []
 	if not args.ordered:
-		q = None
+		if headers:
+			q_in = first_q_out = mp.LockFreeQueue()
 		for sliceno in want_slices[1:]:
-			if headers:
-				q = JoinableQueue()
-				q.put(None)
-				queues.append(q)
+			if q_in:
+				q_out = mp.LockFreeQueue()
 			p = Process(
 				target=one_slice,
-				args=(sliceno, q,),
+				args=(sliceno, q_in, q_out,),
 				name='slice-%d' % (sliceno,),
 			)
 			p.daemon = True
 			p.start()
 			children.append(p)
+			if q_in and q_in is not first_q_out:
+				q_in.close()
+			q_in = q_out
 		want_slices = want_slices[:1]
+	if q_in:
+		q_out = first_q_out
+		q_in.make_reader()
+		q_out.make_writer()
 
-	out = outputter(queues, first_slice=True)
+	out = outputter(q_in, q_out, first_slice=True)
 	for ds in datasets:
 		out.start(ds)
 		for sliceno in want_slices:
