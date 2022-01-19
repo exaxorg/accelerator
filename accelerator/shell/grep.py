@@ -276,7 +276,7 @@ def main(argv, cfg):
 		def start(self, ds):
 			# Each ds is separated by None in the buffer
 			self.buffer.append(None)
-			self.buffer.append(b'') # Avoid need for special case in .drain
+			self.buffer.append(b'') # Avoid need for special case in .drain/.put
 			self.pump()
 
 		def end(self, ds):
@@ -300,7 +300,10 @@ def main(argv, cfg):
 			if self.buffer:
 				self.pump()
 				if self.buffer:
-					self.buffer.append(data)
+					if len(self.buffer[-1]) + len(data) <= 512:
+						self.buffer[-1] += data
+					else:
+						self.buffer.append(data)
 					return
 			# This will be atomic if the line is not too long
 			# (at least up to PIPE_BUF bytes, should be at least 512).
@@ -339,7 +342,7 @@ def main(argv, cfg):
 				# Headers changed, start with those.
 				self.buffer.append(next(headers_iter))
 			else:
-				self.buffer.append(b'') # Avoid need for special case in .drain
+				self.buffer.append(b'') # Avoid need for special case in .drain/.put
 			self.pump()
 
 	# Choose the right outputter for the kind of sync we need.
