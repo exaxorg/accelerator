@@ -176,6 +176,9 @@ def main(argv, cfg):
 	# Don't highlight everything when just trying to cat
 	if args.pattern == '':
 		highlight_matches = False
+	# Don't highlight anything with -l
+	if args.list_matching:
+		highlight_matches = False
 
 	separator = args.separator
 	if separator is None and not sys.stdout.isatty():
@@ -657,6 +660,17 @@ def main(argv, cfg):
 	if args.list_matching:
 		ordered_res = defaultdict(set)
 		q_list.make_reader()
+		if seen_list is None:
+			used_columns = ['dataset', 'sliceno']
+		else:
+			used_columns = ['dataset']
+		inner_show = make_show({} if args.format == 'json' else [], used_columns)
+		def show(ds, sliceno=None):
+			if sliceno is None:
+				items = [ds]
+			else:
+				items = [ds, sliceno]
+			write(1, inner_show(None, items))
 		while True:
 			try:
 				ds, sliceno = q_list.get()
@@ -666,19 +680,19 @@ def main(argv, cfg):
 				if args.ordered:
 					ordered_res[ds].add(sliceno)
 				else:
-					print(ds, sliceno)
+					show(ds, sliceno)
 			elif ds not in seen_list:
 				seen_list.add(ds)
 				if not args.ordered:
-					print(ds)
+					show(ds)
 		if args.ordered:
 			for ds in datasets:
 				if seen_list is None:
 					for sliceno in sorted(ordered_res[ds]):
-						print(ds, sliceno)
+						show(ds, sliceno)
 				else:
 					if ds in seen_list:
-						print(ds)
+						show(ds)
 	else:
 		out = outputter(q_in, q_out, first_slice=True)
 		for ds in datasets:
