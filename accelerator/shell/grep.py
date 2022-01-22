@@ -461,39 +461,12 @@ def main(argv, cfg):
 			cls = Outputter
 		return cls(q_in, q_out)
 
-	def grep(ds, sliceno, out):
-		out.start(ds)
-		chk = pat_s.search
-		def mk_iter(col):
-			if ds.columns[col].type == 'ascii':
-				it = ds._column_iterator(sliceno, col, _type='unicode')
-			else:
-				it = ds._column_iterator(sliceno, col)
-			if ds.columns[col].type == 'bytes':
-				errors = 'replace' if PY2 else 'surrogateescape'
-				if ds.columns[col].none_support:
-					it = (None if v is None else v.decode('utf-8', errors) for v in it)
-				else:
-					it = (v.decode('utf-8', errors) for v in it)
-			return it
-		def colour_item(item):
-			pos = 0
-			parts = []
-			for m in pat_s.finditer(item):
-				a, b = m.span()
-				parts.extend((item[pos:a], colour(item[a:b], 'grep/highlight')))
-				pos = b
-			parts.append(item[pos:])
-			return ''.join(parts)
+	# Make printer for the selected output options
+	def make_show(prefix, used_columns):
 		def filter_item(item):
 			return ''.join(pat_s.findall(item))
 		if args.format == 'json':
-			prefix = {}
 			dumps = json.JSONEncoder(ensure_ascii=False, default=json_default).encode
-			if args.show_dataset:
-				prefix['dataset'] = ds
-			if args.show_sliceno:
-				prefix['sliceno'] = sliceno
 			def show(lineno, items):
 				if only_matching == 'part':
 					items = [filter_item(unicode(item)) for item in items]
@@ -508,12 +481,15 @@ def main(argv, cfg):
 					d = prefix
 				return dumps(d).encode('utf-8', 'surrogatepass')
 		else:
-			prefix = []
-			if args.show_dataset:
-				prefix.append(ds)
-			if args.show_sliceno:
-				prefix.append(str(sliceno))
-			prefix = tuple(prefix)
+			def colour_item(item):
+				pos = 0
+				parts = []
+				for m in pat_s.finditer(item):
+					a, b = m.span()
+					parts.extend((item[pos:a], colour(item[a:b], 'grep/highlight')))
+					pos = b
+				parts.append(item[pos:])
+				return ''.join(parts)
 			def show(lineno, items):
 				data = list(prefix)
 				if args.show_lineno:
@@ -535,6 +511,23 @@ def main(argv, cfg):
 					lens = (l + esc - unesc for l, unesc, esc in zip(lens, lens_unesc, lens_esc))
 				data.extend(show_items)
 				return separate(data, lens).encode('utf-8', errors)
+		return show
+
+	def grep(ds, sliceno, out):
+		out.start(ds)
+		chk = pat_s.search
+		def mk_iter(col):
+			if ds.columns[col].type == 'ascii':
+				it = ds._column_iterator(sliceno, col, _type='unicode')
+			else:
+				it = ds._column_iterator(sliceno, col)
+			if ds.columns[col].type == 'bytes':
+				errors = 'replace' if PY2 else 'surrogateescape'
+				if ds.columns[col].none_support:
+					it = (None if v is None else v.decode('utf-8', errors) for v in it)
+				else:
+					it = (v.decode('utf-8', errors) for v in it)
+			return it
 		used_columns = columns_for_ds(ds)
 		used_grep_columns = grep_columns and columns_for_ds(ds, grep_columns)
 		if grep_columns and set(used_grep_columns) != set(used_columns):
@@ -546,6 +539,21 @@ def main(argv, cfg):
 			before = deque((), args.before_context)
 		else:
 			before = None
+		if args.format == 'json':
+			prefix = {}
+			if args.show_dataset:
+				prefix['dataset'] = ds
+			if args.show_sliceno:
+				prefix['sliceno'] = sliceno
+			show = make_show(prefix, used_columns)
+		else:
+			prefix = []
+			if args.show_dataset:
+				prefix.append(ds)
+			if args.show_sliceno:
+				prefix.append(str(sliceno))
+			prefix = tuple(prefix)
+			show = make_show(prefix, used_columns)
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if any(chk(unicode(item)) for item in grep_items or items):
