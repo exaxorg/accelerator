@@ -300,6 +300,7 @@ def synthesis(job, slices):
 	previous = None
 	previous_cols = []
 	slice = 0
+	header_test = []
 	for ds_ix, cols in enumerate(columns):
 		dw = job.datasetwriter(name='header test %d' % (ds_ix,), previous=previous, allow_missing_slices=True)
 		for col in cols:
@@ -313,6 +314,7 @@ def synthesis(job, slices):
 			args = (value,) * len(cols)
 			dw.write(*args)
 		previous = dw.finish()
+		header_test.append((previous, slice))
 	grep_text(
 		['-H', '-c', '', previous],
 			[['int32', 'int64']] +
@@ -328,6 +330,16 @@ def synthesis(job, slices):
 			[(v,) for v in values_every_time],
 		unordered=True,
 	)
+
+	# test --list-matching
+	grep_text(['-l', '-c', '', previous], [[ds] for ds, _ in header_test])
+	want = [[ds, str(sliceno)] for ds, sliceno in header_test]
+	grep_text(['-l', '-c', '-S', '', previous], want)
+	grep_text(['-l', '-c', '-S', '-H', '', previous], [['[DATASET]', '[SLICE]']] + want)
+	grep_json(['-l', '-c', '', previous], [{'dataset': ds} for ds, _ in header_test])
+	grep_json(['-l', '-c', '-S', '', previous], [{'dataset': ds, 'sliceno': sliceno} for ds, sliceno in header_test])
+	# test escaping
+	grep_text(['-l', '-t', '/', '-S', '', previous], [['"%s"/%d' % header_test[-1]]])
 
 	# more escaping
 	escapy = mk_ds('escapy',
