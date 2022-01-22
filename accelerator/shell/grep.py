@@ -621,7 +621,8 @@ def main(argv, cfg):
 				return b''
 		# remove the starting ds, so no header changes means no special handling.
 		current_headers = headers.pop(datasets[0])
-		write(1, gen_headers(current_headers))
+		if not args.list_matching:
+			write(1, gen_headers(current_headers))
 		headers_iter = iter(map(gen_headers, headers.values()))
 
 	q_in = q_out = first_q_out = q_list = None
@@ -658,6 +659,11 @@ def main(argv, cfg):
 			q_in.put_local(None)
 
 	if args.list_matching:
+		if args.headers:
+			headers_prefix = ['[DATASET]']
+			if seen_list is None:
+				headers_prefix.append('[SLICE]')
+			write(1, gen_headers([]))
 		ordered_res = defaultdict(set)
 		q_list.make_reader()
 		if seen_list is None:
