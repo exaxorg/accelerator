@@ -479,7 +479,7 @@ def main(argv, cfg):
 				if prefix:
 					prefix['data'] = d
 					d = prefix
-				return dumps(d).encode('utf-8', 'surrogatepass')
+				return dumps(d).encode('utf-8', 'surrogatepass') + b'\n'
 		else:
 			def colour_item(item):
 				pos = 0
@@ -510,7 +510,7 @@ def main(argv, cfg):
 					lens_esc = (len(item) for item in data + show_items)
 					lens = (l + esc - unesc for l, unesc, esc in zip(lens, lens_unesc, lens_esc))
 				data.extend(show_items)
-				return separate(data, lens).encode('utf-8', errors)
+				return separate(data, lens).encode('utf-8', errors) + b'\n'
 		return show
 
 	def grep(ds, sliceno, out):
@@ -561,10 +561,10 @@ def main(argv, cfg):
 					q_list.put((ds, sliceno))
 					return
 				while before:
-					out.put(show(*before.popleft()) + b'\n')
+					out.put(show(*before.popleft()))
 				to_show = 1 + args.after_context
 			if to_show:
-				out.put(show(lineno, items) + b'\n')
+				out.put(show(lineno, items))
 				to_show -= 1
 			elif before is not None:
 				before.append((lineno, items))
