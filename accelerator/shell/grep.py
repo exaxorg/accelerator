@@ -646,11 +646,15 @@ def main(argv, cfg):
 			q_out.make_writer()
 		if q_list:
 			q_list.make_writer()
-		out = outputter(q_in, q_out)
-		for ds in datasets:
-			if seen_list is None or ds not in seen_list:
-				grep(ds, sliceno, out)
-		out.finish()
+		try:
+			out = outputter(q_in, q_out)
+			for ds in datasets:
+				if seen_list is None or ds not in seen_list:
+					grep(ds, sliceno, out)
+			out.finish()
+		except QueueEmpty:
+			# some other process died, no need to print an error here
+			sys.exit(1)
 
 	headers_prefix = []
 	if args.show_dataset:
@@ -716,52 +720,57 @@ def main(argv, cfg):
 		if args.ordered:
 			q_in.put_local(None)
 
-	if args.list_matching:
-		if args.headers:
-			headers_prefix = ['[DATASET]']
-			if seen_list is None:
-				headers_prefix.append('[SLICE]')
-			write(1, gen_headers([]))
-		ordered_res = defaultdict(set)
-		q_list.make_reader()
-		if seen_list is None:
-			used_columns = ['dataset', 'sliceno']
-		else:
-			used_columns = ['dataset']
-		inner_show = make_show({} if args.format == 'json' else [], used_columns)
-		def show(ds, sliceno=None):
-			if sliceno is None:
-				items = [ds]
-			else:
-				items = [ds, sliceno]
-			write(1, inner_show(None, items))
-		while True:
-			try:
-				ds, sliceno = q_list.get()
-			except QueueEmpty:
-				break
-			if seen_list is None:
-				if args.ordered:
-					ordered_res[ds].add(sliceno)
-				else:
-					show(ds, sliceno)
-			elif ds not in seen_list:
-				seen_list.add(ds)
-				if not args.ordered:
-					show(ds)
-		if args.ordered:
-			for ds in datasets:
+	try:
+		if args.list_matching:
+			if args.headers:
+				headers_prefix = ['[DATASET]']
 				if seen_list is None:
-					for sliceno in sorted(ordered_res[ds]):
-						show(ds, sliceno)
+					headers_prefix.append('[SLICE]')
+				write(1, gen_headers([]))
+			ordered_res = defaultdict(set)
+			q_list.make_reader()
+			if seen_list is None:
+				used_columns = ['dataset', 'sliceno']
+			else:
+				used_columns = ['dataset']
+			inner_show = make_show({} if args.format == 'json' else [], used_columns)
+			def show(ds, sliceno=None):
+				if sliceno is None:
+					items = [ds]
 				else:
-					if ds in seen_list:
+					items = [ds, sliceno]
+				write(1, inner_show(None, items))
+			while True:
+				try:
+					ds, sliceno = q_list.get()
+				except QueueEmpty:
+					break
+				if seen_list is None:
+					if args.ordered:
+						ordered_res[ds].add(sliceno)
+					else:
+						show(ds, sliceno)
+				elif ds not in seen_list:
+					seen_list.add(ds)
+					if not args.ordered:
 						show(ds)
-	else:
-		out = outputter(q_in, q_out, first_slice=True)
-		for ds in datasets:
-			grep(ds, want_slices[0], out)
-		out.finish()
+			if args.ordered:
+				for ds in datasets:
+					if seen_list is None:
+						for sliceno in sorted(ordered_res[ds]):
+							show(ds, sliceno)
+					else:
+						if ds in seen_list:
+							show(ds)
+		else:
+			out = outputter(q_in, q_out, first_slice=True)
+			for ds in datasets:
+				grep(ds, want_slices[0], out)
+			out.finish()
+	except QueueEmpty:
+		# don't print an error, probably a subprocess died from EPIPE before
+		# the main process. (or the subprocess already printed an error.)
+		return 1
 
 	for c in children:
 		c.join()
