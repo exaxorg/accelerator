@@ -27,7 +27,6 @@ import re
 from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS
-import errno
 from os import write
 import json
 import datetime
@@ -647,17 +646,11 @@ def main(argv, cfg):
 			q_out.make_writer()
 		if q_list:
 			q_list.make_writer()
-		try:
-			out = outputter(q_in, q_out)
-			for ds in datasets:
-				if seen_list is None or ds not in seen_list:
-					grep(ds, sliceno, out)
-			out.finish()
-		except IOError as e:
-			if e.errno == errno.EPIPE:
-				return
-			else:
-				raise
+		out = outputter(q_in, q_out)
+		for ds in datasets:
+			if seen_list is None or ds not in seen_list:
+				grep(ds, sliceno, out)
+		out.finish()
 
 	headers_prefix = []
 	if args.show_dataset:
