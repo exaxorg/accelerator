@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -478,7 +478,7 @@ def main():
 	except UserError as e:
 		print(e, file=sys.stderr)
 		return 1
-	except IOError as e:
+	except OSError as e:
 		if e.errno == errno.EPIPE:
 			return 1
 		else:

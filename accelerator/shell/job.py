@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2021 Carl Drougge                                     #
+# Copyright (c) 2020-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -120,7 +120,7 @@ def main(argv, cfg):
 			print(e)
 			res = 1
 		except Exception as e:
-			if isinstance(e, IOError) and e.errno == errno.EPIPE:
+			if isinstance(e, OSError) and e.errno == errno.EPIPE:
 				raise
 			print_exc()
 			print("Failed to show %r" % (path,))
