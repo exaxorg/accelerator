@@ -564,6 +564,11 @@ def main(argv, cfg):
 				return separate(data, lens).encode('utf-8', errors) + b'\n'
 		return show
 
+	# This is called for each slice in each dataset.
+	# Each slice has a separate process (the same for all datasets).
+	# The first slice runs in the main process (unless -l), everything
+	# else runs from one_slice.
+
 	def grep(ds, sliceno, out):
 		out.start(ds)
 		if len(patterns) == 1:
@@ -629,6 +634,9 @@ def main(argv, cfg):
 				before.append((lineno, items))
 		out.end(ds)
 
+	# This runs in a separate process for each slice except the first
+	# one (unless -l), which is handled specially in the main process.
+
 	def one_slice(sliceno, q_in, q_out):
 		if q_in:
 			q_in.make_reader()
@@ -685,6 +693,8 @@ def main(argv, cfg):
 	children = []
 	seen_list = None
 	if args.list_matching:
+		# in this case all slices get their own process
+		# and the main process just prints the maching slices
 		q_list = mp.LockFreeQueue()
 		separate_process_slices = want_slices
 		if not args.show_sliceno:
@@ -692,6 +702,7 @@ def main(argv, cfg):
 	else:
 		separate_process_slices = want_slices[1:]
 		if args.ordered or headers:
+			# needs to sync in some way
 			q_in = first_q_out = mp.LockFreeQueue()
 	for sliceno in separate_process_slices:
 		if q_in:
