@@ -194,6 +194,14 @@ def synthesis(job, slices):
 	# ... and --context
 	grep_text(['-C', '1', '-v', '-e', '[a-ns-x]', '-e', '[p-v]', '-e', 'y', ctx2], [[ch.upper(), ch] for ch in 'nopyz'])
 
+	# several datasets and columns (testing that unqualified and qualified works the same)
+	grep_text(['-M', '01', a, b, 'int32', 'int64'], [[101, 201], [1001]])
+	grep_text(['-M', '-d', a, '01', b, 'int32', 'int64'], [[101, 201], [1001]])
+	grep_text(['-M', a, b, 'int32', 'int64', '-e', '01'], [[101, 201], [1001]])
+	grep_text(['-M', '-d', a, '--column', 'int32', '-n', 'int64', '--regexp', '01', '--dataset', b], [[101, 201], [1001]])
+	# + several patterns
+	grep_text(['-M', '-e', '000', a, b, 'int32', 'int64', '-e', '01'], [[101, 201], [1000], [1001]])
+
 	# try some colour
 	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [frame(HDR_HI, ['[DATASET]', '[SLICE]', 'int32', 'int64']), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
 	os.putenv('CLICOLOR_FORCE', '1')
