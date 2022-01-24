@@ -182,6 +182,18 @@ def synthesis(job, slices):
 	# only one before 33 because of slicing, only one after 98 because the ds ends (even though ctx2 continues in slice 1)
 	grep_text(['-c', '-A', '3', '-B', '2', '(33|98|Z)', ctx2], [[32], [33], [34], [35], [36], [96], [97], [98], [99], ['X', 'x'], ['Y', 'y'], ['Z', 'z']])
 
+	# --invert-match
+	grep_text(['-v', '[a-mO-Y]', ctx2], [[ch.upper(), ch] for ch in 'nz'])
+	# ... with --context
+	grep_text(['-C', '1', '-v', '[a-mO-Y]', ctx2], [[ch.upper(), ch] for ch in 'mnoyz'])
+
+	# several (partially overlapping) patterns
+	grep_text(['-e', '[moyz]', '-e', '[mNO]', ctx2], [[ch.upper(), ch] for ch in 'mnoyz'])
+	# ... with --invert-match
+	grep_text(['-v', '-e', '[a-ls-x]', '-e', '[p-v]', '-e', 'z', ctx2], [[ch.upper(), ch] for ch in 'mnoy'])
+	# ... and --context
+	grep_text(['-C', '1', '-v', '-e', '[a-ns-x]', '-e', '[p-v]', '-e', 'y', ctx2], [[ch.upper(), ch] for ch in 'nopyz'])
+
 	# try some colour
 	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [frame(HDR_HI, ['[DATASET]', '[SLICE]', 'int32', 'int64']), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
 	os.putenv('CLICOLOR_FORCE', '1')
