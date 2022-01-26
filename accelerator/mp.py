@@ -58,6 +58,9 @@ def _mk_sel(fd, ev):
 # A dying writer will never corrupt or deadlock the queue, but can cause a
 # memory leak in the reading process (until the queue object is destroyed).
 # Large messages are probably quite inefficient.
+# You can call .make_*() before forking, but once you have put anything in the
+# queue it is no longer fork safe. (Forking is still fine, but not using the
+# queue from the new process.)
 #
 # In short, you often can't use this. And when you do, you have to be careful.
 
@@ -65,20 +68,16 @@ class LockFreeQueue:
 	def __init__(self):
 		self._r_sel = self._w_sel = None
 		self.r, self.w = os.pipe()
-		_nb(self.r)
-		_nb(self.w)
 		self._buf = b''
 		self._partial = {}
 
 	def make_writer(self):
 		os.close(self.r)
 		self.r = -1
-		self._w_sel = _mk_sel(self.w, selectors.EVENT_WRITE)
 
 	def make_reader(self):
 		os.close(self.w)
 		self.w = -1
-		self._r_sel = _mk_sel(self.r, selectors.EVENT_READ)
 
 	def close(self):
 		if self._r_sel:
@@ -96,8 +95,24 @@ class LockFreeQueue:
 
 	__del__ = close
 
+	def _late_setup(self):
+		# The selector must be constructed late so it happens in the right
+		# process. Also probably saves an fd before fork (in the selector).
+		pid = os.getpid()
+		if self._r_sel or self._w_sel:
+			assert self._pid == pid, "Can't fork after using"
+		else:
+			self._pid = pid
+			if self.r != -1:
+				_nb(self.r)
+				self._r_sel = _mk_sel(self.r, selectors.EVENT_READ)
+			if self.w != -1:
+				_nb(self.w)
+				self._w_sel = _mk_sel(self.w, selectors.EVENT_WRITE)
+
 	def get(self, block=True, timeout=0):
 		assert self.w == -1, "call make_reader first"
+		self._late_setup()
 		if timeout:
 			deadline = monotonic() + timeout
 		need_data = False
@@ -149,14 +164,14 @@ class LockFreeQueue:
 					self._r_sel.select()
 
 	def put(self, msg):
-		pid = os.getpid()
 		assert self.r == -1, "call make_writer first"
+		self._late_setup()
 		msg = pickle.dumps(msg, pickle.HIGHEST_PROTOCOL)
 		msg = struct.pack('<I', len(msg)) + msg
 		offset = 0
 		while offset < len(msg):
 			part = msg[offset:offset + MAX_PART]
-			part = struct.pack('<HI', len(part), pid) + part
+			part = struct.pack('<HI', len(part), self._pid) + part
 			offset += MAX_PART
 			while True:
 				self._w_sel.select()
