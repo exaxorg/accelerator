@@ -50,6 +50,8 @@ class SignalWrapper(object):
 				old = signal.signal(sig, self.signal_arrived)
 				self.restore[sig] = old
 				signal.siginterrupt(sig, False)
+				if hasattr(signal, 'pthread_sigmask'):
+					signal.pthread_sigmask(signal.SIG_UNBLOCK, {sig})
 			else:
 				all_sigs = False
 		if all_sigs and skip_input_if_possible:

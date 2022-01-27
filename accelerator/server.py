@@ -422,6 +422,8 @@ def main(argv, config):
 
 	signal.signal(signal.SIGUSR1, siginfo)
 	signal.siginterrupt(signal.SIGUSR1, False)
+	if hasattr(signal, 'pthread_sigmask'):
+		signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGUSR1})
 	if hasattr(signal, 'SIGINFO'):
 		signal.signal(signal.SIGINFO, siginfo)
 		signal.siginterrupt(signal.SIGINFO, False)
