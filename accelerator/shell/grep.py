@@ -188,6 +188,17 @@ def main(argv, cfg):
 			if bad:
 				return 1
 
+	# For the status reporting, this gives how many lines have been processed
+	# when reaching each ds ix, per slice. Ends with an extra fictional ds,
+	# i.e. the total number of lines for that slice.
+	total_lines_per_slice_at_ds = [[0] * g.slices]
+	for ds in datasets:
+		total_lines_per_slice_at_ds.append([a + b for a, b in zip(total_lines_per_slice_at_ds[-1], ds.lines)])
+	status_interval = {
+		sliceno: max(sum(ds.lines[sliceno] for ds in datasets) // 200, 10)
+		for sliceno in want_slices
+	}
+
 	# never and always override env settings, auto (default) sets from env/tty
 	if args.colour == 'never':
 		colour.disable()
@@ -252,6 +263,29 @@ def main(argv, cfg):
 	else:
 		escape_item = None
 		errors = 'replace' if PY2 else 'surrogateescape'
+
+	# This is for the ^T handling. Each slice sends an update when finishing
+	# a dataset, and every status_interval[sliceno] lines while iterating.
+	# To minimise the data sent the only information sent over the queue
+	# is (sliceno, finished_dataset).
+	q_status = mp.LockFreeQueue()
+	def status_collector():
+		q_status.make_reader()
+		status = {sliceno: [0, 0] for sliceno in want_slices}
+		#            [ds_ix, done_lines]
+		while True:
+			try:
+				sliceno, finished_dataset = q_status.get()
+			except QueueEmpty:
+				return
+			if finished_dataset:
+				ds_ix = status[sliceno][0] + 1
+				status[sliceno] = [ds_ix, total_lines_per_slice_at_ds[ds_ix][sliceno]]
+			else:
+				status[sliceno][1] += status_interval[sliceno]
+	status_process = mp.SimplifiedProcess(target=status_collector, name='ax grep status')
+	# everything else will write, so make it a writer right away
+	q_status.make_writer()
 
 	# This contains some extra stuff to be a better base for the other
 	# outputters.
@@ -578,11 +612,20 @@ def main(argv, cfg):
 		else:
 			def chk(s):
 				return any(p.search(s) for p in patterns)
+		first = [True]
 		def mk_iter(col):
+			kw = {}
+			if first[0]:
+				first[0] = False
+				lines = ds.lines[sliceno]
+				if lines > status_interval[sliceno]:
+					def cb(n):
+						q_status.put((sliceno, False))
+					kw['callback'] = cb
+					kw['callback_interval'] = status_interval[sliceno]
 			if ds.columns[col].type == 'ascii':
-				it = ds._column_iterator(sliceno, col, _type='unicode')
-			else:
-				it = ds._column_iterator(sliceno, col)
+				kw['_type'] = 'unicode'
+			it = ds._column_iterator(sliceno, col, **kw)
 			if ds.columns[col].type == 'bytes':
 				errors = 'replace' if PY2 else 'surrogateescape'
 				if ds.columns[col].none_support:
@@ -651,6 +694,7 @@ def main(argv, cfg):
 			for ds in datasets:
 				if seen_list is None or ds not in seen_list:
 					grep(ds, sliceno, out)
+				q_status.put((sliceno, True))
 			out.finish()
 		except QueueEmpty:
 			# some other process died, no need to print an error here
@@ -687,7 +731,7 @@ def main(argv, cfg):
 		headers_iter = iter(map(gen_headers, headers.values()))
 
 	q_in = q_out = first_q_out = q_list = None
-	children = []
+	children = [status_process]
 	seen_list = None
 	if args.list_matching:
 		# in this case all slices get their own process
@@ -764,14 +808,17 @@ def main(argv, cfg):
 							show(ds)
 		else:
 			out = outputter(q_in, q_out, first_slice=True)
+			sliceno = want_slices[0]
 			for ds in datasets:
-				grep(ds, want_slices[0], out)
+				grep(ds, sliceno, out)
+				q_status.put((sliceno, True))
 			out.finish()
 	except QueueEmpty:
 		# don't print an error, probably a subprocess died from EPIPE before
 		# the main process. (or the subprocess already printed an error.)
 		return 1
 
+	q_status.close()
 	for c in children:
 		c.join()
 		if c.exitcode:
