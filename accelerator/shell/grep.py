@@ -31,6 +31,7 @@ from os import write
 import json
 import datetime
 import operator
+import signal
 
 from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, izip, PY2
@@ -190,10 +191,12 @@ def main(argv, cfg):
 
 	# For the status reporting, this gives how many lines have been processed
 	# when reaching each ds ix, per slice. Ends with an extra fictional ds,
-	# i.e. the total number of lines for that slice.
+	# i.e. the total number of lines for that slice. And then the same again,
+	# to simplify the code in the status shower.
 	total_lines_per_slice_at_ds = [[0] * g.slices]
 	for ds in datasets:
 		total_lines_per_slice_at_ds.append([a + b for a, b in zip(total_lines_per_slice_at_ds[-1], ds.lines)])
+	total_lines_per_slice_at_ds.append(total_lines_per_slice_at_ds[-1])
 	status_interval = {
 		sliceno: max(sum(ds.lines[sliceno] for ds in datasets) // 200, 10)
 		for sliceno in want_slices
@@ -273,6 +276,43 @@ def main(argv, cfg):
 		q_status.make_reader()
 		status = {sliceno: [0, 0] for sliceno in want_slices}
 		#            [ds_ix, done_lines]
+		total_lines = sum(total_lines_per_slice_at_ds[-1])
+		def show(sig, frame):
+			ds_ixes = []
+			progress_lines = []
+			progress_fraction = []
+			for sliceno in want_slices:
+				ds_ix, done_lines = status[sliceno]
+				ds_ixes.append(ds_ix)
+				max_possible = min(done_lines + status_interval[sliceno], total_lines_per_slice_at_ds[ds_ix + 1][sliceno])
+				done_lines = (done_lines + max_possible) / 2 # middle of the possibilities
+				progress_lines.append(done_lines)
+				total = total_lines_per_slice_at_ds[-1][sliceno]
+				if total == 0:
+					progress_fraction.append(1)
+				else:
+					progress_fraction.append(done_lines / total)
+			progress_total = sum(progress_lines) / (total_lines or 1)
+			bad_cutoff = progress_total - 0.1
+			msg = '%d%% of %d lines' % (round(progress_total * 100), total_lines,)
+			if len(datasets) > 1:
+				min_ds = min(ds_ixes)
+				max_ds = max(ds_ixes)
+				if min_ds < len(datasets):
+					ds_name = datasets[min_ds].quoted
+					extra = '' if min_ds == max_ds else ' ++'
+					msg = '%s (in %s%s)' % (msg, ds_name, extra,)
+			worst = min(progress_fraction)
+			if worst < bad_cutoff:
+				msg = '%s, worst %d%%' % (msg, round(worst * 100),)
+			msg = colour('  SUMMARY: %s' % (msg,), 'grep/info')
+			write(2, msg.encode('utf-8') + b'\n')
+		for signame in ('SIGINFO', 'SIGUSR1'):
+			if hasattr(signal, signame):
+				sig = getattr(signal, signame)
+				signal.signal(sig, show)
+				if hasattr(signal, 'pthread_sigmask'):
+					signal.pthread_sigmask(signal.SIG_UNBLOCK, {sig})
 		while True:
 			try:
 				sliceno, finished_dataset = q_status.get()
