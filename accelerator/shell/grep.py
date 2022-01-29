@@ -211,6 +211,7 @@ def main(argv, cfg):
 		colour.enable()
 		highlight_matches = True
 	else:
+		args.colour = 'auto'
 		highlight_matches = colour.enabled
 
 	# Don't highlight everything when just trying to cat
@@ -279,6 +280,9 @@ def main(argv, cfg):
 		#            [ds_ix, done_lines]
 		total_lines = sum(total_lines_per_slice_at_ds[-1])
 		previous = [0]
+		# base colour conf in if stderr is a tty, not stdout.
+		if args.colour == 'auto':
+			colour.configure_from_environ(stdout=sys.stderr)
 		def show(sig, frame):
 			t = monotonic()
 			verbose = (previous[0] + 2 > t) # within 2 seconds of previous
