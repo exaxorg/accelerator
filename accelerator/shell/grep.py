@@ -338,15 +338,15 @@ def main(argv, cfg):
 				if hasattr(signal, 'pthread_sigmask'):
 					signal.pthread_sigmask(signal.SIG_UNBLOCK, {sig})
 		while True:
-			try:
-				sliceno, finished_dataset = q_status.get()
-			except QueueEmpty:
-				return
-			if finished_dataset:
-				ds_ix = status[sliceno][0] + 1
-				status[sliceno] = [ds_ix, total_lines_per_slice_at_ds[ds_ix][sliceno]]
-			else:
-				status[sliceno][1] += status_interval[sliceno]
+				try:
+					sliceno, finished_dataset = q_status.get()
+				except QueueEmpty:
+					return
+				if finished_dataset:
+					ds_ix = status[sliceno][0] + 1
+					status[sliceno] = [ds_ix, total_lines_per_slice_at_ds[ds_ix][sliceno]]
+				else:
+					status[sliceno][1] += status_interval[sliceno]
 	status_process = mp.SimplifiedProcess(target=status_collector, name='ax grep status')
 	# everything else will write, so make it a writer right away
 	q_status.make_writer()
