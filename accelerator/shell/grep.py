@@ -35,6 +35,7 @@ import signal
 
 from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, izip, PY2
+from accelerator.compat import monotonic
 from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
 from .parser import name2ds
@@ -277,7 +278,11 @@ def main(argv, cfg):
 		status = {sliceno: [0, 0] for sliceno in want_slices}
 		#            [ds_ix, done_lines]
 		total_lines = sum(total_lines_per_slice_at_ds[-1])
+		previous = [0]
 		def show(sig, frame):
+			t = monotonic()
+			verbose = (previous[0] + 2 > t) # within 2 seconds of previous
+			previous[0] = t
 			ds_ixes = []
 			progress_lines = []
 			progress_fraction = []
@@ -294,6 +299,21 @@ def main(argv, cfg):
 					progress_fraction.append(done_lines / total)
 			progress_total = sum(progress_lines) / (total_lines or 1)
 			bad_cutoff = progress_total - 0.1
+			if verbose:
+				show_ds = (len(datasets) > 1 and min(ds_ixes) != max(ds_ixes))
+				for sliceno, ds_ix, p in zip(want_slices, ds_ixes, progress_fraction):
+					if ds_ix == len(datasets):
+						msg = 'DONE'
+					else:
+						msg = '%d%% of %d lines' % (round(p * 100), total_lines_per_slice_at_ds[-1][sliceno],)
+						if show_ds:
+							msg = '%s (in %s)' % (msg, datasets[ds_ix].quoted,)
+					msg = '%9d: %s' % (sliceno, msg,)
+					if p < bad_cutoff:
+						msg = colour(msg, 'grep/infohighlight')
+					else:
+						msg = colour(msg, 'grep/info')
+					write(2, msg.encode('utf-8') + b'\n')
 			msg = '%d%% of %d lines' % (round(progress_total * 100), total_lines,)
 			if len(datasets) > 1:
 				min_ds = min(ds_ixes)

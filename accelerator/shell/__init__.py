@@ -420,6 +420,7 @@ def main():
 		'highlight': ('BOLD',),
 		'grep/highlight': ('RED',),
 		'info': ('BRIGHTBLUE',),
+		'infohighlight': ('BOLD', 'BRIGHTBLUE',),
 		'separator': ('CYAN', 'UNDERLINE',),
 		'header': ('BRIGHTBLUE', 'BOLD',),
 	}
