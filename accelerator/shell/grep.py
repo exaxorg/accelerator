@@ -24,6 +24,7 @@ from __future__ import division, print_function
 
 import sys
 import re
+import os
 from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS
@@ -273,6 +274,9 @@ def main(argv, cfg):
 	# a dataset, and every status_interval[sliceno] lines while iterating.
 	# To minimise the data sent the only information sent over the queue
 	# is (sliceno, finished_dataset).
+	# Status printing is triggered by ^T (or SIGINFO if that is available)
+	# or by SIGUSR1.
+	# Pressing it again within two seconds prints stats per slice too.
 	q_status = mp.LockFreeQueue()
 	def status_collector():
 		q_status.make_reader()
@@ -337,7 +341,49 @@ def main(argv, cfg):
 				signal.signal(sig, show)
 				if hasattr(signal, 'pthread_sigmask'):
 					signal.pthread_sigmask(signal.SIG_UNBLOCK, {sig})
-		while True:
+		tc_original = None
+		using_stdin = False
+		if not hasattr(signal, 'SIGINFO') and sys.stdin.isatty():
+			# ^T wont work automatically on this OS, so we need to handle it as terminal input
+			import termios
+			from accelerator.compat import selectors
+			sel = selectors.DefaultSelector()
+			sel.register(0, selectors.EVENT_READ)
+			sel.register(q_status.r, selectors.EVENT_READ)
+			try:
+				tc_original = termios.tcgetattr(0)
+				tc_changed = list(tc_original)
+				tc_changed[3] &= ~(termios.ICANON | termios.IEXTEN)
+				termios.tcsetattr(0, termios.TCSADRAIN, tc_changed)
+				using_stdin = True
+			except Exception:
+				pass
+			# we can't set stdin nonblocking, because it's probably the same
+			# file description as stdout, so work around that with alarms.
+			def got_alarm(sig, frame):
+				raise IOError()
+			signal.signal(signal.SIGALRM, got_alarm)
+		try:
+			while True:
+				if using_stdin:
+					do_q = False
+					for key, _ in sel.select():
+						if key.fd == 0:
+							try:
+								signal.alarm(1) # in case something else read it we block for max 1 second
+								try:
+									pressed = ord(os.read(0, 1))
+								finally:
+									signal.alarm(0)
+								if pressed == 20:
+									write(2, b'\n') # "^T" shows in the terminal
+									os.kill(os.getpid(), signal.SIGUSR1)
+							except Exception:
+								pass
+						elif key.fd == q_status.r:
+							do_q = True
+					if not do_q:
+						continue
 				try:
 					sliceno, finished_dataset = q_status.get()
 				except QueueEmpty:
@@ -347,6 +393,12 @@ def main(argv, cfg):
 					status[sliceno] = [ds_ix, total_lines_per_slice_at_ds[ds_ix][sliceno]]
 				else:
 					status[sliceno][1] += status_interval[sliceno]
+		finally:
+			if tc_original is not None:
+				try:
+					termios.tcsetattr(0, termios.TCSADRAIN, tc_original)
+				except Exception:
+					pass
 	status_process = mp.SimplifiedProcess(target=status_collector, name='ax grep status')
 	# everything else will write, so make it a writer right away
 	q_status.make_writer()
