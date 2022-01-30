@@ -200,7 +200,8 @@ def main(argv, cfg):
 		total_lines_per_slice_at_ds.append([a + b for a, b in zip(total_lines_per_slice_at_ds[-1], ds.lines)])
 	total_lines_per_slice_at_ds.append(total_lines_per_slice_at_ds[-1])
 	status_interval = {
-		sliceno: max(sum(ds.lines[sliceno] for ds in datasets) // 200, 10)
+		# twice per percent, but not too often or too seldom
+		sliceno: min(max(total_lines_per_slice_at_ds[-1][sliceno] // 200, 10), 5000)
 		for sliceno in want_slices
 	}
 
@@ -430,6 +431,10 @@ def main(argv, cfg):
 		def full(self):
 			return len(self.buffer) > 5000
 
+		def excite(self):
+			if self.buffer:
+				self.pump(False)
+
 	# Partially ordered output, each header change acts as a fence.
 	# This is used in all slices except the first.
 	#
@@ -441,6 +446,8 @@ def main(argv, cfg):
 		def start(self, ds):
 			if ds in headers:
 				self.add_wait()
+			else:
+				self.excite()
 
 		def add_wait(self):
 			# Each sync point is separated by None in the buffer
@@ -737,6 +744,7 @@ def main(argv, cfg):
 				if lines > status_interval[sliceno]:
 					def cb(n):
 						q_status.put((sliceno, False))
+						out.excite()
 					kw['callback'] = cb
 					kw['callback_interval'] = status_interval[sliceno]
 			if ds.columns[col].type == 'ascii':
