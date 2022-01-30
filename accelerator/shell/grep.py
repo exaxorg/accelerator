@@ -313,7 +313,7 @@ def main(argv, cfg):
 					if ds_ix == len(datasets):
 						msg = 'DONE'
 					else:
-						msg = '%d%% of %d lines' % (round(p * 100), total_lines_per_slice_at_ds[-1][sliceno],)
+						msg = '{0:d}% of {1:n} lines'.format(round(p * 100), total_lines_per_slice_at_ds[-1][sliceno])
 						if show_ds:
 							msg = '%s (in %s)' % (msg, datasets[ds_ix].quoted,)
 					msg = '%9d: %s' % (sliceno, msg,)
@@ -322,7 +322,7 @@ def main(argv, cfg):
 					else:
 						msg = colour(msg, 'grep/info')
 					write(2, msg.encode('utf-8') + b'\n')
-			msg = '%d%% of %d lines' % (round(progress_total * 100), total_lines,)
+			msg = '{0:d}% of {1:n} lines'.format(round(progress_total * 100), total_lines)
 			if len(datasets) > 1:
 				min_ds = min(ds_ixes)
 				max_ds = max(ds_ixes)
