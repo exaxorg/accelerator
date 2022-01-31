@@ -806,7 +806,9 @@ def main(argv, cfg):
 	# This runs in a separate process for each slice except the first
 	# one (unless -l), which is handled specially in the main process.
 
-	def one_slice(sliceno, q_in, q_out):
+	def one_slice(sliceno, q_in, q_out, q_to_close):
+		if q_to_close:
+			q_to_close.close()
 		if q_in:
 			q_in.make_reader()
 		if q_out:
@@ -854,7 +856,7 @@ def main(argv, cfg):
 			write(1, gen_headers(current_headers))
 		headers_iter = iter(map(gen_headers, headers.values()))
 
-	q_in = q_out = first_q_out = q_list = None
+	q_in = q_out = first_q_out = q_to_close = q_list = None
 	children = [status_process]
 	seen_list = None
 	if args.list_matching:
@@ -874,12 +876,13 @@ def main(argv, cfg):
 			q_out = mp.LockFreeQueue()
 		p = mp.SimplifiedProcess(
 			target=one_slice,
-			args=(sliceno, q_in, q_out,),
+			args=(sliceno, q_in, q_out, q_to_close,),
 			name='slice-%d' % (sliceno,),
 		)
 		children.append(p)
 		if q_in and q_in is not first_q_out:
 			q_in.close()
+		q_to_close = first_q_out
 		q_in = q_out
 	if q_in:
 		q_out = first_q_out
@@ -887,6 +890,8 @@ def main(argv, cfg):
 		q_out.make_writer()
 		if args.ordered:
 			q_in.put_local(None)
+	del q_to_close
+	del first_q_out
 
 	try:
 		if args.list_matching:
