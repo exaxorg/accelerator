@@ -33,7 +33,7 @@ from accelerator.compat import NoneType, unicode, imap, itervalues, PY2
 
 from accelerator.extras import OptionEnum, DotDict
 from accelerator.dsutil import typed_writer, typed_reader
-from accelerator.error import NoSuchDatasetError
+from accelerator.error import NoSuchDatasetError, AcceleratorError
 from . import dataset_type
 
 depend_extra = (dataset_type,)
@@ -54,8 +54,8 @@ discard all untyped columns, or set it to False to get an error if any
 columns were not preservable (except columns renamed over).
 
 With filter_bad any discarded lines will be saved in a separate dataset
-named "bad", but only the columns actually typed, and always as bytes
-(to avoid problems with columns that vary in type over chains).
+named "bad", but only the columns actually typed, using the "best possible"
+type (unicode, ascii or bytes) for the source types.
 '''
 
 TYPENAME = OptionEnum(dataset_type.convfuncs.keys())
@@ -135,6 +135,17 @@ def prepare(job, slices):
 		hashlabel_override = True
 		hashlabel = options.hashlabel or None
 		rehashing = bool(hashlabel)
+	def spill_type(colname):
+		orig_colname = rev_rename.get(colname, colname)
+		types = {ds.columns[orig_colname].type for ds in chain}
+		if 'bytes' in types:
+			types.discard('ascii')
+			types.discard('unicode')
+		if 'unicode' in types:
+			types.discard('ascii')
+		if len(types) == 1:
+			return types.pop()
+		raise AcceleratorError('Incompatible types for column %r: %r' % (colname, types,))
 	if (options.filter_bad or rehashing or len(chain) > 1) and not options.discard_untyped:
 		untyped_columns = set(d.columns)
 		for ds in chain:
@@ -234,7 +245,12 @@ def prepare(job, slices):
 			previous = datasets.previous.job.dataset('bad')
 		except (AttributeError, NoSuchDatasetError,):
 			previous = None
-		bad_columns = {name: ('bytes', True) for name in options.column2type}
+		def best_bad_type(colname):
+			typ = spill_type(colname)
+			assert typ in byteslike_types
+			ns = chain.none_support(rev_rename.get(colname, colname))
+			return (typ, ns)
+		bad_columns = {name: best_bad_type(name) for name in options.column2type}
 		dw_bad = job.datasetwriter(
 			name='bad',
 			columns=bad_columns,
