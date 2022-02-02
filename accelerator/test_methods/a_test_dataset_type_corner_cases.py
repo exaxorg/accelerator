@@ -366,6 +366,57 @@ def test_filter_bad_across_types():
 		add_want(6)
 		want.sort() # adding them out of order, int32_10 sorts correctly.
 
+def test_filter_bad_with_rename_and_chain():
+	dw = DatasetWriter(name="filter bad with rename", allow_missing_slices=True)
+	dw.add('a', 'ascii')
+	dw.add('b', 'bytes')
+	dw.add('c', 'unicode')
+	dw.set_slice(0)
+	dw.write('0', b'1', '2')
+	dw.write('9', B'A', 'B')
+	dw.write('C', B'D', 'E')
+	source_ds = dw.finish()
+	jid = subjobs.build(
+		'dataset_type',
+		column2type=dict(b='int32_10', c='int64_16', d='int32_16'),
+		filter_bad=True,
+		rename=dict(a='b', b='c', c='d'),
+		source=source_ds,
+	)
+	typed_ds = jid.dataset()
+	coltypes = sorted((name, col.type) for name, col in typed_ds.columns.items())
+	assert coltypes == [('b', 'int32'), ('c', 'int64'), ('d', 'int32')], coltypes
+	assert list(typed_ds.iterate(0)) == [(0, 1, 2), (9, 10, 11)]
+	bad_ds = jid.dataset('bad')
+	coltypes = sorted((name, col.type) for name, col in bad_ds.columns.items())
+	assert coltypes == [('b', 'ascii'), ('c', 'bytes'), ('d', 'unicode')], coltypes
+	assert list(bad_ds.iterate(0)) == [('C', b'D', 'E')]
+
+	dw = DatasetWriter(name="filter bad with rename chain", allow_missing_slices=True, previous=source_ds)
+	dw.add('a', 'ascii')
+	dw.add('b', 'ascii')
+	dw.add('c', 'ascii')
+	dw.set_slice(0)
+	dw.write('3', '4', '5')
+	dw.write('6', '7', 'eight')
+	source_ds = dw.finish()
+	jid = subjobs.build(
+		'dataset_type',
+		column2type=dict(a='number', b='int32_10', c='int64_10'),
+		defaults=dict(a='8'),
+		filter_bad=True,
+		rename=dict(a='b', b='c', c='a'),
+		source=source_ds,
+	)
+	typed_ds = jid.dataset()
+	coltypes = sorted((name, col.type) for name, col in typed_ds.columns.items())
+	assert coltypes == [('a', 'number'), ('b', 'int32'), ('c', 'int64')], coltypes
+	assert list(typed_ds.iterate(0)) == [(2, 0, 1), (5, 3, 4), (8, 6, 7)]
+	bad_ds = jid.dataset('bad')
+	coltypes = sorted((name, col.type) for name, col in bad_ds.columns.items())
+	assert coltypes == [('a', 'unicode'), ('b', 'ascii'), ('c', 'bytes')], coltypes
+	assert list(bad_ds.iterate(0)) == [('B', '9', b'A'), ('E', 'C', b'D')]
+
 def test_column_discarding():
 	dw = DatasetWriter(name='column discarding')
 	dw.add('a', 'bytes')
@@ -430,6 +481,7 @@ def synthesis():
 	)
 
 	test_filter_bad_across_types()
+	test_filter_bad_with_rename_and_chain()
 
 	for t in (all_typenames - used_typenames):
 		print(t)
