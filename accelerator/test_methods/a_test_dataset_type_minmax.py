@@ -200,3 +200,24 @@ def synthesis(job):
 				got_minmax = (re_ds.columns['v'].min, re_ds.columns['v'].max)
 				want_minmax = (mn, mx)
 				chk_minmax(got_minmax, want_minmax, 'Rewriting %s gave the wrong minmax: expected %r, got %r (in %s)' % (t_ds, want_minmax, got_minmax, re_ds,))
+
+	# make sure renaming doesn't mix anything up
+	dw = DatasetWriter(name='rename', columns={'a': 'ascii', 'b': 'ascii'})
+	write = dw.get_split_write()
+	write('5', '3')
+	write('7', 'oops')
+	ds = dw.finish()
+	t_ds = subjobs.build(
+		'dataset_type',
+		column2type=dict(num='number', int='int32_10'),
+		defaults=dict(num='1', int='2'),
+		rename=dict(a='num', b='int'),
+		source=ds,
+	).dataset()
+	for name, want_minmax in (
+		('num', (5, 7)),
+		('int', (2, 3)),
+	):
+		got_minmax = (t_ds.columns[name].min, t_ds.columns[name].max)
+		msg = 'Typing %s gave wrong minmax: expected %r, got %r (in %s)' % (ds, want_minmax, got_minmax, t_ds,)
+		chk_minmax(got_minmax, want_minmax, msg)
