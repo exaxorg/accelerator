@@ -378,12 +378,13 @@ def analysis_lap(vars):
 	if vars.rehashing:
 		if vars.first_lap:
 			out_fn = 'hashtmp.%d' % (vars.sliceno,)
-			colname = vars.rev_rename.get(vars.dw.hashlabel, vars.dw.hashlabel)
-			coltype = vars.column2type[options.rename.get(colname, colname)]
+			dest_colname = vars.dw.hashlabel
+			src_colname = vars.rev_rename.get(dest_colname, dest_colname)
+			coltype = vars.column2type[dest_colname]
 			vars.rehashing = False
-			real_coltype = one_column(vars, colname, coltype, [out_fn], True)
+			real_coltype = one_column(vars, src_colname, coltype, [out_fn], True)
 			vars.rehashing = True
-			assert vars.res_bad_count[colname] == [0] # implicitly has a default
+			assert vars.res_bad_count[dest_colname] == [0] # implicitly has a default
 			vars.slicemap_fd = map_init(vars, 'slicemap%d' % (vars.sliceno,), 'slicemap_size')
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			slicemap = Int16BytesWrapper(slicemap)
@@ -454,6 +455,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	in_fns = []
 	offsets = []
 	max_counts = []
+	dest_colname = options.rename.get(colname, colname)
 	for d in vars.chain:
 		assert colname in d.columns, '%s not in %s' % (colname, d,)
 		if not d.lines[vars.sliceno]:
@@ -468,7 +470,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			offsets.append(0)
 			max_counts.append(-1)
 	if cfunc:
-		default_value = options.defaults.get(colname, cstuff.NULL)
+		default_value = options.defaults.get(dest_colname, cstuff.NULL)
 		if for_hasher and default_value is cstuff.NULL:
 			if coltype.startswith('bits'):
 				# No None-support.
@@ -497,28 +499,28 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			assert len(out_fns) == c_slices + vars.save_bad
 			res = c(*cstuff.bytesargs(in_fns, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
 			assert not res, 'Failed to convert ' + colname
-		vars.res_bad_count[colname] = list(bad_count)
-		vars.res_default_count[colname] = sum(default_count)
+		vars.res_bad_count[dest_colname] = list(bad_count)
+		vars.res_default_count[dest_colname] = sum(default_count)
 		coltype = coltype.split(':', 1)[0]
 		if is_null_converter:
 			real_coltype = vars.chain[0].columns[colname].type
 			# Some lines may have been filtered out, so these minmax values
 			# could be wrong. There's no easy/cheap way to fix that though,
 			# and they will never be wrong in the bad direction.
-			vars.res_minmax[colname] = [vars.chain.min(colname), vars.chain.max(colname)]
+			vars.res_minmax[dest_colname] = [vars.chain.min(colname), vars.chain.max(colname)]
 		else:
 			real_coltype = dataset_type.typerename.get(coltype, coltype)
 			if exists(minmax_fn):
 				with typed_reader(real_coltype)(minmax_fn) as it:
-					vars.res_minmax[colname] = list(it)
+					vars.res_minmax[dest_colname] = list(it)
 				unlink(minmax_fn)
 	else:
 		# python func
 		if for_hasher:
 			raise Exception("Can't hash on column of type %s." % (coltype,))
 		nodefault = object()
-		if colname in options.defaults:
-			default_value = options.defaults[colname]
+		if dest_colname in options.defaults:
+			default_value = options.defaults[dest_colname]
 			if default_value is not None:
 				if isinstance(default_value, unicode):
 					default_value = default_value.encode('utf-8')
@@ -583,9 +585,9 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			slicemap.close()
 		if options.filter_bad:
 			badmap.close()
-		vars.res_bad_count[colname] = bad_count
-		vars.res_default_count[colname] = default_count
-		vars.res_minmax[colname] = [col_min, col_max]
+		vars.res_bad_count[dest_colname] = bad_count
+		vars.res_default_count[dest_colname] = default_count
+		vars.res_minmax[dest_colname] = [col_min, col_max]
 	return real_coltype
 
 def synthesis(slices, analysis_res, prepare_res):
