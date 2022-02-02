@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -58,7 +58,7 @@ def synthesis(job, slices):
 	assert b.hashlabel == None
 	typed_b = subjobs.build('dataset_type', options=dict(hashlabel='a', column2type={'b': 'ascii'}), datasets=dict(source=b)).dataset()
 	assert typed_b.hashlabel == 'a'
-	assert set(typed_b.iterate(None)) == {('a', 'b'), ('A', None), ('A', 'B')}, typed_b
+	assert set(typed_b.iterate(None)) == {('a', 'b', b'c'), ('A', None, None), ('A', 'B', b'C')}, typed_b
 
 	# Test renaming over the original hashlabel
 	dw = job.datasetwriter(name='c', columns={'a': 'unicode', 'b': 'ascii', 'c': 'bytes', 'd': 'unicode'}, hashlabel='a')

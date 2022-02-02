@@ -157,24 +157,20 @@ def prepare(job, slices):
 			missing = set(d.columns) - untyped_columns - set(columns) - orig_columns
 			if missing:
 				raise Exception('discard_untyped is False, but not all columns in %s exist in the whole chain (missing %r)' % (d, missing,))
-		unkeepable = set()
 		for colname in sorted(untyped_columns):
 			target_colname = options.rename.get(colname, colname)
 			if target_colname is None or target_colname in columns:
 				continue
-			ts = set(ds.columns[colname].type for ds in chain)
-			if len(ts) == 1:
-				t = ts.pop()
-				columns[target_colname] = t
-				column2type[target_colname] = dataset_type.copy_types[t]
-				if chain.none_support(colname):
-					none_support.add(colname)
-			else:
-				# We could be a bit more generous and use bytes for other
-				# workable combinations, or even unicode for {ascii, unicode}.
-				unkeepable.add(colname)
-		if options.discard_untyped is False:
-			assert not unkeepable, 'The following columns have varying types: %r' % (unkeepable,)
+			try:
+				t = spill_type(target_colname)
+			except AcceleratorError:
+				if options.discard_untyped is False:
+					raise
+				continue
+			columns[target_colname] = t
+			column2type[target_colname] = dataset_type.copy_types[t]
+			if chain.none_support(colname):
+				none_support.add(target_colname)
 	if options.filter_bad or rehashing or options.discard_untyped or len(chain) > 1:
 		parent = None
 	else:
