@@ -66,7 +66,11 @@ class DatasetUsageError(DatasetError):
 	"""Probably a mistake on the users part"""
 	pass
 
-class JobError(AcceleratorError):
+class BuildError(AcceleratorError):
+	"""Probably a mistake on the users part"""
+	pass
+
+class JobError(BuildError):
 	def __init__(self, job, method, status):
 		AcceleratorError.__init__(self, "Failed to build %s (%s)" % (job, method,))
 		self.job = job

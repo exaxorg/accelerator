@@ -42,7 +42,7 @@ from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, DotDict, _ListTypePreserver
 from accelerator.job import Job
 from accelerator.statmsg import print_status_stacks
-from accelerator.error import JobError, ServerError, UrdPermissionError
+from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
 from accelerator import g
 from accelerator.unixhttp import call
 
@@ -250,7 +250,7 @@ class Automata:
 
 	def call_method(self, method, options={}, datasets={}, jobs={}, record_in=None, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
 		if method not in self._method_info:
-			raise Exception('Unknown method %s' % (method,))
+			raise BuildError('Unknown method %s' % (method,))
 		info = self._method_info[method]
 		params = dict(options=dict(options), datasets=dict(datasets), jobs=dict(jobs))
 		argmap = defaultdict(list)
@@ -259,9 +259,9 @@ class Automata:
 				argmap[n].append(thing)
 		for k, v in kw.items():
 			if k not in argmap:
-				raise Exception('Keyword %s not in options/datasets/jobs for method %s' % (k, method,))
+				raise BuildError('Keyword %s not in options/datasets/jobs for method %s' % (k, method,))
 			if len(argmap[k]) != 1:
-				raise Exception('Keyword %s has several targets on method %s: %r' % (k, method, argmap[k],))
+				raise BuildError('Keyword %s has several targets on method %s: %r' % (k, method, argmap[k],))
 			params[argmap[k][0]][k] = v
 		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, **params)
 		if why_build: # specified by caller
@@ -518,7 +518,7 @@ class Urd(object):
 			try:
 				self._call('%s/test/%s' % (self._url, self._user,), True)
 			except UrdPermissionError:
-				raise Exception('Urd says permission denied, did you forget to set URD_AUTH?')
+				raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
 			self._auth_tested = True
 		self._current = self._path(path)
 		self._current_timestamp = _tsfix(timestamp)
@@ -640,7 +640,7 @@ def find_automata(a, package, script):
 					package = [cand]
 					break
 			else:
-				raise Exception('No method directory found for %r in %r' % (package, all_packages))
+				raise BuildError('No method directory found for %r in %r' % (package, all_packages))
 	else:
 		package = all_packages
 	if not script.startswith('build'):
@@ -658,7 +658,7 @@ def find_automata(a, package, script):
 			else:
 				if not e.message.endswith(script):
 					raise
-	raise Exception('No build script "%s" found in {%s}' % (script, ', '.join(package)))
+	raise BuildError('No build script "%s" found in {%s}' % (script, ', '.join(package)))
 
 def run_automata(options, cfg):
 	g.running = 'build'
@@ -731,7 +731,7 @@ def main(argv, cfg):
 				method, v = v.split('=', 1)
 				concurrency_map[method] = int(v)
 			except ValueError:
-				raise Exception('Bad concurrency spec %r' % (v,))
+				raise BuildError('Bad concurrency spec %r' % (v,))
 	options.concurrency_map = concurrency_map
 
 	try:

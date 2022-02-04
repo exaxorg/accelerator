@@ -38,6 +38,7 @@ from accelerator.colourwrapper import colour
 from accelerator.setupfile import update_setup
 from accelerator.job import WORKDIRS, Job
 from accelerator.extras import json_save, DotDict
+from accelerator.error import BuildError
 
 
 
@@ -161,7 +162,7 @@ class Main:
 		""" Updata database, check deps, create jobids. """
 		ws = workdir or self.target_workdir
 		if ws not in self.workspaces:
-			raise Exception("Workdir %s does not exist" % (ws,))
+			raise BuildError("Workdir %s does not exist" % (ws,))
 		return dependency.initialise_jobs(
 			setup,
 			self.workspaces[ws],

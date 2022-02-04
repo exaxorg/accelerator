@@ -46,12 +46,12 @@ if not before_install:
 	from .error import UrdError, UrdPermissionError, UrdConflictError
 	from .error import NoSuchWhateverError, NoSuchJobError, NoSuchWorkdirError
 	from .error import DatasetError, NoSuchDatasetError, DatasetUsageError
-	from .error import JobError, ColourError
+	from .error import JobError, ColourError, BuildError
 	__all__.extend((AcceleratorError, UserError, ServerError,))
 	__all__.extend((UrdError, UrdPermissionError, UrdConflictError,))
 	__all__.extend((NoSuchWhateverError, NoSuchJobError, NoSuchWorkdirError,))
 	__all__.extend((DatasetError, NoSuchDatasetError, DatasetUsageError,))
-	__all__.extend((JobError, ColourError,))
+	__all__.extend((JobError, ColourError, BuildError,))
 	from .extras import DotDict
 	from .extras import OptionEnum, OptionString, RequiredOption, OptionDefault
 	__all__.extend((DotDict,))
