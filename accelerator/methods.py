@@ -32,15 +32,16 @@ from accelerator.compat import iteritems, itervalues, first_value
 from accelerator.compat import NoneType, unicode, long, monotonic
 
 from accelerator.colourwrapper import colour
+from accelerator.error import AcceleratorError
 from accelerator.extras import DotDict, _OptionString, OptionEnum, OptionDefault, RequiredOption
 from accelerator.runner import new_runners
 from accelerator.setupfile import _sorted_set
 
 from accelerator import __version__ as ax_version
 
-class MethodLoadException(Exception):
+class MethodLoadException(AcceleratorError):
 	def __init__(self, lst):
-		Exception.__init__(self, 'Failed to load ' + ', '.join(lst))
+		AcceleratorError.__init__(self, 'Failed to load ' + ', '.join(lst))
 		self.module_list = lst
 
 
@@ -55,8 +56,10 @@ class Methods(object):
 			db_ = read_methods_conf(package_dir, autodiscover)
 			for method, meta in db_.items():
 				if method in self.db:
-					raise Exception("Method \"%s\" defined both in \"%s\" and \"%s\"!" % (
-						method, package, self.db[method]['package']))
+					raise AcceleratorError(
+						"Method \"%s\" defined both in \"%s\" and \"%s\"!" %
+						(method, package, self.db[method]['package'],)
+					)
 				self.db[method] = DotDict(package=package, **meta)
 		t0 = monotonic()
 		per_runner = defaultdict(list)
@@ -79,7 +82,7 @@ class Methods(object):
 			v = runner.get_ax_version()
 			if v != ax_version:
 				if runner.python == sys.executable:
-					raise Exception("Server is using accelerator %s but %s is currently installed, please restart server." % (ax_version, v,))
+					raise AcceleratorError("Server is using accelerator %s but %s is currently installed, please restart server." % (ax_version, v,))
 				else:
 					print("WARNING: Server is using accelerator %s but runner %r is using accelerator %s." % (ax_version, version, v,))
 			w, f, h, p, d = runner.load_methods(package_list, data)
@@ -119,9 +122,9 @@ class Methods(object):
 			if not hasattr(package_mod, "__file__"):
 				raise ImportError("no __file__")
 		except ImportError:
-			raise Exception("Failed to import %s, maybe missing __init__.py?" % (package,))
+			raise AcceleratorError("Failed to import %s, maybe missing __init__.py?" % (package,))
 		if not package_mod.__file__:
-			raise Exception("%s has no __file__, maybe missing __init__.py?" % (package,))
+			raise AcceleratorError("%s has no __file__, maybe missing __init__.py?" % (package,))
 		return os.path.dirname(package_mod.__file__)
 
 
@@ -151,7 +154,7 @@ def _reprify(o):
 		return '{%s}' % (', '.join('%s: %s' % (_reprify(k), _reprify(v),) for k, v in sorted(iteritems(o))),)
 	if isinstance(o, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta,)):
 		return str(o)
-	raise Exception('Unhandled %s in dependency resolution' % (type(o),))
+	raise AcceleratorError('Unhandled %s in dependency resolution' % (type(o),))
 
 
 
@@ -273,6 +276,6 @@ def read_methods_conf(dirname, autodiscover):
 			except IndexError:
 				version = 'DEFAULT'
 			if data:
-				raise Exception('Trailing garbage on %s:%d: %s' % (filename, lineno, line,))
+				raise AcceleratorError('Trailing garbage on %s:%d: %s' % (filename, lineno, line,))
 			db[method] = DotDict(version=version)
 	return db

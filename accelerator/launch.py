@@ -35,7 +35,7 @@ from accelerator.job import CurrentJob, WORKDIRS
 from accelerator.compat import pickle, iteritems, setproctitle, QueueEmpty
 from accelerator.compat import getarglist, monotonic
 from accelerator.extras import job_params, ResultIterMagic
-from accelerator.build import JobError
+from accelerator.error import AcceleratorError, JobError
 from accelerator.mp import LockFreeQueue, SimplifiedProcess
 from accelerator import g
 from accelerator import blob
@@ -83,7 +83,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 			os.close(delayed_start[1])
 			update = statmsg._start('waiting for concurrency limit (%d)' % (sliceno_,), parent_pid, True)
 			if os.read(delayed_start[0], 1) != b'a':
-				raise Exception('bad delayed_start, giving up')
+				raise AcceleratorError('bad delayed_start, giving up')
 			update(slicename)
 			os.close(delayed_start[0])
 		else:
@@ -186,7 +186,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 				else:
 					exit_count -= 1
 					if p.exitcode:
-						raise Exception("%s terminated with exitcode %d" % (p.name, p.exitcode,))
+						raise AcceleratorError("%s terminated with exitcode %d" % (p.name, p.exitcode,))
 			children = still_alive
 			reap_time = monotonic() + 5
 		# If a process dies badly we may never get a message here.
@@ -206,7 +206,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 				# No children left, so they must have all sent their messages.
 				# Still, just to be sure there isn't a race, wait one iteration more.
 				if no_children_no_messages:
-					raise Exception("All analysis processes exited cleanly, but not all returned a result.")
+					raise AcceleratorError("All analysis processes exited cleanly, but not all returned a result.")
 				else:
 					no_children_no_messages = True
 			continue

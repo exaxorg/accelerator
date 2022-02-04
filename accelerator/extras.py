@@ -31,6 +31,7 @@ import sys
 from accelerator.compat import PY2, PY3, pickle, izip, iteritems, first_value
 from accelerator.compat import num_types, uni, unicode, str_types
 
+from accelerator.error import AcceleratorError
 from accelerator.job import Job, JobWithFile
 from accelerator.statmsg import status
 
@@ -83,7 +84,7 @@ def job_post(jobid):
 		d.files = sorted(fn[len(prefix):] if fn.startswith(prefix) else fn for fn in d.files)
 		version = 1
 	if version != 1:
-		raise Exception("Don't know how to load post.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError("Don't know how to load post.json version %d (in %s)" % (d.version, jobid,))
 	return d
 
 def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, _hidden=False):

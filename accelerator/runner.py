@@ -465,7 +465,8 @@ class Runner(object):
 		# must wait without the lock, otherwise all this threading gets us nothing.
 		res = waiter()
 		if res is None:
-			raise Exception("Runner exited unexpectedly.")
+			from accelerator.error import AcceleratorError
+			raise AcceleratorError("Runner exited unexpectedly.")
 		return res
 
 	def load_methods(self, all_packages, data):

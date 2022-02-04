@@ -27,6 +27,7 @@ from datetime import datetime, date, time, timedelta
 
 from accelerator.compat import iteritems, unicode, long, PY3, PY2, uni
 
+from accelerator.error import AcceleratorError
 from accelerator.extras import DotDict, json_load, json_save, json_encode
 from accelerator.job import Job
 
@@ -72,7 +73,7 @@ def load_setup(jobid):
 		# no changes here, it's only used to know how to find datasets
 		version = 4
 	if version != 4:
-		raise Exception("Don't know how to load setup.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError("Don't know how to load setup.json version %d (in %s)" % (d.version, jobid,))
 	return d
 
 def update_setup(jobid, **kw):
