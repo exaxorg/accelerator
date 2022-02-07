@@ -406,24 +406,31 @@ def main(argv, cfg):
 
 	# This contains some extra stuff to be a better base for the other
 	# outputters.
-	# When used directly it just prints all output immediately.
+	# When used directly it enforces no ordering, but merges smaller writes
+	# to keep the number of syscalls down.
 
 	class Outputter:
 		def __init__(self, q_in, q_out):
 			self.q_in = q_in
 			self.q_out = q_out
 			self.buffer = []
+			self.merge_buffer = b''
 
 		def put(self, data):
-			# This will be atomic if the line is not too long
-			# (at least up to PIPE_BUF bytes, should be at least 512).
-			write(1, data)
+			self.merge_buffer += data
+			if len(self.merge_buffer) >= 1024:
+				self.move_merge()
+
+		def move_merge(self):
+			if self.merge_buffer:
+				write(1, self.merge_buffer)
+				self.merge_buffer = b''
 
 		def start(self, ds):
 			pass
 
 		def end(self, ds):
-			pass
+			self.move_merge()
 
 		def finish(self):
 			pass
@@ -432,6 +439,7 @@ def main(argv, cfg):
 			return len(self.buffer) > 5000
 
 		def excite(self):
+			self.move_merge()
 			if self.buffer:
 				self.pump(False)
 
@@ -452,17 +460,16 @@ def main(argv, cfg):
 		def add_wait(self):
 			# Each sync point is separated by None in the buffer
 			self.buffer.append(None)
-			self.buffer.append(b'') # Avoid need for special case in .drain/.put
+			self.buffer.append(b'') # Avoid need for special case in .drain
 			self.pump()
 
-		def put(self, data):
+		def move_merge(self):
+			data = self.merge_buffer
+			self.merge_buffer = b''
 			if self.buffer:
 				self.pump()
 				if self.buffer:
-					if len(self.buffer[-1]) + len(data) <= 512:
-						self.buffer[-1] += data
-					else:
-						self.buffer.append(data)
+					self.buffer.append(data)
 					return
 			# This will be atomic if the line is not too long
 			# (at least up to PIPE_BUF bytes, should be at least 512).
@@ -568,10 +575,11 @@ def main(argv, cfg):
 		def start(self, ds):
 			# Each ds is separated by None in the buffer
 			self.buffer.append(None)
-			self.buffer.append(b'') # Avoid need for special case in .drain/.put
+			self.buffer.append(b'') # Avoid need for special case in .drain
 			self.pump()
 
 		def end(self, ds):
+			self.move_merge()
 			if not self.buffer:
 				# We are done with this ds, so let next slice continue
 				self.q_out.put(None)
@@ -588,14 +596,13 @@ def main(argv, cfg):
 				return
 			self.drain()
 
-		def put(self, data):
+		def move_merge(self):
+			data = self.merge_buffer
+			self.merge_buffer = b''
 			if self.buffer:
 				self.pump()
 				if self.buffer:
-					if len(self.buffer[-1]) + len(data) <= 512:
-						self.buffer[-1] += data
-					else:
-						self.buffer.append(data)
+					self.buffer.append(data)
 					return
 			# This will be atomic if the line is not too long
 			# (at least up to PIPE_BUF bytes, should be at least 512).
@@ -634,7 +641,7 @@ def main(argv, cfg):
 				# Headers changed, start with those.
 				self.buffer.append(next(headers_iter))
 			else:
-				self.buffer.append(b'') # Avoid need for special case in .drain/.put
+				self.buffer.append(b'') # Avoid need for special case in .drain
 			self.pump()
 
 	# Choose the right outputter for the kind of sync we need.
