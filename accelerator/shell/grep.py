@@ -28,6 +28,7 @@ import os
 from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS
+from multiprocessing import Lock
 from os import write
 import json
 import datetime
@@ -404,6 +405,10 @@ def main(argv, cfg):
 	# everything else will write, so make it a writer right away
 	q_status.make_writer()
 
+	# Output is only allowed while holding this lock, so that long lines
+	# do not get intermixed. (Or when alone in producing output.)
+	io_lock = Lock()
+
 	# This contains some extra stuff to be a better base for the other
 	# outputters.
 	# When used directly it enforces no ordering, but merges smaller writes
@@ -423,7 +428,8 @@ def main(argv, cfg):
 
 		def move_merge(self):
 			if self.merge_buffer:
-				write(1, self.merge_buffer)
+				with io_lock:
+					write(1, self.merge_buffer)
 				self.merge_buffer = b''
 
 		def start(self, ds):
@@ -471,9 +477,8 @@ def main(argv, cfg):
 				if self.buffer:
 					self.buffer.append(data)
 					return
-			# This will be atomic if the line is not too long
-			# (at least up to PIPE_BUF bytes, should be at least 512).
-			write(1, data)
+			with io_lock:
+				write(1, data)
 
 		def pump(self, wait=None):
 			if wait is None:
@@ -499,16 +504,17 @@ def main(argv, cfg):
 
 		def drain(self):
 			assert self.buffer[0] is None, 'The buffer must always stop at a sync point (or empty)'
-			for pos, data in enumerate(self.buffer[1:], 1):
-				if data is None:
-					break
-				elif data:
-					write(1, data)
-			else:
-				# We did not reach the next fence, so last item is real data
-				# and needs to be removed. (The buffer will then be empty and
-				# output will continue directly until reaching the sync point.)
-				pos += 1
+			with io_lock:
+				for pos, data in enumerate(self.buffer[1:], 1):
+					if data is None:
+						break
+					elif data:
+						write(1, data)
+				else:
+					# We did not reach the next fence, so last item is real data
+					# and needs to be removed. (The buffer will then be empty and
+					# output will continue directly until reaching the sync point.)
+					pos += 1
 			self.buffer[:pos] = ()
 
 		def finish(self):
@@ -535,14 +541,15 @@ def main(argv, cfg):
 
 		def drain(self):
 			assert self.buffer[0] is None, 'The buffer must always stop at a sync point (or empty)'
-			for pos, data in enumerate(self.buffer[1:], 1):
-				if data is None:
-					self.q_out.put(True)
-					break
-				elif data:
-					write(1, data)
-			else:
-				pos += 1
+			with io_lock:
+				for pos, data in enumerate(self.buffer[1:], 1):
+					if data is None:
+						self.q_out.put(True)
+						break
+					elif data:
+						write(1, data)
+				else:
+					pos += 1
 			self.buffer[:pos] = ()
 
 		def pump(self, wait=None):
@@ -604,8 +611,7 @@ def main(argv, cfg):
 				if self.buffer:
 					self.buffer.append(data)
 					return
-			# This will be atomic if the line is not too long
-			# (at least up to PIPE_BUF bytes, should be at least 512).
+			# No need for a lock, the other slices aren't writing concurrently.
 			write(1, data)
 
 		def drain(self):
