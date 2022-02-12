@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -26,6 +26,13 @@ from functools import partial
 from accelerator.compat import PY2
 from accelerator.error import ColourError
 
+# all gray colours in the 256 colour palette in intensity order
+_gray2idx = tuple(ix for _, ix in sorted(
+	[(0, 16)] +
+	[(gray * 10 + 8, gray + 232) for gray in range(24)] +
+	[(rgb * 40 + 55, rgb * 43 + 16) for rgb in (1, 2, 3, 4, 5)]
+))
+
 class Colour:
 	"""Constants and functions for colouring output.
 
@@ -45,8 +52,11 @@ class Colour:
 	colour(v, 'red', 'bold') and similar produce shorter sequences than other
 	ways of combining several attributes.
 
-	You can also use colour(v, '#RRGGBB[bg]'), but terminal support is not
-	great.
+	You can also use:
+		colour(v, '#RGB[bg]') (0 - 5) ("256 colour" mode)
+		colour(v, '#GG[bg]') (00 - 1D) (grayscale from "256 colour" mode)
+		colour(v, 'XNN[bg]') (00 - FF) (directly specifying a "256 colour" index)
+		colour(v, '#RRGGBB[bg]') (00 - FF) (but terminal support is not great)
 
 	Finally you can use names you put in the config file, some of which
 	have default values. This also has a fallback system, so 'foo/bar' will
@@ -165,6 +175,8 @@ class Colour:
 			literal_post = ''
 			a_it = self._expand_names(attrs)
 			for a_src, a in a_it:
+				if not a:
+					raise ColourError('%r expanded to nothing' % (a_src,))
 				if a.startswith('>'):
 					raise ColourError('A >post needs a preceding <pre (expanded %r from %r)' % (a, a_src,))
 				if a.startswith('<'):
@@ -179,19 +191,34 @@ class Colour:
 					continue
 				want = a.upper()
 				default = self._all['DEFAULTBG' if want.endswith('BG') else 'DEFAULT']
-				if want.startswith('#'):
+				if want[0] in '#X':
 					if want.endswith('BG'):
 						prefix = '48'
 						want = want[:-2]
 					else:
 						prefix = '38'
-					if len(want) != 7:
-						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
 					try:
-						r, g, b = (str(int(w, 16)) for w in (want[1:3], want[3:5], want[5:7]))
-					except ValueError:
+						if want[0] == '#' and len(want) == 7:
+							r, g, b = (str(int(w, 16)) for w in (want[1:3], want[3:5], want[5:7]))
+							part = (prefix, '2', r, g, b)
+						else:
+							if want[0] == '#' and len(want) == 4:
+								r, g, b = (int(w, 16) for w in want[1:])
+								assert 0 <= r <= 5 and 0 <= g <= 5 and 0 <= b <= 5
+								idx = r * 36 + g * 6 + b + 16
+							elif want[0] == '#' and len(want) == 3:
+								gg = int(want[1:], 16)
+								assert 0 <= gg < len(_gray2idx)
+								idx = _gray2idx[gg]
+							elif want[0] == 'X' and len(want) == 3:
+								idx = int(want[1:], 16)
+								assert 0 <= idx <= 255
+							else:
+								raise ValueError()
+							part = (prefix, '5', str(idx))
+					except (ValueError, AssertionError):
 						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
-					pre.extend((prefix, '2', r, g, b))
+					pre.extend(part)
 					post.add(default)
 				else:
 					if want not in self._all:
