@@ -206,11 +206,11 @@ class Colour:
 								r, g, b = (int(w, 16) for w in want[1:])
 								assert 0 <= r <= 5 and 0 <= g <= 5 and 0 <= b <= 5
 								idx = r * 36 + g * 6 + b + 16
-							elif want[0] == '#' and len(want) == 3:
+							elif want[0] == '#' and len(want) in (2, 3):
 								gg = int(want[1:], 16)
 								assert 0 <= gg < len(_gray2idx)
 								idx = _gray2idx[gg]
-							elif want[0] == 'X' and len(want) == 3:
+							elif want[0] == 'X' and len(want) in (2, 3):
 								idx = int(want[1:], 16)
 								assert 0 <= idx <= 255
 							else:
