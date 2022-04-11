@@ -295,18 +295,44 @@ class Dataset(unicode):
 	def max(self, column):
 		return self._minmax(column, 'max')
 
-	def link_to_here(self, name='default', column_filter=None, override_previous=_no_override, filename=None):
+	def link_to_here(self, name='default', column_filter=None, rename=None, override_previous=_no_override, filename=None):
 		"""Use this to expose a subjob as a dataset in your job:
 		Dataset(subjid).link_to_here()
 		will allow access to the subjob dataset under your jid.
-		Specify column_filter as an iterable of columns to include
-		if you don't want all of them.
+		You can rename columns using rename={oldname: newname}, and discard
+		colums with rename={name: None} and/or by specifying column_filter
+		as an iterable of columns to include. column_filter applies after
+		rename.
 		Use override_previous to rechain (or unchain) the dataset.
 		You can change the filename too, or clear it by setting ''.
 		"""
 		if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
 			raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
 		d = Dataset(self)
+		if rename:
+			renamed = {}
+			renamed_src = {}
+			rename_discarded = set()
+			for k, v in rename.items():
+				if k not in d._data.columns:
+					raise DatasetUsageError("Renamed column %r not in dataset" % (k,))
+				if v is None:
+					rename_discarded.add(k)
+					continue
+				if v in renamed_src:
+					raise DatasetUsageError("Both %r and %r renamed to %r" % (k, renamed_src[v], v,))
+				renamed[v] = d._data.columns.pop(k)
+				renamed_src[v] = k
+			d._data.columns.update(renamed)
+			rename_discarded.difference_update(renamed)
+			if rename_discarded:
+				column_filter = set(column_filter or d._data.columns).difference(rename_discarded)
+				if not column_filter:
+					raise DatasetUsageError("All columns discarded")
+			if d._data.hashlabel in rename:
+				d._data.hashlabel = rename[d._data.hashlabel]
+			elif d._data.hashlabel in renamed:
+				d._data.hashlabel = None
 		if column_filter:
 			column_filter = set(column_filter)
 			filtered_columns = {k: v for k, v in d._data.columns.items() if k in column_filter}
