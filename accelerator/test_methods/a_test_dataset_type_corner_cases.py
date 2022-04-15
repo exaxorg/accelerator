@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -33,6 +33,7 @@ import sys
 from accelerator import subjobs
 from accelerator.dispatch import JobError
 from accelerator.dataset import Dataset, DatasetWriter
+from accelerator.dsutil import typed_writer
 from accelerator.compat import PY3
 from accelerator.standard_methods import dataset_type
 from accelerator import g
@@ -474,13 +475,23 @@ def test_discarding_rehash_with_empty_slices():
 	w('a', '42')
 	w('42', 'b')
 	source = dw.finish()
-	typed = subjobs.build(
-		'dataset_type',
-		source=source,
-		column2type=dict(a='int32_10'),
-		filter_bad=True,
-	).dataset()
-	assert list(typed.iterate(None)) == [(42, 'b',)]
+	hashfunc = typed_writer('int32').hash
+	def verify_hashing(caption, want_values, **kw):
+		ds = subjobs.build(
+			'dataset_type',
+			source=source,
+			column2type=dict(a='int32_10'),
+			caption=caption,
+			**kw
+		).dataset()
+		got_values = set()
+		for sliceno in range(g.slices):
+			for got in ds.iterate(sliceno):
+				assert hashfunc(got[0]) % g.slices == sliceno
+				assert got not in got_values
+				got_values.add(got)
+		assert want_values == got_values
+	verify_hashing('with discard', {(42, 'b',)}, filter_bad=True)
 
 def synthesis():
 	test_bytes()
