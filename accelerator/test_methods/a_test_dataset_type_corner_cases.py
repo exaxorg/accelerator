@@ -467,8 +467,8 @@ def test_column_discarding():
 	assert sorted(abc_bASc.columns) == ['a', 'b', 'c'], '%s: %r' % (abc_bASc, sorted(abc_bASc.columns),)
 	assert list(abc_bASc.iterate(None)) == [('a', True, 'b',)], abc_bASc
 
-def test_discarding_rehash_with_empty_slices():
-	dw = DatasetWriter(name='discarding rehash with empty slices', hashlabel='a')
+def test_rehash_with_empty_slices():
+	dw = DatasetWriter(name='rehash with empty slices', hashlabel='a')
 	dw.add('a', 'ascii')
 	dw.add('b', 'ascii')
 	w = dw.get_split_write()
@@ -492,6 +492,9 @@ def test_discarding_rehash_with_empty_slices():
 				got_values.add(got)
 		assert want_values == got_values
 	verify_hashing('with discard', {(42, 'b',)}, filter_bad=True)
+	# using defaults uses some different code paths
+	verify_hashing('with default=0 (probably two slices)', {(0, '42',), (42, 'b',)}, defaults=dict(a='0'))
+	verify_hashing('with default=42 (one slice)', {(42, '42',), (42, 'b',)}, defaults=dict(a='42'))
 
 def synthesis():
 	test_bytes()
@@ -500,7 +503,7 @@ def synthesis():
 	test_numbers()
 	test_datetimes()
 	test_column_discarding()
-	test_discarding_rehash_with_empty_slices()
+	test_rehash_with_empty_slices()
 
 	verify('json', ['json'],
 		[b'null', b'[42, {"a": "b"}]', b'\r  {  "foo":\r"bar" \r   }\t ', b'nope'],
