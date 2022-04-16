@@ -218,7 +218,7 @@ class Colour:
 							part = (prefix, '5', str(idx))
 					except (ValueError, AssertionError):
 						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
-					pre.extend(part)
+					pre.append(':'.join(part))
 					post.add(default)
 				else:
 					if want not in self._all:

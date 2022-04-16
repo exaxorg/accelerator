@@ -58,7 +58,7 @@ def synthesis(job):
 	# test that a more specific colour config wins
 	with open('accelerator/config', 'a') as fh:
 		fh.write('\tjob/warning = BOLD #030405')
-	assert '\x1b[1;38;2;3;4;5mWARNING: Job did not finish\x1b[22;39m' in ax_cmd('job', job)
+	assert '\x1b[1;38:2:3:4:5mWARNING: Job did not finish\x1b[22;39m' in ax_cmd('job', job)
 	# test literals in the config
 	with open('accelerator/config', 'w') as fh:
 		fh.write(config.replace('CYAN', '<FOO >BAR'))
