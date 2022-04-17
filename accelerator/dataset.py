@@ -299,6 +299,8 @@ class Dataset(unicode):
 		Use override_previous to rechain (or unchain) the dataset.
 		You can change the filename too, or clear it by setting ''.
 		"""
+		if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
+			raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
 		d = Dataset(self)
 		if column_filter:
 			column_filter = set(column_filter)
