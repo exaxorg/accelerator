@@ -152,7 +152,13 @@ def synthesis(job, slices):
 		grep_text(['', pickle], [['foo'], [''], ["{'foo'}"]])
 		grep_text(['.', pickle], [['foo'], ["{'foo'}"]])
 		grep_text(['bar', pickle], [['foo']])
+		# using -g with the same columns as output is a NOP
 		grep_text(['-g', 'pickle', 'bar', pickle], [['foo']])
+		# but using it with a different set of columns is not
+		pickle2 = mk_ds('pickle2', ['ascii'], ['a'], ['b'], ['c'], parent=pickle)
+		grep_text(['-g', 'pickle', 'bar', pickle2], [['a', 'bar']])
+		# order doesn't matter for equality, so here we're back to double evaluation.
+		grep_text(['-g', 'pickle', '-g', 'ascii', 'bar', pickle2], [['a', 'foo']])
 		bytespickle = mk_ds('bytespickle', ['pickle'], [b'\xf0'], [b'\t'])
 		# pickles are str()d, not special cased like bytes columns
 		grep_text(['-f', 'raw', 'xf0', bytespickle], [["b'\\xf0'"]])
