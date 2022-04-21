@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -29,14 +29,13 @@ options = dict(
 )
 
 import os
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
 config = '''
 [alias]
 	path = job -P
 
 [colour]
-	warning = CYAN
 '''
 
 def ax_cmd(*a):
@@ -53,17 +52,28 @@ def synthesis(job):
 		fh.write(config)
 	# test an alias
 	assert ax_cmd('path', job) == job.path
+
+	def chk(cfgstr, pre, post):
+		with open('accelerator/config', 'w') as fh:
+			fh.write(config)
+			fh.write(cfgstr)
+		try:
+			got = ax_cmd('job', job).split('\n')[-1]
+		except CalledProcessError as e:
+			raise Exception("%r could not run: %s" % (cfgstr, e,))
+		want = '%sWARNING: Job did not finish%s' % (pre, post,)
+		if got != want:
+			raise Exception("%r:\nWanted %r\ngot    %r" % (cfgstr, want, got,))
+
 	# test the colour config
-	assert '\x1b[36mWARNING: Job did not finish\x1b[39m' in ax_cmd('job', job)
+	chk('\twarning = CYAN', '\x1b[36m', '\x1b[39m')
 	# test that a more specific colour config wins
-	with open('accelerator/config', 'a') as fh:
-		fh.write('\tjob/warning = BOLD #030405')
-	assert '\x1b[1;38:2:3:4:5mWARNING: Job did not finish\x1b[22;39m' in ax_cmd('job', job)
+	chk('\twarning = CYAN\n\tjob/warning = BOLD #030405', '\x1b[1;38:2:3:4:5m', '\x1b[22;39m')
 	# test literals in the config
-	with open('accelerator/config', 'w') as fh:
-		fh.write(config.replace('CYAN', '<FOO >BAR'))
-	assert 'FOOWARNING: Job did not finishBAR' in ax_cmd('job', job)
+	chk('\twarning = <FOO >BAR', 'FOO', 'BAR')
 	# combining literals with named attributes, and escapes
-	with open('accelerator/config', 'a') as fh:
-		fh.write('\tjob/warning = BOLD BLUE <\\x18\\\\\\eFOO\T >\\?\\\\eBAR\E UNDERLINE')
-	assert '\x1b[1;34m\x18\\\x1bFOO\t\x1b[4mWARNING: Job did not finish\x1b[22;24;39m\\?\\eBAR\x1b' in ax_cmd('job', job)
+	chk(
+		'\twarning = <FOO >BAR\n\tjob/warning = BOLD BLUE <\\x18\\\\\\eFOO\T >\\?\\\\eBAR\E UNDERLINE',
+		'\x1b[1;34m\x18\\\x1bFOO\t\x1b[4m',
+		'\x1b[22;24;39m\\?\\eBAR\x1b',
+	)
