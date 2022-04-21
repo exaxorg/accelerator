@@ -77,3 +77,12 @@ def synthesis(job):
 		'\x1b[1;34m\x18\\\x1bFOO\t\x1b[4m',
 		'\x1b[22;24;39m\\?\\eBAR\x1b',
 	)
+
+	# test various other colour formats in config
+	for cfgstr, pre, post in (
+		('\twarning = #123', '\x1b[38:5:67m', '\x1b[39m'),
+		('\twarning = #0 #1cbg', '\x1b[38:5:16;48:5:255m', '\x1b[39;49m'),
+		('\twarning = #1d Xffbg', '\x1b[38:5:231;48:5:255m', '\x1b[39;49m'),
+		('\twarning = X10 #20ff00bg', '\x1b[38:5:16;48:2:32:255:0m', '\x1b[39;49m'),
+	):
+		chk(cfgstr, pre, post)
