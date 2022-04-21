@@ -171,6 +171,7 @@ def main(urd):
 	urd.build("test_dataset_empty_colname")
 	urd.build("test_dataset_nan")
 	urd.build('test_dataset_parsing_writer')
+	urd.build('test_dataset_overwrite')
 
 	print()
 	print("Testing ['lists'] of datasets and jobs")
