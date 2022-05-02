@@ -29,7 +29,6 @@ from itertools import chain, repeat
 from collections import deque, OrderedDict, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS
 from multiprocessing import Lock
-from os import write
 import json
 import datetime
 import operator
@@ -44,6 +43,12 @@ from .parser import name2ds
 from accelerator.error import NoSuchWhateverError
 from accelerator import g
 from accelerator import mp
+
+
+# os.write can't be trusted to write everything
+def write(fd, data):
+	while data:
+		data = data[os.write(fd, data):]
 
 
 def main(argv, cfg):
