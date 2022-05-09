@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -44,7 +44,6 @@ from accelerator.job import Job
 from accelerator.statmsg import print_status_stacks
 from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
 from accelerator import g
-from accelerator.unixhttp import call
 
 
 class Automata:
@@ -90,6 +89,7 @@ class Automata:
 		pass
 
 	def _url_json(self, *path, **kw):
+		from accelerator.unixhttp import call
 		url = self.url + os.path.join('/', *path)
 		return call(url, **kw)
 
@@ -462,6 +462,7 @@ class Urd(object):
 		return path
 
 	def _call(self, url, data=None, fmt=_urd_typeify):
+		from accelerator.unixhttp import call
 		assert self._url, "No urd configured for this server"
 		url = url.replace(' ', '%20')
 		return call(url, data=data, fmt=fmt, headers=self._headers, server_name='urd')
