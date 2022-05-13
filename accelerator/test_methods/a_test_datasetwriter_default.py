@@ -49,3 +49,15 @@ def synthesis(job):
 		want = [good_value, default_value]
 		got = list(ds.iterate(0, 'data'))
 		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
+		if not t.startswith('bits'):
+			# no none_support in the bits types
+			dw = job.datasetwriter(name=t + ' default=None', allow_missing_slices=True)
+			dw.add('data', t, default=None, none_support=True)
+			dw.set_slice(0)
+			dw.write(good_value)
+			dw.write(())
+			dw.write(None)
+			ds = dw.finish()
+			want = [good_value, None, None]
+			got = list(ds.iterate(0, 'data'))
+			assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
