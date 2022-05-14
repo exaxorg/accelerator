@@ -141,6 +141,7 @@ def main(urd):
 	urd.build("test_datasetwriter_parent")
 	urd.build("test_datasetwriter_missing_slices")
 	urd.build("test_datasetwriter_default")
+	urd.build("test_datasetwriter_parsed")
 	urd.build("test_dataset_in_prepare")
 	ds = Dataset(source, "passed")
 	csvname = "out.csv.gz"
