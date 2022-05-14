@@ -39,13 +39,18 @@ def synthesis(job):
 		('datetime', now, later),
 		('date', now.date(), later.date()),
 		('time', now.time(), later.time()),
+		('json', {'foo': 'bar'}, [1, 2, 3]),
 	):
 		dw = job.datasetwriter(name=t, allow_missing_slices=True)
 		dw.add('data', t, default=default_value)
 		dw.set_slice(0)
 		dw.write(good_value)
-		dw.write(())
-		dw.write(None)
+		if t == 'json':
+			bad1, bad2 = datetime, now
+		else:
+			bad1, bad2 = (), None
+		dw.write(bad1)
+		dw.write(bad2)
 		ds = dw.finish()
 		want = [good_value, default_value, default_value]
 		got = list(ds.iterate(0, 'data'))
@@ -56,21 +61,22 @@ def synthesis(job):
 			dw.add('data', t, default=None, none_support=True)
 			dw.set_slice(0)
 			dw.write(good_value)
-			dw.write(())
-			dw.write(None)
+			dw.write(bad1)
+			dw.write(bad2)
 			ds = dw.finish()
 			want = [good_value, None, None]
 			got = list(ds.iterate(0, 'data'))
 			assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
 
 			# make sure default=None hashes correctly
-			dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
-			dw.add('data', t, default=None, none_support=True)
-			w = dw.get_split_write()
-			w(())
-			w(None)
-			w(())
-			ds = dw.finish()
-			want = [None, None, None]
-			got = list(ds.iterate(0, 'data'))
-			assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
+			if t != 'json':
+				dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
+				dw.add('data', t, default=None, none_support=True)
+				w = dw.get_split_write()
+				w(())
+				w(None)
+				w(())
+				ds = dw.finish()
+				want = [None, None, None]
+				got = list(ds.iterate(0, 'data'))
+				assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
