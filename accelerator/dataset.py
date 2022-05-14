@@ -3,7 +3,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -1410,7 +1410,18 @@ class DatasetWriter(object):
 		w_d[name_writers] = [d2l(d) for d in self._allwriters]
 		w_d[name_next] = next
 		if hl is not None:
-			w_d[name_hsh] = self._allwriters[0][hl].hash
+			hashfunc = self._allwriters[0][hl].hash
+			default_value = self.columns[hl][1]
+			if default_value is not _nodefault:
+				default_slice = hashfunc(default_value) % slices # will not work with spread_None
+				def hashwrap(v):
+					try:
+						return hashfunc(v)
+					except (ValueError, TypeError, OverflowError):
+						return default_slice
+				w_d[name_hsh] = hashwrap
+			else:
+				w_d[name_hsh] = hashfunc
 			prefix = '%s = %s[%s(' % (name_w_l, name_writers, name_hsh,)
 			hix = self._order.index(hl)
 			f_____.append('%s%s) %% %d]' % (prefix, names[hix], slices,))
