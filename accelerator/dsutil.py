@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -80,17 +80,30 @@ def typed_reader(typename):
 		raise ValueError("Unknown reader for type %s" % (typename,))
 	return _type2iter[typename]
 
+_nodefault = object()
+
 from json import JSONEncoder, JSONDecoder, loads as json_loads
 class WriteJson(object):
 	min = max = None
 	def __init__(self, *a, **kw):
-		assert 'default' not in kw, "default not supported for Json, sorry"
+		default = kw.pop('default', _nodefault)
 		if PY3:
 			self.fh = _dsutil.WriteUnicode(*a, **kw)
 			self.encode = JSONEncoder(ensure_ascii=False, separators=(',', ':')).encode
 		else:
 			self.fh = _dsutil.WriteBytes(*a, **kw)
 			self.encode = JSONEncoder(ensure_ascii=True, separators=(',', ':')).encode
+		self.encode = self._wrap_encode(self.encode, default)
+	def _wrap_encode(self, encode, default):
+		if default is _nodefault:
+			return encode
+		default = encode(default)
+		def wrapped_encode(o):
+			try:
+				return encode(o)
+			except (TypeError, ValueError):
+				return default
+		return wrapped_encode
 	def write(self, o):
 		self.fh.write(self.encode(o))
 	@property
@@ -110,10 +123,21 @@ _convfuncs['json'] = WriteJson
 class WriteParsedJson(WriteJson):
 	"""This assumes strings are the object you wanted and parse them as json.
 	If they are unparseable you get an error."""
-	def write(self, o):
-		if isinstance(o, str_types):
-			o = json_loads(o)
-		self.fh.write(self.encode(o))
+	def _wrap_encode(self, encode, default):
+		if default is not _nodefault:
+			if isinstance(default, str_types):
+				default = json_loads(default)
+			default = encode(default)
+		def wrapped_encode(o):
+			try:
+				if isinstance(o, str_types):
+					o = json_loads(o)
+				return encode(o)
+			except (TypeError, ValueError):
+				if default is _nodefault:
+					raise
+				return default
+		return wrapped_encode
 _convfuncs['parsed:json'] = WriteParsedJson
 
 class ReadJson(object):
