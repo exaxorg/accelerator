@@ -45,8 +45,9 @@ def synthesis(job):
 		dw.set_slice(0)
 		dw.write(good_value)
 		dw.write(())
+		dw.write(None)
 		ds = dw.finish()
-		want = [good_value, default_value]
+		want = [good_value, default_value, default_value]
 		got = list(ds.iterate(0, 'data'))
 		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
 		if not t.startswith('bits'):
