@@ -61,3 +61,15 @@ def synthesis(job):
 			want = [good_value, None, None]
 			got = list(ds.iterate(0, 'data'))
 			assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
+
+			# make sure default=None hashes correctly
+			dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
+			dw.add('data', t, default=None, none_support=True)
+			w = dw.get_split_write()
+			w(())
+			w(None)
+			w(())
+			ds = dw.finish()
+			want = [None, None, None]
+			got = list(ds.iterate(0, 'data'))
+			assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
