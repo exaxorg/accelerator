@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2017 eBay Inc.
- * Modifications copyright (c) 2018-2021 Carl Drougge
+ * Modifications copyright (c) 2018-2022 Carl Drougge
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1450,7 +1450,7 @@ err:                                                                            
 	}                                                                                	\
 	static PyObject *C_ ## tname(Write *self, PyObject *obj, int actually_write)     	\
 	{                                                                                	\
-		if (withnone && obj == Py_None) {                                        	\
+		if (withnone && obj == Py_None && (self->none_support || !self->default_value)) { \
 is_none:                                                                                 	\
 			WRITE_NONE_SLICE_CHECK;                                          	\
 			self->count++;                                                   	\
@@ -1766,7 +1766,7 @@ static void Write_obj_minmax(Write *self, PyObject *obj)
 
 static PyObject *C_WriteNumber(Write *self, PyObject *obj, int actually_write, int first)
 {
-	if (obj == Py_None) {
+	if (obj == Py_None && (self->none_support || !self->default_obj)) {
 		WRITE_NONE_SLICE_CHECK;
 		self->count++;
 		return Write_write_(self, "", 1);
