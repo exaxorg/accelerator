@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -225,6 +225,11 @@ class CurrentJob(Job):
 		obj.result_directory = result_directory
 		obj.input_directory = input_directory
 		return obj
+
+	def finish_early(self, result=None):
+		"""Finish job (successfully) without running later stages"""
+		from accelerator.launch import _FinishJob
+		raise _FinishJob(result)
 
 	def save(self, obj, filename='result.pickle', sliceno=None, temp=None):
 		from accelerator.extras import pickle_save

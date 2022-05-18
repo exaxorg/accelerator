@@ -44,6 +44,12 @@ from accelerator import dataset
 from accelerator import iowrapper
 
 
+# Raise this to finish job (successfully) without running later stages
+class _FinishJob(Exception):
+	def __init__(self, result=None):
+		Exception.__init__(self)
+		self.result = result
+
 g_allesgut = False
 _prof_fd = -1
 
@@ -92,7 +98,10 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		for dw in dataset._datasetwriters.values():
 			if dw._for_single_slice is None:
 				dw._set_slice(sliceno_)
-		res = analysis_func(**kw)
+		try:
+			res = analysis_func(**kw)
+		except _FinishJob:
+			raise AcceleratorError('job.finish_early() does not yet work in analysis')
 		if preserve_result:
 			# Remove defaultdicts until we find one with a picklable default_factory.
 			# (This is what you end up doing manually anyway.)
@@ -343,7 +352,12 @@ def execute_process(workdir, jobid, slices, concurrency, result_directory, commo
 		g.subjob_cookie = subjob_cookie
 		setproctitle(g.running)
 		with statmsg.status(g.running):
-			g.prepare_res = method_ref.prepare(**args_for(method_ref.prepare))
+			try:
+				g.prepare_res = method_ref.prepare(**args_for(method_ref.prepare))
+			except _FinishJob as finish:
+				analysis_func = synthesis_func = dummy
+				if finish.result is not None:
+					blob.save(finish.result, temp=False)
 			to_finish = [dw.name for dw in dataset._datasetwriters.values() if dw._started]
 			if to_finish:
 				with statmsg.status("Finishing datasets"):
@@ -372,7 +386,10 @@ def execute_process(workdir, jobid, slices, concurrency, result_directory, commo
 	g.subjob_cookie = subjob_cookie
 	setproctitle(g.running)
 	with statmsg.status(g.running):
-		synthesis_res = synthesis_func(**args_for(synthesis_func))
+		try:
+			synthesis_res = synthesis_func(**args_for(synthesis_func))
+		except _FinishJob as finish:
+			synthesis_res = finish.result
 		if synthesis_res is not None:
 			blob.save(synthesis_res, temp=False)
 		if dataset._datasetwriters:
