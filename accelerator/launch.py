@@ -100,9 +100,12 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				dw._set_slice(sliceno_)
 		try:
 			res = analysis_func(**kw)
-		except _FinishJob:
-			raise AcceleratorError('job.finish_early() does not yet work in analysis')
-		if preserve_result:
+			finishjob = False
+		except _FinishJob as finish:
+			finishjob = True
+			if finish.result is not None:
+				raise AcceleratorError('Can not return a result with job.finish_early() in analysis.')
+		if preserve_result and not finishjob:
 			# Remove defaultdicts until we find one with a picklable default_factory.
 			# (This is what you end up doing manually anyway.)
 			def picklable(v):
@@ -145,13 +148,13 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				dw_lens[name] = dw._lens
 				dw_minmax[name] = dw._minmax
 		c_fflush()
-		q.put((sliceno_, monotonic(), saved_files, dw_lens, dw_minmax, dw_compressions, None,))
+		q.put((sliceno_, monotonic(), saved_files, dw_lens, dw_minmax, dw_compressions, None, finishjob,))
 		q.close()
 	except:
 		c_fflush()
 		msg = fmt_tb(1)
 		print(msg)
-		q.put((sliceno_, monotonic(), {}, {}, {}, {}, msg,))
+		q.put((sliceno_, monotonic(), {}, {}, {}, {}, msg, False,))
 		q.close()
 		sleep(5) # give launcher time to report error (and kill us)
 		exitfunction()
@@ -182,6 +185,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 	q.make_reader()
 	per_slice = []
 	temp_files = {}
+	finishjob = set()
 	no_children_no_messages = False
 	reap_time = monotonic() + 5
 	exit_count = 0
@@ -208,7 +212,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 				# the process died badly (e.g. from running out of memory).
 				exit_count += 1
 				continue
-			s_no, s_t, s_temp_files, s_dw_lens, s_dw_minmax, s_dw_compressions, s_tb = msg
+			s_no, s_t, s_temp_files, s_dw_lens, s_dw_minmax, s_dw_compressions, s_tb, s_finishjob = msg
 		except QueueEmpty:
 			if not children:
 				# No children left, so they must have all sent their messages.
@@ -218,6 +222,9 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 				else:
 					no_children_no_messages = True
 			continue
+		finishjob.add(s_finishjob)
+		if len(finishjob) != 1 and not s_tb:
+			s_tb = 'not all slices agreed about job.finish_early() in analysis'
 		if s_tb:
 			data = [{'analysis(%d)' % (s_no,): s_tb}, None]
 			writeall(_prof_fd, json.dumps(data).encode('utf-8'))
@@ -240,7 +247,9 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 		os.close(delayed_start[1])
 	for p in children:
 		p.join()
-	if preserve_result:
+	if finishjob.pop():
+		res_seq = _FinishJob
+	elif preserve_result:
 		res_seq = ResultIterMagic(slices, reuse_msg="analysis_res is an iterator, don't re-use it")
 	else:
 		res_seq = None
@@ -381,6 +390,8 @@ def execute_process(workdir, jobid, slices, concurrency, result_directory, commo
 			del g.update_top_status
 		prof['analysis'] = monotonic() - t
 		saved_files.update(files)
+		if g.analysis_res is _FinishJob:
+			synthesis_func = dummy
 	t = monotonic()
 	g.running = 'synthesis'
 	g.subjob_cookie = subjob_cookie
