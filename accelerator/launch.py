@@ -148,7 +148,6 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		exitfunction()
 
 def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, output_fds, q):
-	from multiprocessing import Process
 	import gc
 	children = []
 	t = monotonic()
