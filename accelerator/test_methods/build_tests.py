@@ -157,9 +157,10 @@ def main(urd):
 	urd.build("test_compare_datasets", a=reimp_csv, b=reimp_csv_quoted)
 
 	print()
-	print("Testing subjobs")
+	print("Testing job related functions")
 	urd.build("test_subjobs_type", typed=ds, untyped=reimp_csv)
 	urd.build("test_subjobs_nesting")
+	urd.build('test_finish_early')
 
 	print()
 	print("Testing datasets more")
