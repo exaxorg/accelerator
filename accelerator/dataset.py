@@ -1679,17 +1679,18 @@ def job_datasets(job):
 		fn = job.filename('datasets.txt')
 	else:
 		fn = job.filename('DS/LIST')
+	res = DatasetList()
 	if not os.path.exists(fn):
 		# It's not an error to list datasets in a job without them.
-		return []
+		return res
 	if version < 4:
 		with open(fn, 'r', encoding='utf-8') as fh:
 			names = [line[:-1] for line in fh]
 	else:
 		names = job.load('DS/LIST')
-	res = []
 	# Do this backwards to improve chances that we take advantage of cache.
 	# (Names are written to datasets.txt in finish() order.)
 	for name in reversed(names):
 		res.append(Dataset(job, name))
-	return list(reversed(res))
+	res.reverse()
+	return res
