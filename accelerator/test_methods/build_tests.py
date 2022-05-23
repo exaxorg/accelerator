@@ -33,7 +33,7 @@ def main(urd):
 
 	print()
 	print("Testing urd.build and job.load")
-	want = ({'foo': 'foo', 'a': 'a'}, {'foo': None, 'b': None}, {'foo': None, 'c': None})
+	want = ({'foo': 'foo', 'a': 'a'}, {'foo': '', 'b': ''}, {'foo': '', 'c': ''})
 	job = urd.build("test_build_kws")
 	assert job.load() == want
 	bad = None

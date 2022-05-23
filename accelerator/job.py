@@ -25,7 +25,7 @@ from collections import namedtuple
 from functools import wraps
 
 from accelerator.compat import unicode, PY2, PY3, open, iteritems
-from accelerator.error import NoSuchJobError, NoSuchWorkdirError
+from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError
 
 
 # WORKDIRS should live in the Automata class, but only for callers
@@ -284,6 +284,50 @@ class CurrentJob(Job):
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
 		return open(self.input_filename(filename), mode, encoding=encoding, errors=errors)
+
+
+class NoJob(Job):
+	"""
+	A empty string that is used for unset job arguments, with some properties
+	that may still make sense on an unset job.
+	Also provides .load() and .load_json() methods that return None as long
+	as no filename or sliceno was specified, and .files() that always returns
+	an empty set.
+	"""
+
+	__slots__ = ()
+
+	# functions you shouldn't call on this
+	filename = link_result = open = params = path = post = withfile = None
+
+	workdir = None
+	method = output = ''
+	number = version = -1
+
+	def __new__(cls):
+		return unicode.__new__(cls, '')
+
+	def dataset(self, name='default'):
+		raise NoSuchDatasetError('NoJob has no datasets')
+
+	@property
+	def datasets(self):
+		from accelerator.dataset import DatasetList
+		return DatasetList()
+
+	def files(self, pattern='*'):
+		return set()
+
+	def load(self, filename=None, sliceno=None, encoding='bytes'):
+		if filename is not None or sliceno is not None:
+			raise NoSuchJobError('Can not load named / sliced file on <NoJob>')
+		return None
+
+	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2):
+		return self.load(filename, sliceno)
+
+NoJob = NoJob()
+
 
 class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 	__slots__ = ()

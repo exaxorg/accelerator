@@ -40,7 +40,7 @@ from accelerator.compat import str_types, int_types, FileNotFoundError
 
 from accelerator import blob
 from accelerator.extras import DotDict, job_params, _ListTypePreserver, quote
-from accelerator.job import Job
+from accelerator.job import Job, NoJob
 from accelerator.dsutil import typed_writer, _type2iter
 from accelerator.error import NoSuchDatasetError, DatasetUsageError, DatasetError
 
@@ -164,13 +164,13 @@ class Dataset(unicode):
 	name is 'default' (for better backwards compatibility).
 
 	You usually don't have to make these yourself, because datasets.foo is
-	already a Dataset instance (or None).
+	already a Dataset instance.
 
 	You can pass jobid="jid/name" or jobid="jid", name="name", or skip
 	name completely for "default".
 
 	You can also pass jobid={jid: dsname} to resolve dsname from the datasets
-	passed to jid. This gives None if that option was unset.
+	passed to jid. This gives NoDataset if that option was unset.
 
 	These decay to a (unicode) string when pickled.
 	"""
@@ -180,17 +180,17 @@ class Dataset(unicode):
 	def __new__(cls, jobid, name=None):
 		if isinstance(jobid, (tuple, list)):
 			jobid = _dsid(jobid)
+		if jobid is NoDataset:
+			if name is not None:
+				raise DatasetUsageError("Don't pass both a separate name and jobid=NoDataset")
+			return NoDataset
 		elif isinstance(jobid, dict):
 			if name is not None:
 				raise DatasetUsageError("Don't pass both a separate name and jobid as {job: dataset}")
 			if len(jobid) != 1:
 				raise DatasetUsageError("Only pass a single {job: dataset}")
 			jobid, dsname = next(iteritems(jobid))
-			if not jobid:
-				return None
-			jobid = job_params(jobid, default_empty=True).datasets.get(dsname)
-			if not jobid:
-				return None
+			return job_params(jobid, default_empty=True).datasets.get(dsname, NoDataset)
 		if not jobid:
 			raise DatasetUsageError("If you really meant to use yourself as a dataset, pass your jobid explicitly.")
 		if '/' in jobid:
@@ -1630,6 +1630,45 @@ class DatasetList(_ListTypePreserver):
 
 class DatasetChain(DatasetList):
 	pass
+
+
+# Magic object used for NoDataset.lines. Contains only a single 0, but
+# all element accesses return 0 and all sliced accesses return self.
+# (This is so the same object will work for any number of slices.)
+class _NoLines(tuple):
+	def __new__(cls):
+		return tuple.__new__(cls, (0,))
+	def __getitem__(self, item):
+		if isinstance(item, slice):
+			return self
+		return 0
+
+class NoDataset(Dataset):
+	"""
+	A empty string that is used for unset dataset arguments, with some
+	properties that may still make sense on an unset dataset.
+	"""
+
+	__slots__ = ()
+
+	def __new__(cls):
+		return unicode.__new__(cls, '')
+
+	# functions you shouldn't call on this
+	append = iterate = iterate_chain = iterate_list = link_to_here = merge = new = None
+
+	caption = name = ''
+	quoted = '<NoDataset>'
+	job = NoJob
+	filename = fs_name = hashlabel = parent = previous = None
+	lines = _NoLines()
+	shape = (0, 0)
+
+	@property
+	def columns(self):
+		return {}
+
+NoDataset = NoDataset()
 
 
 def _fmt_range_value(name, value, d):

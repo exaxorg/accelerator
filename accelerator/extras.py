@@ -45,13 +45,13 @@ def _fn(filename, jobid, sliceno):
 		filename = '%s.%d' % (filename, sliceno,)
 	return filename
 
-def _typelistnone(v, t, listtype):
+def _type_list_or(v, t, falseval, listtype):
 	if isinstance(v, list):
-		return listtype(t(v) if v else None for v in v)
+		return listtype(t(v) if v else falseval for v in v)
 	elif v:
 		return t(v)
 	else:
-		return None
+		return falseval
 
 def _job_params(jobid):
 	from accelerator.setupfile import load_setup
@@ -66,12 +66,12 @@ def job_params(jobid=None, default_empty=False):
 			datasets=DotDict(),
 			jobs=DotDict(),
 		)
-	from accelerator.dataset import Dataset, DatasetList
-	from accelerator.job import Job
+	from accelerator.dataset import Dataset, NoDataset, DatasetList
+	from accelerator.job import Job, NoJob
 	from accelerator.build import JobList
 	d = _job_params(jobid)
-	d.datasets = DotDict({k: _typelistnone(v, Dataset, DatasetList) for k, v in d.datasets.items()})
-	d.jobs = DotDict({k: _typelistnone(v, Job, JobList) for k, v in d.jobs.items()})
+	d.datasets = DotDict({k: _type_list_or(v, Dataset, NoDataset, DatasetList) for k, v in d.datasets.items()})
+	d.jobs = DotDict({k: _type_list_or(v, Job, NoJob, JobList) for k, v in d.jobs.items()})
 	d.jobid = Job(d.jobid)
 	return d
 
