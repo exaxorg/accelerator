@@ -175,6 +175,8 @@ class Dataset(unicode):
 	These decay to a (unicode) string when pickled.
 	"""
 
+	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache',)
+
 	def __new__(cls, jobid, name=None):
 		if isinstance(jobid, (tuple, list)):
 			jobid = _dsid(jobid)

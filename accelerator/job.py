@@ -71,6 +71,9 @@ class Job(unicode):
 
 	Decays to a (unicode) string when pickled.
 	"""
+
+	__slots__ = ('workdir', 'number', '_cache')
+
 	def __new__(cls, jobid, method=None):
 		k = (jobid, method)
 		if k in _cache:
@@ -283,6 +286,8 @@ class CurrentJob(Job):
 		return open(self.input_filename(filename), mode, encoding=encoding, errors=errors)
 
 class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
+	__slots__ = ()
+
 	def __new__(cls, job, name, sliced=False, extra=None):
 		assert not name.startswith('/'), "Specify relative filenames to JobWithFile"
 		return tuple.__new__(cls, (Job(job), name, bool(sliced), extra,))
