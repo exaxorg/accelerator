@@ -181,7 +181,7 @@ class Dataset(unicode):
 		if isinstance(jobid, (tuple, list)):
 			jobid = _dsid(jobid)
 		elif isinstance(jobid, dict):
-			if name:
+			if name is not None:
 				raise DatasetUsageError("Don't pass both a separate name and jobid as {job: dataset}")
 			if len(jobid) != 1:
 				raise DatasetUsageError("Only pass a single {job: dataset}")
@@ -194,7 +194,7 @@ class Dataset(unicode):
 		if not jobid:
 			raise DatasetUsageError("If you really meant to use yourself as a dataset, pass your jobid explicitly.")
 		if '/' in jobid:
-			if name:
+			if name is not None:
 				raise DatasetUsageError("Don't pass both a separate name and jobid as jid/name")
 			jobid, name = jobid.split('/', 1)
 		name = _namechk('default' if name is None else name)
