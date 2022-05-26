@@ -91,6 +91,7 @@ cstuff = dataset_type.init()
 
 def prepare(job, slices):
 	assert 1 <= options.compression <= 9
+	assert datasets.source, 'No source specified'
 	if options.timezone:
 		cstuff.backend.init(options.timezone.encode('utf-8'))
 	else:
