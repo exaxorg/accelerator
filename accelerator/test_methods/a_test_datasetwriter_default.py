@@ -44,6 +44,15 @@ def synthesis(job):
 		('bytes'    , b'foo'        , b'bar'       , u'baz'      , None),
 		('unicode'  , u'\xe4'       , u'\xe5'      , b'baz'      , None),
 	):
+		for bad_default in (bad1, bad2):
+			dw = job.datasetwriter(name='failme')
+			try:
+				dw.add('data', t, default=bad_default)
+				dw.get_split_write()
+				raise Exception('%s accepted %r as default value' % (t, bad_default,))
+			except (TypeError, ValueError, OverflowError):
+				pass
+			dw.discard()
 		dw = job.datasetwriter(name=t, allow_missing_slices=True)
 		dw.add('data', t, default=default_value)
 		dw.set_slice(0)
