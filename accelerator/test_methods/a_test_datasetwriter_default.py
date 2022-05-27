@@ -40,6 +40,9 @@ def synthesis(job):
 		('date', now.date(), later.date()),
 		('time', now.time(), later.time()),
 		('json', {'foo': 'bar'}, [1, 2, 3]),
+		('ascii', 'foo', 'bar'),
+		('bytes', b'foo', b'bar'),
+		('unicode', '\xe4', '\xe5'),
 	):
 		dw = job.datasetwriter(name=t, allow_missing_slices=True)
 		dw.add('data', t, default=default_value)
