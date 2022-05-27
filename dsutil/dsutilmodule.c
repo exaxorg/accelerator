@@ -1067,6 +1067,7 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 {
 	Write *self = (Write *)self_;
 	PyObject *compression = 0;
+	PyObject *default_obj = 0;
 	char *name = 0;
 	char *error_extra = default_error_extra;
 	PyObject *hashfilter = 0;
@@ -1075,13 +1076,14 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 		goto err;
 	}
 	static char *kwlist[] = {
-		"name", "compression", "hashfilter",
+		"name", "compression", "default", "hashfilter",
 		"error_extra", "none_support", 0
 	};
 	if (!PyArg_ParseTupleAndKeywords(
-		args, kwds, "et|OOeti", kwlist,
+		args, kwds, "et|OOOeti", kwlist,
 		Py_FileSystemDefaultEncoding, &name,
 		&compression,
+		&default_obj,
 		&hashfilter,
 		Py_FileSystemDefaultEncoding, &error_extra,
 		&self->none_support
@@ -1090,6 +1092,21 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 	self->error_extra = error_extra;
 	err1(Write_parse_compression(self, compression));
 	err1(parse_hashfilter(hashfilter, &self->hashfilter, &self->sliceno, &self->slices, &self->spread_None));
+	if (default_obj) {
+		if (default_obj == Py_None && !self->none_support) {
+			PyErr_Format(PyExc_ValueError,
+				"Refusing default=None without none_support=True%s",
+				self->error_extra
+			);
+			goto err;
+		}
+		// check that the object is acceptable by hashing it
+		PyObject *res = PyObject_CallMethod(self, "hash", "(O)", default_obj);
+		err1(!res);
+		Py_DECREF(res);
+		self->default_obj = default_obj;
+		Py_INCREF(default_obj);
+	}
 	return 0;
 err:
 	return -1;
@@ -1327,7 +1344,12 @@ static PyObject *C_WriteUnicode(Write *self, PyObject *obj, int actually_write)
 #define MKWBLOB(name)                                                                               	\
 	static PyObject *write_Write ## name (Write *self, PyObject *obj)                           	\
 	{                                                                                           	\
-		return C_Write ## name (self, obj, 1);                                              	\
+		PyObject *res = C_Write ## name (self, obj, 1);                                     	\
+		if (!res && self->default_obj) {                                                    	\
+			PyErr_Clear();                                                              	\
+			res = C_Write ## name (self, self->default_obj, 1);                         	\
+		}                                                                                   	\
+		return res;                                                                         	\
 	}                                                                                           	\
 	static PyObject *hashcheck_Write ## name (Write *self, PyObject *obj)                       	\
 	{                                                                                           	\
