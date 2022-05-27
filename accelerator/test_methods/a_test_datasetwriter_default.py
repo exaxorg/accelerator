@@ -25,33 +25,29 @@ from datetime import datetime, timedelta
 def synthesis(job):
 	now = datetime.now()
 	later = now + timedelta(days=1, hours=1)
-	for t, good_value, default_value in (
-		('int64', 1, 2),
-		('int32', 1, 2),
-		('bits64', 1, 2),
-		('bits32', 1, 2),
-		('float64', 0.1, 0.2),
-		('float32', 1, 2),
-		('number', 1, 2.1),
-		('complex64', 0.1+1j, 2-0.2j),
-		('complex32', 1+1j, 2-2j),
-		('bool', False, True),
-		('datetime', now, later),
-		('date', now.date(), later.date()),
-		('time', now.time(), later.time()),
-		('json', {'foo': 'bar'}, [1, 2, 3]),
-		('ascii', 'foo', 'bar'),
-		('bytes', b'foo', b'bar'),
-		('unicode', '\xe4', '\xe5'),
+	for   t         , good_value    , default_value, bad1        , bad2 in (
+		('int64'    , 1             , 2            , float('inf'), None),
+		('int32'    , 1             , 2            , float('inf'), None),
+		('bits64'   , 1             , 2            , -1          , None),
+		('bits32'   , 1             , 2            , -1          , None),
+		('float64'  , 0.1           , 0.2          , 'bad'       , None),
+		('float32'  , 1             , 2            , 'bad'       , None),
+		('number'   , 1             , 2.1          , 'bad'       , None),
+		('complex64', 0.1+1j        , 2-0.2j       , 'bad'       , None),
+		('complex32', 1+1j          , 2-2j         , 'bad'       , None),
+		('bool'     , False         , True         , 2           , None),
+		('datetime' , now           , later        , 95          , None),
+		('date'     , now.date()    , later.date() , ()          , None),
+		('time'     , now.time()    , later.time() , ''          , None),
+		('json'     , {'foo': 'bar'}, [1, 2, 3]    , datetime    , now),
+		('ascii'    , 'foo'         , 'bar'        , u'\xe4'     , b'\xe4'),
+		('bytes'    , b'foo'        , b'bar'       , u'baz'      , None),
+		('unicode'  , u'\xe4'       , u'\xe5'      , b'baz'      , None),
 	):
 		dw = job.datasetwriter(name=t, allow_missing_slices=True)
 		dw.add('data', t, default=default_value)
 		dw.set_slice(0)
 		dw.write(good_value)
-		if t == 'json':
-			bad1, bad2 = datetime, now
-		else:
-			bad1, bad2 = (), None
 		dw.write(bad1)
 		dw.write(bad2)
 		ds = dw.finish()
@@ -76,9 +72,9 @@ def synthesis(job):
 				dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
 				dw.add('data', t, default=None, none_support=True)
 				w = dw.get_split_write()
-				w(())
+				w(bad1)
 				w(None)
-				w(())
+				w(bad1) # bad2 might be None, so don't use that.
 				ds = dw.finish()
 				want = [None, None, None]
 				got = list(ds.iterate(0, 'data'))
