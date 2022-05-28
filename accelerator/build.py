@@ -692,8 +692,9 @@ def run_automata(options, cfg):
 		a.update_method_info()
 	else:
 		a.update_methods()
-	module_ref.main(urd)
+	res = module_ref.main(urd)
 	urd._show_warnings()
+	return res
 
 
 def main(argv, cfg):
@@ -736,8 +737,7 @@ def main(argv, cfg):
 	options.concurrency_map = concurrency_map
 
 	try:
-		run_automata(options, cfg)
-		return 0
+		return run_automata(options, cfg)
 	except (JobError, ServerError):
 		# If it's a JobError we don't care about the local traceback,
 		# we want to see the job traceback, and maybe know what line
