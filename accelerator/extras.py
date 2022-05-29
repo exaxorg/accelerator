@@ -152,7 +152,7 @@ def _unicode_as_utf8bytes(obj):
 
 def json_decode(s, unicode_as_utf8bytes=PY2):
 	if unicode_as_utf8bytes:
-		return _unicode_as_utf8bytes(json.loads(s))
+		return _unicode_as_utf8bytes(json.loads(s, object_pairs_hook=DotDict))
 	else:
 		return json.loads(s, object_pairs_hook=DotDict)
 
@@ -361,8 +361,8 @@ class ResultIterMagic(object):
 		return data
 
 
-class DotDict(dict):
-	"""Like a dict, but with d.foo as well as d['foo'].
+class DotDict(OrderedDict):
+	"""Like an OrderedDict, but with d.foo as well as d['foo'].
 	(Names beginning with _ will have to use d['_foo'] syntax.)
 	The normal dict.f (get, items, ...) still return the functions.
 	"""

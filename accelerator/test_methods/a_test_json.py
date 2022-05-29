@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2020 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -120,5 +120,6 @@ def synthesis():
 		s = (s[:-1] + "}").encode("ascii")
 		if not sorted_s:
 			sorted_s = s
+			sorted_d = d
 		test("ordered%d.json" % (ix,), d, d, s, sort_keys=False)
-		test("sorted%d.json" % (ix,), d, d, sorted_s, sort_keys=True)
+		test("sorted%d.json" % (ix,), d, sorted_d, sorted_s, sort_keys=True)
