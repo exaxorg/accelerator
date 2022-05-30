@@ -118,13 +118,16 @@ _DatasetColumn_3_3 = namedtuple('_DatasetColumn_3_3', 'type compression location
 DatasetColumn = _DatasetColumn_3_3
 # It's probably usually best to generate the new type so the rest of the code needs no special handling.
 class _DatasetColumn_3_2(object):
+	__slots__ = ()
 	def __new__(cls, type, backing_type, location, min, max, offsets, none_support):
 		assert type == backing_type
 		return _DatasetColumn_3_3(type, 'gzip', location, min, max, offsets, none_support)
 class _DatasetColumn_3_1(object):
+	__slots__ = ()
 	def __new__(cls, type, backing_type, name, location, min, max, offsets, none_support):
 		return _DatasetColumn_3_2(type, backing_type, location, min, max, offsets, none_support)
 class _DatasetColumn_3_0(object):
+	__slots__ = ()
 	def __new__(cls, type, backing_type, name, location, min, max, offsets):
 		none_support = not backing_type.startswith('bits')
 		return _DatasetColumn_3_1(type, backing_type, name, location, min, max, offsets, none_support)
@@ -1543,6 +1546,8 @@ class DatasetList(_ListTypePreserver):
 	These are lists of datasets with some convenience methods.
 	"""
 
+	__slots__ = ()
+
 	def _minmax(self, column, minmax):
 		vl = []
 		nan_seen = None
@@ -1629,13 +1634,14 @@ class DatasetList(_ListTypePreserver):
 
 
 class DatasetChain(DatasetList):
-	pass
+	__slots__ = ()
 
 
 # Magic object used for NoDataset.lines. Contains only a single 0, but
 # all element accesses return 0 and all sliced accesses return self.
 # (This is so the same object will work for any number of slices.)
 class _NoLines(tuple):
+	__slots__ = ()
 	def __new__(cls):
 		return tuple.__new__(cls, (0,))
 	def __getitem__(self, item):
@@ -1704,10 +1710,12 @@ def range_check_function(bottom, top, none_support=False, index=None):
 class SkipDataset(Exception):
 	"""Raise this in pre_callback to skip iterating the coming dataset
 	(or the remaining slices of it)"""
+	__slots__ = ()
 
 class SkipSlice(Exception):
 	"""Raise this in pre_callback to skip iterating the coming slice
 	(if your callback doesn't want sliceno, this is the same as SkipDataset)"""
+	__slots__ = ()
 
 def job_datasets(job):
 	"""All datasets in a job"""

@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -40,6 +40,7 @@ from accelerator.setupfile import _sorted_set
 from accelerator import __version__ as ax_version
 
 class MethodLoadException(AcceleratorError):
+	__slots__ = ('module_list',)
 	def __init__(self, lst):
 		AcceleratorError.__init__(self, 'Failed to load ' + ', '.join(lst))
 		self.module_list = lst

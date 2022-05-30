@@ -79,6 +79,7 @@ def _get_params(jobid):
 		raise
 
 class _ParamsDict(defaultdict):
+	__slots__ = ()
 	def __missing__(self, key):
 		self[key] = value = _get_params(key)[1]
 		return value

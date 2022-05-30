@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2021 Carl Drougge                            #
+# Modifications copyright (c) 2021-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -18,6 +18,7 @@
 ############################################################################
 
 class AutoFlush:
+	__slots__ = ('fh', 'isatty')
 	def __init__(self, fh):
 		self.fh = fh
 		self.isatty = fh.isatty

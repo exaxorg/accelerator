@@ -311,6 +311,8 @@ class JobList(_ListTypePreserver):
 	.pretty a pretty-printed version (string).
 	"""
 
+	__slots__ = ()
+
 	def __getitem__(self, item):
 		if isinstance(item, slice):
 			return self.__class__(list.__getitem__(self, item))

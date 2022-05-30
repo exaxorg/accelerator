@@ -46,6 +46,7 @@ from accelerator import iowrapper
 
 # Raise this to finish job (successfully) without running later stages
 class _FinishJob(Exception):
+	__slots__ = ('result',)
 	def __init__(self, result=None):
 		Exception.__init__(self)
 		self.result = result

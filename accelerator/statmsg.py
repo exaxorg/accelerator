@@ -58,6 +58,7 @@ status_stacks_lock = Lock()
 
 # all currently (or recently) running launch.py PIDs
 class Children(set):
+	__slots__ = ()
 	def add(self, pid):
 		with status_stacks_lock:
 			set.add(self, pid)

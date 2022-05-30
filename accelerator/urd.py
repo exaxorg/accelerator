@@ -70,6 +70,10 @@ class TimeStamp(str):
 	Datetimes without integers sort before the same datetime with an integer.
 	When both are specified they are separated by a +
 	"""
+
+	if PY3: # python2 doesn't support slots on str subclasses
+		__slots__ = ('_ts', '_integer')
+
 	def __new__(cls, ts):
 		if isinstance(ts, TimeStamp):
 			return ts

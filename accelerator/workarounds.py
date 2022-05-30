@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2020 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -29,6 +29,8 @@ from contextlib import contextmanager
 class SignalWrapper(object):
 	"""Some misguided kernels (like Linux) feel that SIGINFO is not needed.
 	Perhapt some other kernels feel similarly about other signals?"""
+
+	__slots__ = ('key_values', 'restore', 'signal_set', 'clean', 'use_input', 'tc_original')
 
 	def __init__(self, signal_names=['SIGINFO'], key_values=[20], skip_input_if_possible=True):
 		"""signal_names is a list of signal names, which will be listened for if they exist.

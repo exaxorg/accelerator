@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -23,52 +23,52 @@ from __future__ import unicode_literals
 
 class AcceleratorError(Exception):
 	"""Base class for all accelerator exception types"""
-	pass
+	__slots__ = ()
 
 class UserError(AcceleratorError):
 	"""Raised when the user (of a shell command) did something wrong"""
-	pass
+	__slots__ = ()
 
 class ServerError(AcceleratorError):
 	"""Error return from a server call (not a method failing)"""
-	pass
+	__slots__ = ()
 
 class UrdError(AcceleratorError):
 	"""Errors from urd"""
-	pass
+	__slots__ = ()
 
 class UrdPermissionError(UrdError):
 	"""Attempting to write something you are not allowed to write"""
-	pass
+	__slots__ = ()
 
 class UrdConflictError(UrdError):
 	"""Attempting to write something that already has a different value"""
-	pass
+	__slots__ = ()
 
 class NoSuchWhateverError(AcceleratorError):
 	"""Base class for errors about things not being found (job, dataset, ...)"""
-	pass
+	__slots__ = ()
 
 class NoSuchJobError(NoSuchWhateverError):
-	pass
+	__slots__ = ()
 
 class NoSuchWorkdirError(NoSuchWhateverError):
-	pass
+	__slots__ = ()
 
 class DatasetError(AcceleratorError):
 	"""Any error about datasets"""
-	pass
+	__slots__ = ()
 
 class NoSuchDatasetError(DatasetError, NoSuchWhateverError):
-	pass
+	__slots__ = ()
 
 class DatasetUsageError(DatasetError):
 	"""Probably a mistake on the users part"""
-	pass
+	__slots__ = ()
 
 class BuildError(AcceleratorError):
 	"""Probably a mistake on the users part"""
-	pass
+	__slots__ = ()
 
 class JobError(BuildError):
 	def __init__(self, job, method, status):
@@ -86,4 +86,4 @@ class JobError(BuildError):
 
 class ColourError(AcceleratorError):
 	"""Raised when colourwrapper can not parse an attribute spec"""
-	pass
+	__slots__ = ()

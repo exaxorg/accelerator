@@ -84,6 +84,7 @@ _nodefault = object()
 
 from json import JSONEncoder, JSONDecoder, loads as json_loads
 class WriteJson(object):
+	__slots__ = ('fh', 'encode')
 	min = max = None
 	def __init__(self, *a, **kw):
 		default = kw.pop('default', _nodefault)
@@ -123,6 +124,7 @@ _convfuncs['json'] = WriteJson
 class WriteParsedJson(WriteJson):
 	"""This assumes strings are the object you wanted and parse them as json.
 	If they are unparseable you get an error."""
+	__slots__ = ()
 	def _wrap_encode(self, encode, default):
 		if default is not _nodefault:
 			if isinstance(default, str_types):
@@ -141,6 +143,7 @@ class WriteParsedJson(WriteJson):
 _convfuncs['parsed:json'] = WriteParsedJson
 
 class ReadJson(object):
+	__slots__ = ('fh', 'decode')
 	def __init__(self, *a, **kw):
 		if PY3:
 			self.fh = _dsutil.ReadUnicode(*a, **kw)
@@ -162,6 +165,7 @@ _type2iter['json'] = ReadJson
 
 from pickle import dumps as pickle_dumps, loads as pickle_loads
 class WritePickle(object):
+	__slots__ = ('fh',)
 	min = max = None
 	def __init__(self, *a, **kw):
 		assert PY3, "Pickle columns require python 3, sorry"
@@ -184,6 +188,7 @@ class WritePickle(object):
 _convfuncs['pickle'] = WritePickle
 
 class ReadPickle(object):
+	__slots__ = ('fh',)
 	def __init__(self, *a, **kw):
 		assert PY3, "Pickle columns require python 3, sorry"
 		self.fh = _dsutil.ReadBytes(*a, **kw)

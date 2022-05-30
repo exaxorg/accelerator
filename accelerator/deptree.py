@@ -30,6 +30,7 @@ from accelerator.extras import OptionEnum, OptionEnumValue, _OptionString, Optio
 from accelerator.job import JobWithFile
 
 class OptionException(Exception):
+	__slots__ = ()
 	pass
 
 _date_types = (datetime, date, time, timedelta)

@@ -68,7 +68,7 @@ def path_prefix(paths):
 	return prefix
 
 class MsgException(Exception):
-	pass
+	__slots__ = ()
 
 def check_picklable(desc, value):
 	from accelerator.compat import pickle

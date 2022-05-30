@@ -67,9 +67,11 @@ def _mk_sel(fd, ev):
 # In short, you often can't use this. And when you do, you have to be careful.
 
 class QueueClosedError(Exception):
-	pass
+	__slots__ = ()
 
 class LockFreeQueue:
+	__slots__ = ('r', 'w', '_r_sel', '_w_sel', '_pid', '_buf', '_partial', '_local')
+
 	def __init__(self):
 		self._r_sel = self._w_sel = None
 		self.r, self.w = os.pipe()
@@ -223,6 +225,8 @@ class LockFreeQueue:
 # has scaling issues with many children.
 
 class SimplifiedProcess:
+	__slots__ = ('pid', 'name', '_alive', 'exitcode')
+
 	def __init__(self, target, args=(), kwargs={}, name=None):
 		sys.stdout.flush()
 		sys.stderr.flush()
@@ -275,6 +279,8 @@ class SimplifiedProcess:
 
 
 class MpSet:
+	__slots__ = ('_lock', '_q_r', '_q_w', '_p', '_broken')
+
 	def __init__(self):
 		self._lock = multiprocessing.Lock()
 		self._q_r = LockFreeQueue()

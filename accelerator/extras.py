@@ -210,6 +210,9 @@ class FileWriteMove(object):
 
 	The temp-level of the file is recorded in saved_files.
 	"""
+
+	__slots__ = ('filename', 'tmp_filename', 'temp', '_hidden', '_status', 'close', '_open')
+
 	def __init__(self, filename, temp=None, _hidden=False):
 		from accelerator.g import running
 		self.filename = filename
@@ -244,6 +247,9 @@ class FileWriteMove(object):
 				print_exc(file=sys.stderr)
 
 class ResultIter(object):
+
+	__slots__ = ('_slices', '_is_tupled', '_loaders', '_tupled')
+
 	def __init__(self, slices):
 		slices = range(slices)
 		self._slices = iter(slices)
@@ -272,6 +278,8 @@ class ResultIterMagic(object):
 	exhausted. This is to avoid bugs, for example using analysis_res as if
 	it was a list.
 	"""
+
+	__slots__ = ('_inner', '_reuse_msg', '_exc', '_done', '_started')
 
 	def __init__(self, slices, reuse_msg="Attempted to iterate past end of iterator.", exc=Exception):
 		self._inner = ResultIter(slices)
@@ -359,6 +367,8 @@ class DotDict(dict):
 	The normal dict.f (get, items, ...) still return the functions.
 	"""
 
+	__slots__ = () # all the .stuff is actually items, not attributes
+
 	def __getattr__(self, name):
 		if name[0] == "_":
 			raise AttributeError(name)
@@ -376,6 +386,8 @@ class DotDict(dict):
 
 class _ListTypePreserver(list):
 	"""Base class to inherit from in list subclasses that want their custom type preserved when slicing."""
+
+	__slots__ = ()
 
 	def __getslice__(self, i, j):
 		return self[slice(i, j)]
@@ -400,6 +412,10 @@ class _ListTypePreserver(list):
 		return '%s(%s)' % (self.__class__.__name__, list.__repr__(self))
 
 class OptionEnumValue(str):
+
+	if PY3: # python2 doesn't support slots on str subclasses
+		__slots__ = ('_valid', '_prefixes')
+
 	@staticmethod
 	def _mktype(name, valid, prefixes):
 		return type('OptionEnumValue' + name, (OptionEnumValue,), {'_valid': valid, '_prefixes': prefixes})
@@ -443,6 +459,8 @@ class OptionEnum(object):
 	these as foo['cde'] (for use in options{}).
 	"""
 
+	__slots__ = ('_values', '_valid', '_prefixes', '_sub')
+
 	def __new__(cls, values, none_ok=False):
 		if isinstance(values, str_types):
 			values = values.replace(',', ' ').split()
@@ -483,6 +501,9 @@ class _OptionString(str):
 	You can use plain OptionString, or you can use OptionString('example'),
 	without making 'example' the default.
 	"""
+
+	__slots__ = ()
+
 	def __call__(self, example):
 		return _OptionString(example)
 	def __repr__(self):
@@ -496,6 +517,9 @@ class RequiredOption(object):
 	"""Specify that this option is mandatory (that the caller must specify a value).
 	None is accepted as a specified value if you pass none_ok=True.
 	"""
+
+	__slots__ = ('value', 'none_ok')
+
 	def __init__(self, value, none_ok=False):
 		self.value = value
 		self.none_ok = none_ok
@@ -506,6 +530,9 @@ class OptionDefault(object):
 	foo=OptionDefault({'bar': OptionEnum(...)}) isn't.
 	(Default None unless specified.)
 	"""
+
+	__slots__ = ('value', 'default')
+
 	def __init__(self, value, default=None):
 		self.value = value
 		self.default = default

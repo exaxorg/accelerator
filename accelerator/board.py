@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2021 Carl Drougge                                     #
+# Copyright (c) 2020-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -65,6 +65,7 @@ def get_best_accept(*want):
 	return want_short.get(best, best)
 
 class JSONEncoderWithSet(json.JSONEncoder):
+	__slots__ = ()
 	def default(self, o):
 		if isinstance(o, set):
 			return list(o)

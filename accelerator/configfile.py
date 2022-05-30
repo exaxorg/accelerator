@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -38,6 +38,7 @@ def interpolate(s):
 
 
 class HostPortTuple(tuple):
+	__slots__ = ()
 	def __str__(self):
 		return "http://%s:%d" % self
 
@@ -80,7 +81,7 @@ def load_config(filename):
 		return p
 
 	class _E(Exception):
-		pass
+		__slots__ = ()
 	def parse_package(val):
 		if len(val) == 2:
 			if val[1] != 'auto-discover':
