@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -97,8 +97,14 @@ def _sorted_set(s):
 def encode_setup(data, sort_keys=True, as_str=False):
 	def copy(src):
 		if isinstance(src, dict):
+			# Modern python versions preserve order on all dicts, but to avoid
+			# surprises we sort normal dicts regardless of version.
+			if isinstance(src, OrderedDict):
+				keys = src
+			else:
+				keys = sorted(src)
 			dst = OrderedDict()
-			for k in sorted(src):
+			for k in keys:
 				dst[k] = copy(src[k])
 			return dst
 		elif isinstance(src, (list, tuple,)):
@@ -153,7 +159,7 @@ def _encode_with_compact(data, compact_keys, extra_indent=0, separator='\n', spe
 			del data[k]
 	for k in special_keys:
 		if k in data:
-			fmted = dumps(data[k], indent=4, sort_keys=True)
+			fmted = dumps(data[k], indent=4, sort_keys=False)
 			special.append('    "%s": %s' % (k, fmted.replace('\n', '\n    '),))
 			del data[k]
 	res = json_encode(data, as_str=True)
