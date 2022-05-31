@@ -375,6 +375,11 @@ class DotDict(OrderedDict):
 		return self[name]
 
 	def __setattr__(self, name, value):
+		# if using the python implementation of OrderedDict (as python2 does)
+		# this is needed. don't worry about __slots__, it won't apply in that
+		# case, and __getattr__ is not needed as it falls through automatically.
+		if name.startswith('_OrderedDict__'):
+			return OrderedDict.__setattr__(self, name, value)
 		if name[0] == "_":
 			raise AttributeError(name)
 		self[name] = value
