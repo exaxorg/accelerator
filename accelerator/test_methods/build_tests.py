@@ -25,6 +25,7 @@ from accelerator.dataset import Dataset
 from accelerator.build import JobError
 from accelerator.compat import monotonic
 
+from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from sys import exit
 
@@ -175,6 +176,13 @@ def main(urd):
 	urd.build("test_dataset_nan")
 	urd.build('test_dataset_parsing_writer')
 	urd.build('test_dataset_overwrite')
+
+	print()
+	print("Testing order preservation in dicts in options")
+	for key_order in (['a', 'c', 'b', 'z', 'd', 'inner'], ['foo', 'bar', 'inner', 'aaa']):
+		d = OrderedDict((k, 0) for k in key_order)
+		d['inner'] = OrderedDict((k, 1) for k in key_order)
+		urd.build("test_options_dict_order", dict=d, key_order=key_order)
 
 	print()
 	print("Testing ['lists'] of datasets and jobs")
