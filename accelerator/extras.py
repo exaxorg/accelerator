@@ -369,6 +369,15 @@ class DotDict(OrderedDict):
 
 	__slots__ = () # all the .stuff is actually items, not attributes
 
+	# this is a workaround for older versions not inheriting from OrderedDict.
+	# without this, unpickling of pickles that were not ordered will fail.
+	# it throws the arguments away, as they will be passed to __init__ too
+	# anyway. (Or set as items, in the pickle case.)
+	def __new__(cls, other=(), **kw):
+		obj = OrderedDict.__new__(cls)
+		OrderedDict.__init__(obj)
+		return obj
+
 	def __getattr__(self, name):
 		if name[0] == "_":
 			raise AttributeError(name)
