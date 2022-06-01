@@ -73,7 +73,7 @@ class MsgException(Exception):
 def check_picklable(desc, value):
 	from accelerator.compat import pickle
 	try:
-		pickle.dumps(value)
+		pickle.dumps(value, 2)
 		return
 	except Exception as e:
 		msg = str(e)
