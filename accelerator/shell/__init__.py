@@ -252,7 +252,7 @@ cmd_intro.help = '''show introduction text'''
 def cmd_version(argv):
 	from accelerator import __version__ as ax_version
 	if len(argv) > 1:
-		if argv[1:] in (['-h'], ['--help']):
+		if '-h' in argv or '--help' in argv:
 			print('Usage:', argv[0])
 			return 0
 		else:
