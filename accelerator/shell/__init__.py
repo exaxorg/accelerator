@@ -249,7 +249,7 @@ def cmd_intro(argv):
 	cmd('https://exax.org/documentation/2019/10/30/initialise.html', 'intro/info')
 cmd_intro.help = '''show introduction text'''
 
-def cmd_version(argv):
+def cmd_version(argv, as_command=True):
 	from accelerator import __version__ as ax_version
 	if len(argv) > 1:
 		if '-h' in argv or '--help' in argv:
@@ -260,6 +260,18 @@ def cmd_version(argv):
 			return 1
 	else:
 		print(ax_version)
+		if as_command:
+			py_version = ''
+			suffix = sys.version.strip()
+			try:
+				# sys.implementation does not exist in python 2.
+				py_version = sys.implementation.name
+				suffix = ' (%s)' % (suffix.split('\n')[0].strip(),)
+				impl_version = '.'.join(map(str, sys.implementation.version))
+				py_version = '%s %s' % (py_version, impl_version,)
+			except Exception:
+				pass
+			print('Running on ' + py_version + suffix)
 cmd_version.help = '''show installed accelerator version'''
 
 COMMANDS = {
@@ -467,7 +479,7 @@ def main():
 	parser.add_argument('--version', action='store_true', help='alias for the version command')
 	args = parser.parse_args(main_argv)
 	if args.version:
-		sys.exit(cmd_version(()))
+		sys.exit(cmd_version((), False))
 	args.command = argv.pop(0) if argv else None
 	if args.command not in COMMANDS:
 		parser.print_help(file=sys.stderr)
