@@ -376,21 +376,21 @@ def printdesc(items, columns, colour_prefix, full=False):
 		items = [
 			(
 				(name + spaces)[:len2len[len(name)]],
-				description[0],
+				[description[0]],
 			)
 			for name, description in items
 		]
+	items = [(name, description if description[0] else None) for name, description in items]
 	for name, description in items:
 		max_len = columns - len(ddot) - len(name)
 		preamble = colour('  ' + name, colour_prefix + '/highlight')
 		if description and max_len > 10:
-			lines = description.split('\n')
 			if full:
 				print(preamble)
-				for line in lines:
+				for line in description:
 					print('    ' + line)
 			else:
-				print(preamble + '  ' + chopline(lines[0], max_len))
+				print(preamble + '  ' + chopline(description[0], max_len))
 		else:
 			print(preamble)
 
