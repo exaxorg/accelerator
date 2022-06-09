@@ -732,12 +732,12 @@ def main(argv, cfg):
 				lens = (len(item) for item in data + show_items)
 				if highlight_matches:
 					show_items = list(map(colour_item, show_items))
-				if escape_item:
-					lens_unesc = (len(item) for item in data + show_items)
-					show_items = list(map(escape_item, show_items))
-					lens_esc = (len(item) for item in data + show_items)
-					lens = (l + esc - unesc for l, unesc, esc in zip(lens, lens_unesc, lens_esc))
 				data.extend(show_items)
+				if escape_item:
+					lens_unesc = (len(item) for item in data)
+					data = list(map(escape_item, data))
+					lens_esc = (len(item) for item in data)
+					lens = (l + esc - unesc for l, unesc, esc in zip(lens, lens_unesc, lens_esc))
 				return separate(data, lens).encode('utf-8', errors) + b'\n'
 		return show
 
