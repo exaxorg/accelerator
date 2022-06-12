@@ -236,9 +236,9 @@ def synthesis(job, slices):
 			['0' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42' + SEP_HI + '  ' + SEP_HI_POST + '3'],
 		], sep='',
 	)
-	# with a PTY, to see that this defaults to colour and expanded tabs
+	# with a PTY, to see that this defaults to colour and smart expanded tabs
 	grep_text(['-S', '^1', c, 'int32', 'float64'], [
-			['0' + SEP_HI + '       ' + SEP_HI_POST + '3' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42'],
+			['0' + SEP_HI + '               ' + SEP_HI_POST + '3' + SEP_HI + '               ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42'],
 		], sep='', check_output=check_output_pty,
 	)
 

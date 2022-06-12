@@ -25,9 +25,9 @@ from __future__ import division, print_function
 import sys
 import re
 import os
-from itertools import chain, repeat
+from itertools import chain, repeat, cycle
 from collections import deque, OrderedDict, defaultdict
-from argparse import RawTextHelpFormatter, Action, SUPPRESS
+from argparse import RawTextHelpFormatter, Action, SUPPRESS, ArgumentError
 from multiprocessing import Lock
 import json
 import datetime
@@ -41,6 +41,7 @@ from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
 from .parser import name2ds
 from accelerator.error import NoSuchWhateverError
+from accelerator.extras import DotDict
 from accelerator import g
 from accelerator import mp
 
@@ -56,6 +57,43 @@ def main(argv, cfg):
 	class ContextAction(Action):
 		def __call__(self, parser, namespace, values, option_string=None):
 			namespace.before_context = namespace.after_context = values
+
+	# Default values for tab_length
+	tab_length = DotDict(tab_len=8, field_len=16, min_len=2)
+
+	class TabLengthAction(Action):
+		def __call__(self, parser, namespace, values, option_string=None):
+			names = {}
+			for suffix in ('_length', 'length', '_len', 'len', ''):
+				for name in ('tab', 'field', 'min'):
+					names[name + suffix] = name + '_len'
+			min_value = dict(tab_len=1, field_len=0, min_len=1)
+			order = ['tab_len', 'field_len', 'min_len']
+			unnamed = cycle(order)
+			values = re.split(r'[/, ]', values)
+			if len(values) == 1 and values[0] and '=' not in values[0]:
+				# only a single number provided: skip defaults and be traditional
+				tab_length.field_len = 0
+				tab_length.min_len = 1
+			for value in values:
+				if not value:
+					continue # so you can do -T/ or similar to just activate it
+				if '=' in value:
+					name, value = value.rsplit('=', 1)
+					name = name.lower()
+				else:
+					name = next(unnamed)
+				if name not in names:
+					raise ArgumentError(self, 'unknown field %r' % (name,))
+				name = names[name]
+				try:
+					value = int(value)
+				except ValueError:
+					raise ArgumentError(self, 'invalid int value for %s: %r' % (name, value,))
+				if value < min_value[name] or value > 9999:
+					raise ArgumentError(self, 'invalid value for %s: %d' % (name, value,))
+				tab_length[name] = value
+			namespace.tab_length = True
 
 	parser = ArgumentParser(
 		usage="%(prog)s [options] [-e] pattern [...] [-d] ds [...] [[-n] column [...]]",
@@ -83,7 +121,15 @@ def main(argv, cfg):
 	supported_formats = ('csv', 'raw', 'json',)
 	parser.add_argument('-f', '--format', default='csv', choices=supported_formats, help="output format, csv (default) / " + ' / '.join(supported_formats[1:]), metavar='FORMAT', )
 	parser.add_argument('-t', '--separator', help="field separator, default tab / tab-like spaces", )
-	parser.add_argument('-T', '--tab-length', type=int, metavar='LENGTH', help="field alignment, always uses spaces as separator", )
+	parser.add_argument('-T', '--tab-length', metavar='LENGTH', action=TabLengthAction,
+		help="field alignment, always uses spaces as separator\n" +
+		     "specify as many as you like of TABLEN/FIELDLEN/MINLEN\n" +
+		     "or as NAME=VALUE (e.g. \"min=3/field=24\")\n" +
+		     "TABLEN works like normal tabs\n" +
+		     "FIELDLEN sets a longer minimum between fields\n" +
+		     "MINLEN sets a minimum len for all separators\n" +
+		     "use \"-T/\" to just activate it (sets %d/%d/%d)" % (tab_length.tab_len, tab_length.field_len, tab_length.min_len,)
+	)
 	parser.add_argument('-B', '--before-context', type=int, default=0, metavar='NUM', help="print NUM lines of leading context", )
 	parser.add_argument('-A', '--after-context',  type=int, default=0, metavar='NUM', help="print NUM lines of trailing context", )
 	parser.add_argument('-C', '--context',        type=int, default=0, metavar='NUM', action=ContextAction,
@@ -242,15 +288,20 @@ def main(argv, cfg):
 	if separator is None:
 		# special case where we try to be like a tab, but with spaces.
 		# this is useful because terminals typically don't style tabs.
-		# and also so you can change the length of tabs.
-		if (args.tab_length or 0) < 1:
-			args.tab_length = 8
-		def separate(items, lens):
+		# and also so you can use smarter tabs and change the length.
+		def separate(items, lens, tab_len=tab_length.tab_len, field_len=tab_length.field_len, min_len=tab_length.min_len):
 			things = []
+			current_pos = min_pos = 0
 			for item, item_len in zip(items, lens):
 				things.append(item)
-				spaces = args.tab_length - (item_len % args.tab_length)
+				current_pos += item_len
+				min_pos += field_len
+				spaces = max(min_pos - current_pos, min_len)
+				align = (current_pos + spaces) % tab_len
+				if align:
+					spaces += tab_len - align
 				things.append(colour(' ' * spaces, 'grep/separator'))
+				current_pos += spaces
 			return ''.join(things[:-1])
 		separator = '\t'
 	else:
