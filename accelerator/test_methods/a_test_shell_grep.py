@@ -425,6 +425,19 @@ def synthesis(job, slices):
 		{'spaced name': 'singlequote end', 'tabbed\tname': "foo'"},
 	])
 
+	# test that escaping of ds name works in the right places
+	comma_ds = mk_ds(',', ['ascii'], ['foo'])
+	commaquote_ds = mk_ds(',"', ['ascii'], ['bar'])
+	newline_ds = mk_ds('\n', ['ascii'], ['really?'])
+	grep_text(['-t', ',', '-D', '', comma_ds], [['"' + comma_ds.replace('"', '""') + '"', 'foo']], sep=',')
+	grep_text(['-t', ',', '-D', '', commaquote_ds], [['"' + commaquote_ds.replace('"', '""') + '"', 'bar']], sep=',')
+	grep_text(['-t', ',', '-D', '', newline_ds], [[newline_ds.replace('\n', '\\n'), 'really?']], sep=',')
+	# and the same thing but -f raw, so it's not escaped
+	grep_text(['-t', ',', '-D', '-f', 'raw', '', comma_ds], [[comma_ds, 'foo']], sep=',')
+	grep_text(['-t', ',', '-D', '-f', 'raw', '', commaquote_ds], [[commaquote_ds, 'bar']], sep=',')
+	# this ends up looking like two lines
+	grep_text(['-t', ',', '-D', '-f', 'raw', '', newline_ds], [[newline_ds.replace('\n', '')], [',really?']], sep=',')
+
 	alltypes = mk_ds('alltypes',
 		[
 			'ascii',
