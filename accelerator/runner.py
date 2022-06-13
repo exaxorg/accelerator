@@ -559,28 +559,36 @@ if __name__ == "__main__":
 	if r1 < 5000:
 		print("WARNING: RLIMIT_NOFILE is %d, that's not much." % (r1,))
 
-	while True:
-		op, length = struct.unpack('<cI', recvall(sock, 5, True))
-		data = recvall(sock, length, True)
-		cookie, data = pickle.loads(data)
-		if op == b'm':
-			res = load_methods(*data)
-			respond(cookie, res)
-		elif op == b's':
-			res = launch_start(data)
-			respond(cookie, res)
-		elif op == b'f':
-			# waits until job is done, so must run on a separate thread
-			Thread(
-				target=launch_finish,
-				args=(cookie, data,),
-				name=data[3], # jobid
-			).start()
-		elif op == b'w':
-			# It would be nice to be able to just ignore children
-			# (set SIGCHLD to SIG_IGN), but the server might want to
-			# killpg the child, so we need it to stick around.
-			os.waitpid(data, 0)
-			respond(cookie, None)
-		elif op == b'v':
-			respond(cookie, ax_version)
+	try:
+		while True:
+			op, length = struct.unpack('<cI', recvall(sock, 5, True))
+			data = recvall(sock, length, True)
+			cookie, data = pickle.loads(data)
+			if op == b'm':
+				res = load_methods(*data)
+				respond(cookie, res)
+			elif op == b's':
+				res = launch_start(data)
+				respond(cookie, res)
+			elif op == b'f':
+				# waits until job is done, so must run on a separate thread
+				Thread(
+					target=launch_finish,
+					args=(cookie, data,),
+					name=data[3], # jobid
+				).start()
+			elif op == b'w':
+				# It would be nice to be able to just ignore children
+				# (set SIGCHLD to SIG_IGN), but the server might want to
+				# killpg the child, so we need it to stick around.
+				os.waitpid(data, 0)
+				respond(cookie, None)
+			elif op == b'v':
+				respond(cookie, ax_version)
+	except KeyboardInterrupt:
+		# Exiting with KeyboardInterrupt causes python to print a traceback,
+		# but let's not.
+		signal.signal(signal.SIGINT, signal.SIG_DFL)
+		os.kill(os.getpid(), signal.SIGINT)
+		# If that didn't work let's re-raise the KeyboardInterrupt.
+		raise
