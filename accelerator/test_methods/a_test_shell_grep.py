@@ -34,6 +34,8 @@ import datetime
 import os
 import errno
 import json
+from itertools import cycle
+from functools import partial
 
 from accelerator.compat import PY2, PY3, izip_longest
 from accelerator.dsutil import _convfuncs
@@ -74,9 +76,6 @@ def check_output_pty(cmd):
 		res.append(data)
 	os.close(b)
 	return b''.join(res)
-
-def frame(pre, a, post='\x1b[22;39m'):
-	return [pre + el + post for el in a]
 
 def grep_json(args, want):
 	cmd = options.command_prefix + ['grep', '--ordered', '--format=json'] + args
@@ -132,6 +131,7 @@ def synthesis(job, slices):
 				dw.write(*line)
 		return dw.finish()
 	HDR_HI = '\x1b[94;1m'
+	HDR_HI_POST = '\x1b[22;39m'
 	SEP_HI = '\x1b[36;4m'
 	SEP_HI_POST = '\x1b[24;39m'
 	COMMA_HI = SEP_HI + ',' + SEP_HI_POST
@@ -140,6 +140,14 @@ def synthesis(job, slices):
 	os.unsetenv('CLICOLOR')
 	os.unsetenv('CLICOLOR_FORCE')
 	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
+
+	def frame(framevalues, *a):
+		framevalues = cycle(framevalues)
+		return [next(framevalues) + el + next(framevalues) for el in a]
+
+	hdrframe = partial(frame, [HDR_HI, HDR_HI_POST])
+	sepframe = partial(frame,  ['', '', SEP_HI, SEP_HI_POST])
+	hdrsepframe = partial(frame,  [HDR_HI, HDR_HI_POST, SEP_HI, SEP_HI_POST])
 
 	# start with testing basic output, chaining, column selection and headers.
 	a = mk_ds('a', ['int32', 'int64'], [100, 200], [101, 201])
@@ -203,13 +211,13 @@ def synthesis(job, slices):
 	grep_text(['-M', '-e', '000', a, b, 'int32', 'int64', '-e', '01'], [[101, 201], [1000], [1001]])
 
 	# try some colour
-	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [frame(HDR_HI, ['[DATASET]', '[SLICE]', 'int32', 'int64']), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
+	grep_text(['--colour', '-t', ',', '-D', '-S', '-H', '', a], [hdrframe('[DATASET]', '[SLICE]', 'int32', 'int64'), [a, 0, 100, 200], [a, 1, 101, 201]], sep=COMMA_HI)
 	os.putenv('CLICOLOR_FORCE', '1')
-	grep_text(['-t', ',', '-L', '-S', '-H', '', a], [frame(HDR_HI, ['[SLICE]', '[LINE]', 'int32', 'int64']), [0, 0, 100, 200], [1, 0, 101, 201]], sep=COMMA_HI)
+	grep_text(['-t', ',', '-L', '-S', '-H', '', a], [hdrframe('[SLICE]', '[LINE]', 'int32', 'int64'), [0, 0, 100, 200], [1, 0, 101, 201]], sep=COMMA_HI)
 	grep_text(['-t', ',', '-L', '-S', '-H', '--colour=never', '', a], [['[SLICE]', '[LINE]', 'int32', 'int64'], [0, 0, 100, 200], [1, 0, 101, 201]], sep=',')
-	grep_text(['-t', ',', '-D', '-H', '', b], [frame(HDR_HI, ['[DATASET]', 'int32']), [b, 1000], [b, 1001]], sep=COMMA_HI)
+	grep_text(['-t', ',', '-D', '-H', '', b], [hdrframe('[DATASET]', 'int32'), [b, 1000], [b, 1001]], sep=COMMA_HI)
 	grep_text(['-t', ',', '-C', '1', 'F', ctx2], [['E', 'e'], ['\x1b[31mF\x1b[39m', 'f'], ['G', 'g']], sep=COMMA_HI)
-	grep_text(['-t', ',', '-D', '-H', '-c', '', b], [frame(HDR_HI, ['[DATASET]', 'int32', 'int64']), [a, 100, 200], [a, 101, 201], frame(HDR_HI, ['[DATASET]', 'int32']), [b, 1000], [b, 1001]], sep=COMMA_HI)
+	grep_text(['-t', ',', '-D', '-H', '-c', '', b], [hdrframe('[DATASET]', 'int32', 'int64'), [a, 100, 200], [a, 101, 201], hdrframe('[DATASET]', 'int32'), [b, 1000], [b, 1001]], sep=COMMA_HI)
 	grep_json(['-s', '0', '', a], [{'int32': 100, 'int64': 200}]) # no colour in json
 	grep_text(['-s', '0', '', b, a], [['1000'], ['100', '200']], sep=TAB_HI)
 	grep_text(['--color=never', '0', b], [[1000], [1001]])
@@ -220,25 +228,25 @@ def synthesis(job, slices):
 
 	# test the tab-replacing separator handling
 	grep_text(['--color=always', '--tab-length=8', '-H', '-S', '^1', a, c], [
-			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int32']) + frame(SEP_HI, ['   '], SEP_HI_POST) + frame(HDR_HI, ['int64']),
-			['0' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m00' + SEP_HI + '     ' + SEP_HI_POST + '200'],
-			['1' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m01' + SEP_HI + '     ' + SEP_HI_POST + '201'],
-			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['float64']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int32']),
-			['0' + SEP_HI + '       ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42' + SEP_HI + '    ' + SEP_HI_POST + '3'],
+			hdrsepframe('[SLICE]', ' ', 'int32', '   ', 'int64'),
+			sepframe('0', '       ', '\x1b[31m1\x1b[39m00', '     ', '200'),
+			sepframe('1', '       ', '\x1b[31m1\x1b[39m01', '     ', '201'),
+			hdrsepframe('[SLICE]', ' ', 'float64', ' ', 'int32'),
+			sepframe('0', '       ', '\x1b[31m1\x1b[39m.42', '    ', '3'),
 		], sep='',
 	)
 	# different length
 	grep_text(['--color=always', '--tab-length=3', '-H', '-S', '^1', a, c], [
-			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['int32']) + frame(SEP_HI, [' '], SEP_HI_POST) + frame(HDR_HI, ['int64']),
-			['0' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m00' + SEP_HI + '   ' + SEP_HI_POST + '200'],
-			['1' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m01' + SEP_HI + '   ' + SEP_HI_POST + '201'],
-			frame(HDR_HI, ['[SLICE]']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['float64']) + frame(SEP_HI, ['  '], SEP_HI_POST) + frame(HDR_HI, ['int32']),
-			['0' + SEP_HI + '  ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42' + SEP_HI + '  ' + SEP_HI_POST + '3'],
+			hdrsepframe('[SLICE]', '  ', 'int32', ' ', 'int64'),
+			sepframe('0', '  ', '\x1b[31m1\x1b[39m00', '   ', '200'),
+			sepframe('1', '  ', '\x1b[31m1\x1b[39m01', '   ', '201'),
+			hdrsepframe('[SLICE]', '  ', 'float64', '  ', 'int32'),
+			sepframe('0', '  ', '\x1b[31m1\x1b[39m.42', '  ', '3'),
 		], sep='',
 	)
 	# with a PTY, to see that this defaults to colour and smart expanded tabs
 	grep_text(['-S', '^1', c, 'int32', 'float64'], [
-			['0' + SEP_HI + '               ' + SEP_HI_POST + '3' + SEP_HI + '               ' + SEP_HI_POST + '\x1b[31m1\x1b[39m.42'],
+			sepframe('0', '               ', '3', '               ', '\x1b[31m1\x1b[39m.42'),
 		], sep='', check_output=check_output_pty,
 	)
 
