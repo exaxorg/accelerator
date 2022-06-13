@@ -585,3 +585,83 @@ def synthesis(job, slices):
 	if PY2:
 		all_types.remove('pickle')
 	assert used_types == all_types, 'Missing/extra column types: %r %r' % (all_types - used_types, used_types - all_types,)
+
+	# test the smart tab mode with various lengths
+
+	# with traditional tabs specified differently:
+	# t       t       t       t       t       t       t       t       t
+	# date    datetime        float32 float64 int32   int64
+	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0       0
+	grep_text(['--color=always', '--tab-length=8/8/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64'], [
+			hdrsepframe('date', '    ', 'datetime', '        ', 'float32', ' ', 'float64', ' ', 'int32', '   ', 'int64'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0'),
+		], sep='',
+	)
+
+	# same, but with min_len=2
+	# with traditional tabs specified differently:
+	# t       t       t       t       t       t       t       t       t
+	# date    datetime        float32         float64         int32   int64
+	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0       0
+	grep_text(['--color=always', '--tab-length=8/8/2', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64'], [
+			hdrsepframe('date', '    ', 'datetime', '        ', 'float32', '         ', 'float64', '         ', 'int32', '   ', 'int64'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0'),
+		], sep='',
+	)
+
+	# with the default smart values
+	# f               f               f               f               f               f
+	# t       t       t       t       t       t       t       t       t       t       t
+	# date            datetime        float32         float64         int32           int64
+	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0             0               0
+	grep_text(['--color=always', '--tab-length=/', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', '         ', 'float64', '         ', 'int32', '           ', 'int64'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '             ', '0', '               ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '             ', '0', '               ', '0'),
+		], sep='',
+	)
+	# same, but explicitly specified
+	grep_text(['--color=always', '--tab-length=8/16/2', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', '         ', 'float64', '         ', 'int32', '           ', 'int64'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '             ', '0', '               ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '             ', '0', '               ', '0'),
+		], sep='',
+	)
+
+	# with field_len=11 which is not a multiple of tab_len=8
+	# f          f          f          f          f          f          f
+	# t       t       t       t       t       t       t       t       t       t
+	# date            datetime        float32 float64 int32   int64           bits32
+	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0       0       0
+	grep_text(['--color=always', '--tab-length=8/11/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', ' ', 'int32', '   ', 'int64', '           ', 'bits32'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0', '       ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0', '       ', '0'),
+		], sep='',
+	)
+
+	# with field_len=13 which is not a multiple of tab_len=8
+	# f            f            f            f            f            f            f
+	# t       t       t       t       t       t       t       t       t       t       t
+	# date            datetime        float32 float64         int32           int64   bits32
+	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0               0       0
+	grep_text(['--color=always', '--tab-length=8/13/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', '         ', 'int32', '           ', 'int64', '   ', 'bits32'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '               ', '0', '       ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '               ', '0', '       ', '0'),
+		], sep='',
+	)
+
+	# exercise the parser a bit more (this is 4/8/3, written stupidly)
+	# f       f       f       f       f       f       f       f       f
+	# t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
+	# date    datetime    float32     float64     int32   int64   bits32
+	# 0042-01-01      0001-01-01 01:01:01     0.0     0.0     0   0   0
+	grep_text(['--color=always', '--tab-length=1/min_LENGTH=3/8', '-T', 'tablen=4', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
+			hdrsepframe('date', '    ', 'datetime', '    ', 'float32', '     ', 'float64', '     ', 'int32', '   ', 'int64', '   ', 'bits32'),
+			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '   ', '0', '   ', '0'),
+			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '   ', '0', '   ', '0'),
+		], sep='',
+	)
