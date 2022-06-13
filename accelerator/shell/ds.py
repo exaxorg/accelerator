@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -96,7 +96,7 @@ def main(argv, cfg):
 						lines = sum(sum(x.lines) for x in ds.chain())
 					else:
 						lines = sum(ds.lines)
-					v.append((ds.name, '{:n}'.format(lines)))
+					v.append((ds.quoted, '{:n}'.format(lines)))
 				len_n, len_l = colwidth(v)
 				template = "{0:%d}  ({1:>%d})" % (len_n, len_l)
 				for name, numlines in sorted(v):
