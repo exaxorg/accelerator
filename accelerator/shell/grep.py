@@ -93,7 +93,15 @@ def main(argv, cfg):
 				if value < min_value[name] or value > 9999:
 					raise ArgumentError(self, 'invalid value for %s: %d' % (name, value,))
 				tab_length[name] = value
+			# -T overrides -t
+			namespace.separator = None
 			namespace.tab_length = True
+
+	class SeparatorAction(Action):
+		def __call__(self, parser, namespace, values, option_string=None):
+			# -t overrides -T
+			namespace.tab_length = False
+			namespace.separator = values
 
 	parser = ArgumentParser(
 		usage="%(prog)s [options] [-e] pattern [...] [-d] ds [...] [[-n] column [...]]",
@@ -120,7 +128,7 @@ def main(argv, cfg):
 	parser.add_argument('-L', '--show-lineno',  action='store_true', help="show lineno (per slice) on matching lines", )
 	supported_formats = ('csv', 'raw', 'json',)
 	parser.add_argument('-f', '--format', default='csv', choices=supported_formats, help="output format, csv (default) / " + ' / '.join(supported_formats[1:]), metavar='FORMAT', )
-	parser.add_argument('-t', '--separator', help="field separator, default tab / tab-like spaces", )
+	parser.add_argument('-t', '--separator', action=SeparatorAction, help="field separator, default tab / tab-like spaces", )
 	parser.add_argument('-T', '--tab-length', metavar='LENGTH', action=TabLengthAction,
 		help="field alignment, always uses spaces as separator\n" +
 		     "specify as many as you like of TABLEN/FIELDLEN/MINLEN\n" +
