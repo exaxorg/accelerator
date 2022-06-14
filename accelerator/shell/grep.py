@@ -113,8 +113,8 @@ def main(argv, cfg):
 		formatter_class=RawTextHelpFormatter,
 	)
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
-	parser.add_argument(      '--chain-length', '--cl', metavar='LENGTH', type=int, default=-1, help="follow chains at most this many datasets")
-	parser.add_argument(      '--stop-ds', metavar='DATASET', help="follow chains at most to this dataset\nthese options work like in ds.chain()")
+	parser.add_argument(      '--chain-length', '--cl', metavar='LENGTH', action='append', type=int, help="follow chains at most this many datasets")
+	parser.add_argument(      '--stop-ds',      action='append', metavar='DATASET', help="follow chains at most to this dataset\nthese options work like in ds.chain() and you can\nspecify them several times (for several datasets)")
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', help="select non-matching lines", )
@@ -220,7 +220,14 @@ def main(argv, cfg):
 		only_matching = False
 
 	if args.chain:
-		datasets = list(chain.from_iterable(ds.chain(length=args.chain_length, stop_ds=args.stop_ds) for ds in datasets))
+		datasets = list(chain.from_iterable(
+			ds.chain(length=length, stop_ds=stop_ds)
+			for ds, length, stop_ds in zip(
+				datasets,
+				cycle(args.chain_length or [-1]),
+				cycle(args.stop_ds or [None]),
+			)
+		))
 
 	def columns_for_ds(ds, columns=columns):
 		if columns:
