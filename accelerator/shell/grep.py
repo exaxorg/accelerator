@@ -113,6 +113,8 @@ def main(argv, cfg):
 		formatter_class=RawTextHelpFormatter,
 	)
 	parser.add_argument('-c', '--chain',        action='store_true', help="follow dataset chains", )
+	parser.add_argument(      '--chain-length', '--cl', metavar='LENGTH', type=int, default=-1, help="follow chains at most this many datasets")
+	parser.add_argument(      '--stop-ds', metavar='DATASET', help="follow chains at most to this dataset\nthese options work like in ds.chain()")
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', help="select non-matching lines", )
@@ -218,7 +220,7 @@ def main(argv, cfg):
 		only_matching = False
 
 	if args.chain:
-		datasets = list(chain.from_iterable(ds.chain() for ds in datasets))
+		datasets = list(chain.from_iterable(ds.chain(length=args.chain_length, stop_ds=args.stop_ds) for ds in datasets))
 
 	def columns_for_ds(ds, columns=columns):
 		if columns:
