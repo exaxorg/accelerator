@@ -26,7 +26,7 @@ import sys
 import re
 import os
 from itertools import chain, repeat, cycle
-from collections import deque, OrderedDict, defaultdict
+from collections import deque, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS, ArgumentError
 from multiprocessing import Lock
 import json
@@ -522,7 +522,9 @@ def main(argv, cfg):
 
 	class HeaderWaitOutputter(Outputter):
 		def start(self, ds):
-			if ds in headers:
+			expect_ds, show = next(show_headers_here)
+			assert ds == expect_ds
+			if show:
 				self.add_wait()
 			else:
 				self.excite()
@@ -707,7 +709,12 @@ def main(argv, cfg):
 		def start(self, ds):
 			# Each ds is separated by None in the buffer
 			self.buffer.append(None)
-			if ds in headers:
+			if headers:
+				expect_ds, show = next(show_headers_here)
+				assert ds == expect_ds
+			else:
+				show = False
+			if show:
 				# Headers changed, start with those.
 				self.buffer.append(next(headers_iter))
 			else:
@@ -911,15 +918,23 @@ def main(argv, cfg):
 	if args.show_lineno:
 		headers_prefix.append('[LINE]')
 
-	# {ds: headers} for each ds where headers change (not including the first).
+	# [headers] for each ds where headers change (not including the first).
 	# this is every ds where sync between slices has to happen when not --ordered.
-	headers = OrderedDict()
+	# which ds this is is stored in show_headers_here
+	headers = []
 	if args.headers:
 		current_headers = None
+		# [(ds, show_headers?)] for each ds in datasets.
+		# records ds as well to uncover bugs (it's not really needed)
+		show_headers_here = []
 		for ds in datasets:
 			candidate_headers = columns_for_ds(ds)
 			if candidate_headers != current_headers:
-				headers[ds] = current_headers = candidate_headers
+				current_headers = candidate_headers
+				headers.append(current_headers)
+				show_headers_here.append((ds, True))
+			else:
+				show_headers_here.append((ds, False))
 		def gen_headers(headers):
 			show_items = headers_prefix + headers
 			if escape_item:
@@ -928,10 +943,12 @@ def main(argv, cfg):
 			txt = separate(coloured, map(len, show_items))
 			return txt.encode('utf-8', 'surrogatepass') + b'\n'
 		# remove the starting ds, so no header changes means no special handling.
-		current_headers = headers.pop(datasets[0])
+		current_headers = headers.pop(0)
 		if not args.list_matching:
 			write(1, gen_headers(current_headers))
-		headers_iter = iter(map(gen_headers, headers.values()))
+		headers_iter = iter(map(gen_headers, headers))
+		show_headers_here[0] = (datasets[0], False) # first one is already printed
+		show_headers_here = iter(show_headers_here)
 
 	q_in = q_out = first_q_out = q_to_close = q_list = None
 	children = [status_process]
