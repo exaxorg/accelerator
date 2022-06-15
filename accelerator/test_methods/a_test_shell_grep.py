@@ -367,6 +367,15 @@ def synthesis(job, slices):
 			['[DATASET]', 'int32'],
 		],
 	)
+	# test that repeating datasets doesn't repeat header outputs
+	grep_text(
+		['-H', '-D', '-s', '2', '7', header_test[2][0], header_test[2][0], header_test[3][0], header_test[3][0]], [
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'],
+			[header_test[2][0], '7', '7'],
+			['[DATASET]', 'int32'],
+		],
+	)
 
 	# test --list-matching
 	grep_text(['-l', '-c', '', previous], [[ds] for ds, _ in header_test])
