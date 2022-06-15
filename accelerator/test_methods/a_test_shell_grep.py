@@ -377,6 +377,53 @@ def synthesis(job, slices):
 		],
 	)
 
+	# test --chain-length and --stop-ds
+	grep_text(
+		['-H', '-D', '-c', '--chain-length=3', '7', header_test[3][0]], [
+			['[DATASET]', 'int32', 'int64'],
+			[header_test[1][0], '7', '7'],
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'],
+			['[DATASET]', 'int32'],
+			[header_test[3][0], '7'],
+		],
+	)
+	# --stop-ds happens first and wins
+	grep_text(
+		['-H', '-D', '-c', '--chain-length=3', '--stop-ds', header_test[1][0], '7', header_test[3][0]], [
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'],
+			['[DATASET]', 'int32'],
+			[header_test[3][0], '7'],
+		],
+	)
+	# ...with several values
+	grep_text(
+		['-H', '-D', '-c', '--chain-length=3', '--chain-length=2', '7', header_test[3][0], header_test[4][0]], [
+			['[DATASET]', 'int32', 'int64'],
+			[header_test[1][0], '7', '7'],
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'],
+			['[DATASET]', 'int32'],
+			[header_test[3][0], '7'],
+			[header_test[3][0], '7'],
+			[header_test[4][0], '7'],
+		],
+	)
+	# same thing using --stop-ds for the second ds. (--chain-length=3 applies to both, but only matters for the first)
+	grep_text(
+		['-H', '-D', '-c', '--chain-length=3', '--stop-ds=', '--stop-ds', header_test[2][0], '7', header_test[3][0], header_test[4][0]], [
+			['[DATASET]', 'int32', 'int64'],
+			[header_test[1][0], '7', '7'],
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'],
+			['[DATASET]', 'int32'],
+			[header_test[3][0], '7'],
+			[header_test[3][0], '7'],
+			[header_test[4][0], '7'],
+		],
+	)
+
 	# test --list-matching
 	grep_text(['-l', '-c', '', previous], [[ds] for ds, _ in header_test])
 	want = [[ds, str(sliceno)] for ds, sliceno in header_test]
