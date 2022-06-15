@@ -358,6 +358,15 @@ def synthesis(job, slices):
 			[(v,) for v in values_every_time],
 		unordered=True,
 	)
+	# test that only a single slice with header changes isn't a problem.
+	grep_text(
+		['-H', '-D', '-c', '-s', '2', '7', header_test[3][0]], [
+			['[DATASET]', 'int32', 'int64'],
+			['[DATASET]', 'int32', 'number'],
+			[header_test[2][0], '7', '7'], # the other datasets don't have anything in slice 2
+			['[DATASET]', 'int32'],
+		],
+	)
 
 	# test --list-matching
 	grep_text(['-l', '-c', '', previous], [[ds] for ds, _ in header_test])
