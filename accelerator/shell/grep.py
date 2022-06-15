@@ -962,9 +962,21 @@ def main(argv, cfg):
 		q_to_close = first_q_out
 		q_in = q_out
 	if q_in:
-		q_out = first_q_out
-		q_in.make_reader()
-		q_out.make_writer()
+		if q_in is first_q_out:
+			# Special case: only one slice, but HeaderOutputter still needs queues.
+			class LocalQueue:
+				def __init__(self):
+					self._lst = []
+					self.put = self._lst.append
+				def get(self, wait=None):
+					if self._lst:
+						return self._lst.pop(0)
+					raise QueueEmpty()
+			q_in = q_out = LocalQueue()
+		else:
+			q_out = first_q_out
+			q_in.make_reader()
+			q_out.make_writer()
 		if args.ordered:
 			q_in.put_local(None)
 	del q_to_close
