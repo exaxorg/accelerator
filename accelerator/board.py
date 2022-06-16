@@ -241,14 +241,22 @@ def run(cfg, from_shell=False):
 
 	@bottle.get('/results')
 	def results():
-		res = {}
-		for fn in os.listdir(cfg.result_directory):
+		files = {}
+		res = {'files': files}
+		filenames = ()
+		try:
+			filenames = os.listdir(cfg.result_directory)
+		except KeyError:
+			res['missing'] = 'result directory not configured'
+		except OSError:
+			res['missing'] = 'result directory %r missing' % (cfg.result_directory,)
+		for fn in filenames:
 			if fn.endswith('_'):
 				continue
 			ffn = os.path.join(cfg.result_directory, fn)
 			try:
 				jobid, name = os.readlink(ffn).split('/')[-2:]
-				res[fn] = dict(
+				files[fn] = dict(
 					jobid=jobid,
 					name=name,
 					ts=os.lstat(ffn).st_mtime,

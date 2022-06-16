@@ -111,6 +111,21 @@
 		#header {
 			float: left;
 		}
+		#missing {
+			visibility: hidden;
+		}
+		#missing.error {
+			visibility: visible;
+			font-size: 175%;
+			position: fixed;
+			width: fit-content;
+			top: 6em;
+			left: 0;
+			right: 0;
+			margin: 0 auto;
+			padding: 0.5em;
+			z-index: 1;
+		}
 		#waiting {
 			pointer-events: none;
 			position: fixed;

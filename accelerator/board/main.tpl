@@ -22,6 +22,7 @@
 	<div id="status">
 		<a target="_blank" href="/status">status</a>: <span></span>
 	</div>
+	<div id="missing"></div>
 	<div id="waiting"><div class="spinner"></div></div>
 <script language="javascript">
 (function () {
@@ -60,11 +61,18 @@
 			throw new Error('error response');
 		})
 		.then(res => {
+			const missing = document.getElementById('missing');
+			if (res.missing) {
+				missing.className = 'error';
+				missing.innerText = res.missing
+			} else {
+				missing.className = '';
+			}
 			const existing = {};
 			for (const el of document.querySelectorAll('.result')) {
 				if (el.dataset.name) existing[el.dataset.name] = el;
 			};
-			const items = Object.entries(res);
+			const items = Object.entries(res.files);
 			if (items.length) {
 				waitingEl.style.display = 'none';
 			} else {
