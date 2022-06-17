@@ -189,14 +189,16 @@ def main(urd):
 	urd.build(
 		"test_arg_lists",
 		dslist=[
+			'',
 			mergejob.dataset('a0'),
 			mergejob.dataset('a1'),
 			mergejob.dataset('b0'),
 			mergejob.dataset('b1'),
 			mergejob.dataset('c0'),
 			mergejob.dataset('c1'),
+			None,
 		],
-		joblist=[source, reimp_csv_uncompressed],
+		joblist=[None, source, ''],
 	)
 
 	print()
