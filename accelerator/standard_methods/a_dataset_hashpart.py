@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -109,15 +109,19 @@ def synthesis(prepare_res, job, slices):
 		# If we don't want a chain we abuse our knowledge of dataset internals
 		# to avoid recompressing. Don't do this stuff yourself.
 		dws, names, caption, filename, cols = prepare_res
+		dws = list(filter(None, dws))
 		merged_dw = job.datasetwriter(
 			caption=caption,
 			hashlabel=options.hashlabel,
 			filename=filename,
 			previous=datasets.previous,
-			meta_only=True,
+			meta_only=bool(dws),
 			columns=cols,
 		)
-		dws = list(filter(None, dws))
+		if not dws:
+			# There is no data, but we still have to start the dataset
+			merged_dw.get_split_write()
+			return
 		merged_dw.set_compressions(dws[0]._compressions)
 		for sliceno in range(slices):
 			merged_dw.set_lines(sliceno, sum(dw._lens[sliceno] for dw in dws))
