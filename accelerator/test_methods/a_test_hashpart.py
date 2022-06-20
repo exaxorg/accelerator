@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -91,6 +91,16 @@ def verify(slices, data, source, previous=None, **options):
 			assert row == want, '%s (rehashed from %s) did not contain the right data for "%s".\nWanted\n%r\ngot\n%r' % (ds, source, hl, want, row)
 	return ds
 
+def verify_empty(source, previous=None, **options):
+	jid = subjobs.build(
+		"dataset_hashpart",
+		datasets=dict(source=source, previous=previous),
+		options=options,
+	)
+	ds = Dataset(jid)
+	assert list(ds.iterate(None)) == [], "source=%s previous=%s did not produce empty dataset in %s" % (source, previous, ds,)
+	assert ds.previous == previous, "Empty %s should have had previous=%s, but had %s" % (ds, previous, ds.previous,)
+
 def synthesis(params):
 	ds = write(data)
 	for colname in data[0]:
@@ -108,10 +118,13 @@ def synthesis(params):
 	b = verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", previous=a)
 	assert b.chain() == [a, b], "chain of %s is not [%s, %s] as expected" % (b, a, b)
 	# as_chain sparseness
-	dw = DatasetWriter(columns=columns, name="empty")
-	dw.get_split_write()
-	ds = verify(params.slices, [], dw.finish(), hashlabel="date", as_chain=True)
-	assert len(ds.chain()) == 1, ds + ": dataset_hashpart on empty dataset with as_chain=True did not produce a single dataset"
+	empty = write([], name="empty")
+	verify_empty(empty, hashlabel="date")
+	verify_empty(empty, hashlabel="date", as_chain=True)
+	ds = verify(params.slices, [], empty, hashlabel="date", as_chain=True)
+	# chaining with the same source as previous should also produce an empty dataset
+	verify_empty(bonus_ds, hashlabel="date", previous=b)
+	verify_empty(bonus_ds, hashlabel="date", previous=b, as_chain=True)
 	# two populated slices with the same data, should end up in two datasets.
 	dw = DatasetWriter(columns=columns, name="0 and 2", allow_missing_slices=True)
 	dw.set_slice(0)
