@@ -1509,6 +1509,8 @@ class DatasetWriter(object):
 		from accelerator.g import running, slices, job
 		if running != self._running and running != 'synthesis':
 			raise DatasetUsageError("Finish where you started or in synthesis")
+		if not (self._started or self.meta_only or self._lens):
+			raise DatasetUsageError("DatasetWriter %r was never started (.get_split_write*() or .set_slice(), or .discard() it)" % (self.name,))
 		self.close()
 		if set(self._compressions) != set(self.columns):
 			missing = set(self.columns) - set(self._compressions)
