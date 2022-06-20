@@ -531,6 +531,10 @@ class Dataset(unicode):
 
 		if isinstance(datasets, str_types + (Dataset, dict)):
 			datasets = [datasets]
+		if not datasets:
+			# An empty list isn't an error, so you don't have to special case
+			# when things like dschain.range(...) gives an empty result.
+			return ()
 		datasets = [ds if isinstance(ds, Dataset) else Dataset(ds) for ds in datasets]
 		slices = len(datasets[0].lines)
 		if columns is None:
