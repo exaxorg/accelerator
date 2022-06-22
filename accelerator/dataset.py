@@ -53,7 +53,7 @@ kwlist.update({
 
 iskeyword = frozenset(kwlist).__contains__
 
-# A dataset is defined by a pickled DotDict containing at least the following (all strings are unicode):
+# A dataset is defined by a pickled dict containing at least the following (all strings are unicode):
 #     version = (3, 3,),
 #     filename = "filename" or None,
 #     hashlabel = "column name" or None,
@@ -1055,7 +1055,7 @@ class Dataset(unicode):
 	def _save(self):
 		if not os.path.exists('DS'):
 			os.mkdir('DS')
-		blob.save(self._data, self._name('pickle'), temp=False, _hidden=True)
+		blob.save(dict(self._data), self._name('pickle'), temp=False, _hidden=True)
 
 	def _name(self, thing):
 		if self.job and self.job.version < 4:
