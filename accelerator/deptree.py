@@ -180,7 +180,9 @@ class DepTree:
 				v = tuple(v) + defaults[len(v):] # so all of default_v gets convert()ed.
 				v = [convert(dv, vv) for dv, vv in zip(default_v, v)]
 				return JobWithFile(*v)
-			raise OptionException('Failed to convert option %s of %s to %s on method %s' % (k, type(v), type(default_v), method,))
+			if type(default_v) != type:
+				default_v = type(default_v)
+			raise OptionException('Failed to convert option %s of %s to %s on method %s' % (k, type(v), default_v, method,))
 		for k, v in iteritems(self.params['options']):
 			if k in options:
 				try:
