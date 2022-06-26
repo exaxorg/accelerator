@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -76,7 +76,7 @@ def run(cmd, close_in_child, keep_in_child, no_stdin=True):
 	os.execv(cmd[0], cmd)
 	os._exit()
 
-def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency, debug, server_url, subjob_cookie, parent_pid):
+def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency, server_url, subjob_cookie, parent_pid):
 	starttime = monotonic()
 	jobid = setup.jobid
 	method = setup.method

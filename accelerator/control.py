@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -56,7 +56,7 @@ class Main:
 
 		"""
 		self.config = config
-		self.debug = options.debug
+		self.keep_temp_files = options.keep_temp_files
 		self.server_url = server_url
 		self._update_methods()
 		self.target_workdir = self.config['target_workdir']
@@ -180,9 +180,9 @@ class Main:
 		t0 = time.time()
 		setup = update_setup(jobid, starttime=t0)
 		prof = setup.get('exectime', DotDict())
-		new_prof, files, subjobs = dispatch.launch(W.path, setup, self.config, self.Methods, active_workdirs, slices, concurrency, self.debug, self.server_url, subjob_cookie, parent_pid)
+		new_prof, files, subjobs = dispatch.launch(W.path, setup, self.config, self.Methods, active_workdirs, slices, concurrency, self.server_url, subjob_cookie, parent_pid)
 		prefix = join(W.path, jobid) + '/'
-		if not self.debug:
+		if not self.keep_temp_files:
 			for filename, temp in list(files.items()):
 				if temp:
 					unlink(join(prefix, filename))
