@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -43,14 +43,16 @@ explicitly or because the zip only contains one file) you also get that
 as the default dataset.
 
 You can also get the files in the zip chained, controlled by the "chaining"
-option. There are four possibilites:
+option. There are six possibilites:
 
 off:         Don't chain the imports.
-on:          Chain the imports in the order the files are in the zip file
-             This is the default.
-by_filename: Chain in filename order.
-by_dsname:   Chain in dataset name order. Since inside_filenames
-             is a dict this is your only way of controlling its order.
+on:          This is the default, and means by_dict if inside_filenames is set
+             and by_ziporder if it is not.
+by_filename: Chain the imports in filename order.
+by_dsname:   Chain the imports in dataset name order.
+by_dict:     Chain the imports in the order in inside_filenames.
+             Note that you must pass inside_filenames an OrderedDict for this.
+by_ziporder: Chain the imports in the order the files are in the zip file.
 
 If you chain you will also get the last dataset as the default dataset,
 to make it easy to find. Naming a non-last dataset "default" is an error.
@@ -74,7 +76,7 @@ depend_extra = (a_csvimport,)
 
 options = DotDict(a_csvimport.options)
 options.inside_filenames = {} # {"filename in zip": "dataset name"} or empty to import all files
-options.chaining = OptionEnum('off on by_filename by_dsname').on
+options.chaining = OptionEnum('off on by_filename by_dsname by_dict by_ziporder').on
 options.include_re = "" # Regex of files to include. (Matches anywhere, use ^$ as needed.)
 options.exclude_re = "" # Regex of files to exclude, takes priority over include.
 options.strip_dirs = False # Strip directories from filename (a/b/c -> c)
@@ -127,6 +129,10 @@ def prepare(job):
 		res.sort(key=lambda x: x[3])
 	if options.chaining == 'by_dsname':
 		res.sort(key=lambda x: x[2])
+	if options.chaining == 'by_dict' or (options.chaining == 'on' and options.inside_filenames):
+		assert options.inside_filenames, "You can't chain by_dict without setting inside_filenames"
+		order = {name: ix for ix, name in enumerate(options.inside_filenames.values())}
+		res.sort(key=lambda x: order[x[2]])
 	if options.chaining != 'off':
 		assert 'default' not in (x[2] for x in res[:-1]), 'When chaining the dataset named "default" must be last (or non-existant)'
 	return [x[:3] for x in res]
