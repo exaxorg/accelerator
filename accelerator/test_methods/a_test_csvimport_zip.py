@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019 Carl Drougge                                          #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -27,6 +27,7 @@ Verify the zip wrapper for csvimport.
 from zipfile import ZipFile
 from io import BytesIO
 from gzip import GzipFile
+from collections import OrderedDict
 
 from accelerator import subjobs
 from accelerator.dataset import Dataset
@@ -55,6 +56,26 @@ def verify(zipname, inside_filenames, want_ds, **kw):
 		got_data = list(Dataset(jid, dsn).iterate(None, '0'))
 		assert got_data == want_data, "%s/%s from %s didn't contain %r, instead contained %r" % (jid, dsn, zipname, want_data, got_data)
 
+def verify_order(want_order, namemap={}, **kw):
+	opts=dict(
+		filename=g.job.filename('many files.zip'),
+		labelsonfirstline=False,
+		labels=['0'],
+	)
+	opts.update(kw)
+	jid = subjobs.build('csvimport_zip', options=opts)
+	want_order = list(want_order)
+	for dsn in want_order:
+		b = b'contents of ' + namemap.get(dsn, dsn).encode('ascii')
+		got_data = list(Dataset(jid, dsn).iterate(None, '0'))
+		assert got_data == [b], "%s/%s from 'many files.zip' didn't contain [%r], instead contained %r" % (jid, dsn, b, got_data)
+	got_order = [ds.name for ds in Dataset(jid, want_order[-1]).chain()]
+	assert want_order == got_order, 'Wanted order %r, got %r in %s' % (want_order, got_order, jid,)
+	if len(want_order) > 1: # chaining is actually on, so a default ds is produced
+		got_order = [ds.name for ds in Dataset(jid).chain()]
+		want_order[-1] = 'default'
+		assert want_order == got_order, 'Wanted order %r, got %r in %s' % (want_order, got_order, jid,)
+
 def synthesis():
 	# Simple case, a single file in the zip.
 	with ZipFile('a.zip', 'w') as z:
@@ -80,8 +101,7 @@ def synthesis():
 	# A whole bunch of files.
 	with ZipFile('many files.zip', 'w') as z:
 		manyfiles = {}
-		for i in range(65, 91):
-			a = chr(i)
+		for a in 'BACDEFGHIJKLMOPQRSTUVWXYZ': # almost in order
 			b = b'contents of ' + a.encode('ascii')
 			z.writestr(a, b)
 			manyfiles[a] = [b]
@@ -103,3 +123,22 @@ def synthesis():
 	verify('named default.zip', {}, {'default': list_b})
 	# Use inside_filenames to test this again in a different way.
 	verify('a.zip', {'a': 'default'}, {'default': list_a})
+
+	# check all the different orders chaining can be done in
+	verify_order('BACDEFGHIJKLMOPQRSTUVWXYZ') # implicitly 'on', i.e. 'by_ziporder'
+	inside_filenames = OrderedDict([
+		('A', 'A'),
+		('Y', 'B'),
+		('B', 'C'),
+		('E', 'E'),
+		('D', 'D'),
+	])
+	verify_order('ABCDE', chaining='by_dsname'  , inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
+	verify_order('ACDEB', chaining='by_filename', inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
+	verify_order('CADEB', chaining='by_ziporder', inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
+	verify_order('ABCED', chaining='by_dict'    , inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
+	# implicitly 'on', i.e. 'by_dict' since inside_filenames is set
+	verify_order('ABCED',                         inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
+	# off doesn't chain, so each ds is a chain of length 1
+	for dsn in inside_filenames.values():
+		verify_order(dsn, chaining='off', inside_filenames=inside_filenames, namemap={'C': 'B', 'B': 'Y'})
