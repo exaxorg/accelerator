@@ -29,6 +29,10 @@ from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from sys import exit
 
+description = '''
+Run the tests. Needs at least 3 slices to work.
+'''
+
 def main(urd):
 	assert urd.info.slices >= 3, "The tests don't work with less than 3 slices (you have %d)." % (urd.info.slices,)
 
