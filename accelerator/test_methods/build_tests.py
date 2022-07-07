@@ -180,6 +180,7 @@ def main(urd):
 	urd.build("test_dataset_nan")
 	urd.build('test_dataset_parsing_writer')
 	urd.build('test_dataset_overwrite')
+	urd.build('test_dataset_rename_columns')
 
 	print()
 	print("Testing order preservation in dicts in options")
