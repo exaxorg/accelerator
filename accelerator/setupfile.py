@@ -27,7 +27,7 @@ from datetime import datetime, date, time, timedelta
 
 from accelerator.compat import iteritems, unicode, long, PY3, PY2, uni
 
-from accelerator.error import AcceleratorError
+from accelerator.error import AcceleratorError, NoSuchJobError
 from accelerator.extras import DotDict, json_load, json_save, json_encode
 from accelerator.job import Job
 
@@ -56,7 +56,10 @@ def load_setup(jobid):
 	"""Loads but does not type setup.json from jobid.
 	You probably want to use extras.job_params instead.
 	"""
-	d = json_load('setup.json', jobid)
+	try:
+		d = json_load('setup.json', jobid)
+	except IOError:
+		raise NoSuchJobError('Job %r not found' % (jobid,))
 	version = d.version
 	if version == 1:
 		d.jobs = d.pop('jobids')
