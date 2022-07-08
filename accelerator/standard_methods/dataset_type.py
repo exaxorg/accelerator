@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -719,10 +719,10 @@ def _conv_json(_):
 def _conv_complex(t):
 	if numeric_comma:
 		def conv_complex(v):
-			return complex(v.decode('utf-8').replace('.', 'dot').replace(',', '.'))
+			return None if v is None else complex(v.decode('utf-8').replace('.', 'dot').replace(',', '.'))
 	else:
 		def conv_complex(v):
-			return complex(v.decode('utf-8'))
+			return None if v is None else complex(v.decode('utf-8'))
 	return conv_complex
 
 ConvTuple = namedtuple('ConvTuple', 'size conv_code_str pyfunc')
@@ -985,7 +985,15 @@ more_infiles:
 			continue;
 		}
 		char *ptr = buf;
+#if %(noneval_support)d
+		if (line == NoneMarker) {
+			memcpy(ptr, &%(noneval_name)s, %(datalen)s);
+		} else {
+			%(convert)s;
+		}
+#else
 		%(convert)s;
+#endif
 		if (!ptr) {
 			if (record_bad && !default_value) {
 				badmap[i / 8] |= 1 << (i %% 8);
@@ -1230,7 +1238,14 @@ more_infiles:
 		double d_v = 0;
 		PyObject *o_v = 0;
 		int do_minmax = 1;
-		int len = convert_number_do(line, ptr, allow_float, &d_v, &o_v);
+		int len;
+		if (line == NoneMarker) {
+			ptr = "\0";
+			len = 1;
+			do_minmax = 0;
+		} else {
+			len = convert_number_do(line, ptr, allow_float, &d_v, &o_v);
+		}
 		if (!len) {
 			if (record_bad && !deflen) {
 				badmap[i / 8] |= 1 << (i %% 8);

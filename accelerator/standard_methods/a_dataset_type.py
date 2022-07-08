@@ -184,8 +184,15 @@ def prepare(job, slices):
 			raise Exception("Can't rehash on discarded column %r." % (hashlabel,))
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
-	for colname in none_support:
-		columns[colname] = (columns[colname], True)
+	def needs_none_support(typ, colname):
+		needs = colname in none_support or chain.none_support(rev_rename.get(colname, colname))
+		if needs and typ.startswith('bits'):
+			raise Exception("Can't type column %r as %s because it has none_support" % (colname, typ,))
+		return needs
+	columns = {
+		colname: (typ, needs_none_support(typ, colname))
+		for colname, typ in columns.items()
+	}
 	dws = []
 	if rehashing:
 		previous = datasets.previous
@@ -548,7 +555,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		do_minmax = real_coltype not in dont_minmax_types
 		if vars.save_bad:
 			bad_fh = typed_writer('bytes')(out_fns.pop(), none_support=True)
-		fhs = [typed_writer(real_coltype)(fn) for fn in out_fns]
+		fhs = [typed_writer(real_coltype)(fn, none_support=True) for fn in out_fns]
 		if vars.save_bad:
 			fhs.append(bad_fh)
 		write = fhs[0].write
