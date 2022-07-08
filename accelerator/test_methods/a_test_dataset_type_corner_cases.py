@@ -467,6 +467,59 @@ def test_filter_bad_with_rename_and_chain():
 	assert coltypes == [('a', 'unicode'), ('b', 'ascii'), ('c', 'bytes')], coltypes
 	assert list(bad_ds.iterate(0)) == [('B', '9', b'A'), ('E', 'C', b'D')]
 
+def test_None():
+	types = {
+		'bool': 'floatbool',
+		'complex32': 'complex32', 'complex64': 'complex64',
+		'float32': 'float32', 'float64': 'float64',
+		'int32': 'int32_10', 'int64': 'int64_10',
+		'number': 'number',
+		'date': 'date:%Y-%m-%d',
+		'datetime': 'datetime:%Y-%m-%dT%H:%M:%S',
+		'time': 'time:%H:%M:%S',
+		'ascii': 'ascii:strict', 'unicode': 'unicode:utf-8',
+	}
+	values = {
+		'bool': b'-1',
+		'date': b'2022-07-08',
+		'datetime': b'2022-07-08T22:23:24',
+		'time': b'22:23:24',
+		'ascii': b'text',
+		'unicode': b'\xe5\xad\x97',
+	}
+	values = {k: values.get(k, b'%d' % (ix,)) for ix, k in enumerate(sorted(types))}
+	want_values = {
+		'bool': True,
+		'date': date(2022, 7, 8),
+		'datetime': datetime(2022, 7, 8, 22, 23, 24),
+		'time': time(22, 23, 24),
+		'ascii': 'text',
+		'unicode': '字',
+	}
+	want_values = {k: want_values.get(k, ix) for ix, k in enumerate(sorted(types))}
+	def test(name, dw_kw, type_kw, write_lines, want_none_count):
+		dw = DatasetWriter(name=name, allow_missing_slices=True, **dw_kw)
+		for typ in types:
+			dw.add(typ, 'bytes', none_support=True)
+		dw.set_slice(0)
+		for d in write_lines:
+			dw.write(**d)
+		source_ds = dw.finish()
+		ds = subjobs.build(
+			'dataset_type',
+			source=source_ds,
+			column2type=types,
+			**type_kw
+		).dataset()
+		for colname, value in want_values.items():
+			want = [value] + [None] * want_none_count
+			assert list(ds.iterate(0, colname)) == want, colname
+		return source_ds
+	# One line with good values, one with Nones
+	prev = test('None values', {}, {}, [values, dict.fromkeys(values, None)], 1)
+	# One line with bad values (plus the previous ds)
+	test('bad None values', {'previous': prev}, {'defaults': dict.fromkeys(values, None)}, [dict.fromkeys(values, b'\xff')], 2)
+
 def test_column_discarding():
 	dw = DatasetWriter(name='column discarding')
 	dw.add('a', 'bytes')
@@ -551,6 +604,7 @@ def synthesis():
 	test_unicode()
 	test_numbers()
 	test_datetimes()
+	test_None()
 	test_column_discarding()
 	test_rehash_with_empty_slices()
 	test_rename()
