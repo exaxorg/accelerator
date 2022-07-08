@@ -72,7 +72,9 @@ options = {
 	'timezone'                  : str,
 	'hashlabel'                 : str, # leave as None to inherit hashlabel, set to '' to not have a hashlabel
 	'defaults'                  : {}, # {'COLNAME': value}, unspecified -> method fails on unconvertible unless filter_bad
-	'rename'                    : {}, # {'OLDNAME': 'NEWNAME'} doesn't shadow OLDNAME. (Other COLNAMEs use NEWNAME.) Use {'OLDNAME': None} to discard OLDNAME.
+	'rename'                    : {}, # {'OLDNAME': 'NEWNAME'} doesn't shadow OLDNAME. (Other COLNAMEs use NEWNAME.)
+	                                  # Use {'OLDNAME': None} to discard OLDNAME.
+	                                  # Renaming a column that is not typed is not possible.
 	'caption'                   : 'typed dataset',
 	'discard_untyped'           : bool, # Make unconverted columns inaccessible ("new" dataset)
 	'filter_bad'                : False, # Discard lines where any column fails typing, saving them in a dataset named "bad"
@@ -159,19 +161,18 @@ def prepare(job, slices):
 			if missing:
 				raise Exception('discard_untyped is False, but not all columns in %s exist in the whole chain (missing %r)' % (d, missing,))
 		for colname in sorted(untyped_columns):
-			target_colname = options.rename.get(colname, colname)
-			if target_colname is None or target_colname in columns:
+			if options.rename.get(colname, 0) is None or colname in columns:
 				continue
 			try:
-				t = spill_type(target_colname)
+				t = spill_type(colname)
 			except AcceleratorError:
 				if options.discard_untyped is False:
 					raise
 				continue
-			columns[target_colname] = t
-			column2type[target_colname] = dataset_type.copy_types[t]
+			columns[colname] = t
+			column2type[colname] = dataset_type.copy_types[t]
 			if chain.none_support(colname):
-				none_support.add(target_colname)
+				none_support.add(colname)
 	if options.filter_bad or rehashing or options.discard_untyped or len(chain) > 1:
 		parent = None
 	else:
