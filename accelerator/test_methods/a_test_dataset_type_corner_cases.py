@@ -367,6 +367,55 @@ def test_filter_bad_across_types():
 		add_want(6)
 		want.sort() # adding them out of order, int32_10 sorts correctly.
 
+def test_rename():
+	def mk(name, **kw):
+		dw = DatasetWriter(name='rename_' + name, **kw)
+		dw.add('a', 'ascii')
+		dw.add('b', 'bytes')
+		dw.add('c', 'unicode', none_support=True)
+		dw.get_split_write()('0', b'1', '2')
+		return dw.finish()
+	plain = mk('plain')
+	with_hashlabel = mk('with_hashlabel', hashlabel='a')
+
+	# Rename all, with some name hidden. Untyped a remains visible.
+	jid = subjobs.build(
+		'dataset_type',
+		column2type=dict(b='int32_10', c='int64_10', d='number'),
+		rename=dict(a='b', b='c', c='d'),
+		source=plain,
+	)
+	typed_ds = jid.dataset()
+	coltypes = sorted((name, col.type, col.none_support) for name, col in typed_ds.columns.items())
+	assert coltypes == [('a', 'ascii', False), ('b', 'int32', False), ('c', 'int64', False), ('d', 'number', True)], coltypes
+	assert list(typed_ds.iterate(None)) == [('0', 0, 1, 2)]
+
+	# Rename hashlabel a => b, c untouched except for rehashing
+	jid = subjobs.build(
+		'dataset_type',
+		column2type=dict(b='int32_10'),
+		rename=dict(a='b'),
+		source=with_hashlabel,
+	)
+	typed_ds = jid.dataset()
+	coltypes = sorted((name, col.type, col.none_support) for name, col in typed_ds.columns.items())
+	assert coltypes == [('b', 'int32', False), ('c', 'unicode', True)], coltypes
+	assert list(typed_ds.iterate(None)) == [(0, '2')]
+	assert typed_ds.hashlabel == 'b'
+
+	# Discard hashlabel
+	jid = subjobs.build(
+		'dataset_type',
+		column2type=dict(b='int32_10'),
+		rename=dict(a=None),
+		source=with_hashlabel,
+	)
+	typed_ds = jid.dataset()
+	coltypes = sorted((name, col.type, col.none_support) for name, col in typed_ds.columns.items())
+	assert coltypes == [('b', 'int32', False), ('c', 'unicode', True)], coltypes
+	assert list(typed_ds.iterate(None)) == [(1, '2')]
+	assert typed_ds.hashlabel == None
+
 def test_filter_bad_with_rename_and_chain():
 	dw = DatasetWriter(name="filter bad with rename", allow_missing_slices=True)
 	dw.add('a', 'ascii')
@@ -504,6 +553,7 @@ def synthesis():
 	test_datetimes()
 	test_column_discarding()
 	test_rehash_with_empty_slices()
+	test_rename()
 
 	verify('json', ['json'],
 		[b'null', b'[42, {"a": "b"}]', b'\r  {  "foo":\r"bar" \r   }\t ', b'nope'],
