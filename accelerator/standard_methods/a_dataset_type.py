@@ -134,6 +134,8 @@ def prepare(job, slices):
 				hashlabel = None
 				hashlabel_override = True
 		rehashing = (hashlabel in columns)
+		if hashlabel is None: # discarded through options.rename
+			hashlabel_override = True
 	else:
 		hashlabel_override = True
 		hashlabel = options.hashlabel or None
