@@ -335,6 +335,8 @@ class Dataset(unicode):
 				d._data.hashlabel = None
 		if column_filter:
 			column_filter = set(column_filter)
+			if d._data.hashlabel not in column_filter:
+				d._data.hashlabel = None
 			filtered_columns = {k: v for k, v in d._data.columns.items() if k in column_filter}
 			left_over = column_filter - set(filtered_columns)
 			if left_over:
