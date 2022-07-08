@@ -17,10 +17,11 @@
 ############################################################################
 
 description = r'''
-Test the dataset_rename_columns method.
+Test the dataset_rename_columns method, and ds.link_to_here with rename
+and column_filter.
 '''
 
-from accelerator import subjobs
+from accelerator import subjobs, DatasetUsageError
 
 def synthesis(job):
 	columns = dict(
@@ -39,8 +40,13 @@ def synthesis(job):
 	dw = job.datasetwriter(name='b', hashlabel='b', columns=columns, previous=a)
 	dw.get_split_write()(1, 2, 3)
 	b = dw.finish()
+	names = ('link%d' % (ix,) for ix in range(1000)) # more than enough
 	def chk(ds, want_hashlabel, want_previous, want_coltypes, rename):
-		got_ds = subjobs.build('dataset_rename_columns', rename=rename, source=ds).dataset()
+		got_job = subjobs.build('dataset_rename_columns', rename=rename, source=ds)
+		chk_inner(got_job.dataset(), want_hashlabel, want_previous, want_coltypes)
+		got_ds = ds.link_to_here(name=next(names), rename=rename)
+		chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes)
+	def chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes):
 		assert got_ds.hashlabel == want_hashlabel
 		assert got_ds.previous == want_previous
 		got_cols = set(got_ds.columns)
@@ -70,3 +76,29 @@ def synthesis(job):
 	chk(b, None, a, dict(b='int32', c='number'), dict(b=None, a='b'))
 	# discard a column, but also rename hashlabel to that name
 	chk(b, 'a', a, dict(a='int64', c='number'), dict(a=None, b='a'))
+
+	# try a few with column_filter too
+	# rename hashlabel, only keep that
+	got_ds = a.link_to_here(name=next(names), rename=dict(a='b'), column_filter='b')
+	chk_inner(got_ds, 'b', None, dict(b='int32'))
+	# discard hashlabel
+	got_ds = a.link_to_here(name=next(names), column_filter='c')
+	chk_inner(got_ds, None, None, dict(c='number'))
+	# rename hashlabel but then discard it
+	got_ds = a.link_to_here(name=next(names), rename=dict(a='b'), column_filter='c')
+	chk_inner(got_ds, None, None, dict(c='number'))
+	# rename over hashlabel, keep everthing but specify the column_filter
+	got_ds = a.link_to_here(name=next(names), rename=dict(b='a'), column_filter='ac')
+	chk_inner(got_ds, None, None, dict(a='int64', c='number'))
+
+	# and try a few that should not be allowed
+	def failme(ds, msg, **kw):
+		try:
+			ds.link_to_here('failme', **kw)
+			raise Exception(msg)
+		except DatasetUsageError:
+			pass
+	failme(a, 'renamed hashlabel, got to keep original name', rename=dict(a='b'), column_filter='ab')
+	failme(a, 'renamed non-existant column', rename=dict(d='e'))
+	failme(a, 'renamed two columns to the same name', rename=dict(a='c', b='c'))
+	failme(a, 'got to keep non-existant column', column_filter='abcd')
