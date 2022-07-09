@@ -115,6 +115,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--chain-length', '--cl', metavar='LENGTH', action='append', type=int, help="follow chains at most this many datasets")
 	parser.add_argument(      '--stop-ds',      action='append', metavar='DATASET',   help="follow chains at most to this dataset\nthese options work like in ds.chain() and you can\nspecify them several times (for several datasets)")
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
+	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
