@@ -116,6 +116,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--stop-ds',      action='append', metavar='DATASET',   help="follow chains at most to this dataset\nthese options work like in ds.chain() and you can\nspecify them several times (for several datasets)")
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
+	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
@@ -478,6 +479,7 @@ def main(argv, cfg):
 				except Exception:
 					pass
 	status_process = mp.SimplifiedProcess(target=status_collector, name='ax grep status')
+	children = [status_process]
 	# everything else will write, so make it a writer right away
 	q_status.make_writer()
 
@@ -930,6 +932,12 @@ def main(argv, cfg):
 	if args.show_lineno:
 		headers_prefix.append('[LINE]')
 
+	if args.lined:
+		from .lined import enable_lines
+		liner_process = enable_lines('grep', q_status.close)
+		if liner_process:
+			children.append(liner_process)
+
 	# [headers] for each ds where headers change (not including the first).
 	# this is every ds where sync between slices has to happen when not --ordered.
 	# which ds this is is stored in show_headers_here
@@ -963,7 +971,6 @@ def main(argv, cfg):
 		show_headers_here = iter(show_headers_here)
 
 	q_in = q_out = first_q_out = q_to_close = q_list = None
-	children = [status_process]
 	seen_list = None
 	if args.list_matching:
 		# in this case all slices get their own process
@@ -1066,6 +1073,7 @@ def main(argv, cfg):
 		return 1
 
 	q_status.close()
+	os.close(1) # so the liner process will see EOF before we actually exit
 	for c in children:
 		c.join()
 		if c.exitcode:

@@ -483,6 +483,8 @@ def main():
 		'infohighlight': ('BOLD', 'BRIGHTBLUE',),
 		'separator': ('CYAN', 'UNDERLINE',),
 		'header': ('BRIGHTBLUE', 'BOLD',),
+		'evenlines': ('BLACK', 'WHITEBG',),
+		'oddlines': ('BLACK', 'BRIGHTWHITEBG',),
 	}
 	parse_user_config(aliases, colour_d)
 	colour._names.update(colour_d)

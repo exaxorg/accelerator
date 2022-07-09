@@ -227,7 +227,7 @@ class LockFreeQueue:
 class SimplifiedProcess:
 	__slots__ = ('pid', 'name', '_alive', 'exitcode')
 
-	def __init__(self, target, args=(), kwargs={}, name=None):
+	def __init__(self, target, args=(), kwargs={}, name=None, stdin=None):
 		sys.stdout.flush()
 		sys.stderr.flush()
 		self.pid = os.fork()
@@ -237,6 +237,9 @@ class SimplifiedProcess:
 			return
 		rc = 1
 		try:
+			if stdin:
+				os.dup2(stdin, 0)
+				os.close(stdin)
 			target(*args, **kwargs)
 			rc = 0
 		except KeyboardInterrupt:
