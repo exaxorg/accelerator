@@ -174,8 +174,8 @@ def synthesis(job, slices):
 		'date'    : 'unicode:ascii',
 		'datetime': 'unicode:ascii',
 		'time'    : 'unicode:ascii',
-		'bits32'  : 'bits32_10',
-		'bits64'  : 'bits64_10',
+		'bits32'  : 'int32_10', # can't type as bits since that doesn't support None
+		'bits64'  : 'int64_10', # can't type as bits since that doesn't support None
 		'bytes'   : 'bytes',
 		'float32' : 'float32',
 		'float64' : 'float64',
@@ -190,7 +190,7 @@ def synthesis(job, slices):
 		hl_hash = typed_writer(hl).hash
 		for sliceno in range(slices):
 			for line in ds.iterate(sliceno, None):
-				key = line[0] or None
+				key = line[0]
 				if isinstance(key, float):
 					key = int(key)
 				if isinstance(key, bytes):
