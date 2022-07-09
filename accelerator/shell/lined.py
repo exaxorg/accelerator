@@ -86,7 +86,7 @@ def collect_escseq(it, line_fg, line_bg):
 	return chars
 
 
-def enable_lines(colour_prefix, process_setup=lambda: None):
+def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 	pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
 	pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
 	if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '':
@@ -110,6 +110,8 @@ def enable_lines(colour_prefix, process_setup=lambda: None):
 		for line in in_fh:
 			line_fg, line_bg = next(colours)
 			line = line.rstrip(b'\n').decode('utf-8', errors)
+			if decode_lines:
+				line = '\\'.join(part.replace('\\n', '\x1b[K\n' if line_bg else '\n') for part in line.split('\\\\'))
 			todo = iter(line)
 			data = []
 			if line_fg and line_bg:

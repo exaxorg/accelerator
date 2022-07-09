@@ -346,7 +346,12 @@ def main(argv, cfg):
 				return item.replace('\n', '\\n')
 		errors = 'surrogatepass'
 	else:
-		escape_item = None
+		if args.format == 'raw' and args.lined:
+			# this will be reversed inside the liner process
+			def escape_item(item):
+				return item.replace('\\', '\\\\').replace('\n', '\\n')
+		else:
+			escape_item = None
 		errors = 'replace' if PY2 else 'surrogateescape'
 
 	# This is for the ^T handling. Each slice sends an update when finishing
@@ -934,9 +939,13 @@ def main(argv, cfg):
 
 	if args.lined:
 		from .lined import enable_lines
-		liner_process = enable_lines('grep', q_status.close)
+		liner_process = enable_lines('grep', q_status.close, args.format == 'raw')
 		if liner_process:
 			children.append(liner_process)
+		else:
+			args.lined = False
+			if args.format == 'raw':
+				escape_item = None
 
 	# [headers] for each ds where headers change (not including the first).
 	# this is every ds where sync between slices has to happen when not --ordered.
