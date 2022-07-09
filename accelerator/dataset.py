@@ -156,9 +156,7 @@ _dir_name_blacklist = list(range(32)) + [37, 47] # unprintable and '%/'
 _dir_name_blacklist = {chr(c): '\\x%02x' % (c,) for c in _dir_name_blacklist}
 _dir_name_blacklist['\\'] = '\\\\' # make sure names can't collide
 
-def _fs_name(name, version=4):
-	if version < 4:
-		return name
+def _fs_name(name):
 	return 'DS/' + ''.join(_dir_name_blacklist.get(c, c) for c in name)
 
 class Dataset(unicode):
@@ -178,7 +176,7 @@ class Dataset(unicode):
 	These decay to a (unicode) string when pickled.
 	"""
 
-	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache',)
+	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache', '_job_version',)
 
 	def __new__(cls, jobid, name=None):
 		if isinstance(jobid, (tuple, list)):
@@ -212,6 +210,8 @@ class Dataset(unicode):
 		obj = unicode.__new__(cls, fullname)
 		obj.name = name
 		obj.quoted = quote('%s/%s' % (job, name,))
+		obj._job_version = 4 # hopefully
+		obj.fs_name = _fs_name(obj.name)
 		if jobid is _new_dataset_marker:
 			obj._data = DotDict({
 				'version': (3, 3,),
@@ -224,10 +224,13 @@ class Dataset(unicode):
 				'lines': [],
 			})
 			obj.job = None
-			obj.fs_name = _fs_name(obj.name)
 		else:
 			obj.job = job
-			obj.fs_name = _fs_name(obj.name, obj.job.version)
+			if not os.path.exists(job.filename(obj.fs_name)) and '/' not in obj.name:
+				# job.version is a little expensive if uncached, that's why we avoided it if possible
+				obj._job_version = job.version
+				if obj._job_version < 4:
+					obj.fs_name = obj.name
 			obj._data = DotDict(_ds_load(obj))
 			if obj._data.version[0] != 3:
 				raise DatasetError("%s/%s: Unsupported dataset pickle version %r" % (jobid, name, obj._data.version,))
@@ -1086,7 +1089,7 @@ class Dataset(unicode):
 		blob.save(dict(self._data), self._name('pickle'), temp=False, _hidden=True)
 
 	def _name(self, thing):
-		if self.job and self.job.version < 4:
+		if self._job_version < 4:
 			assert thing == 'pickle'
 			return self.name + '/dataset.pickle'
 		else:
