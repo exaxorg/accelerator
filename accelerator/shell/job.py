@@ -24,6 +24,7 @@ from traceback import print_exc
 from datetime import datetime
 import errno
 from argparse import RawTextHelpFormatter
+import os
 import sys
 
 from accelerator.colourwrapper import colour
@@ -78,6 +79,23 @@ def show(url, job, show_output):
 		print('%s produced %d bytes of output, use --output/-o to see it' % (job, len(out),))
 		print()
 
+def show_source(job):
+	import tarfile
+	with tarfile.open(job.filename('method.tar.gz'), 'r:gz') as tar:
+		members = [info for info in tar.getmembers() if info.isfile()]
+		for ix, info in enumerate(members, 1):
+			if len(members) > 1:
+				print(info.path)
+				print('=' * len(info.path))
+			data = tar.extractfile(info).read()
+			has_nl = data.endswith(b'\n')
+			while data:
+				data = data[os.write(1, data):]
+			if not has_nl:
+				os.write(1, b'\n')
+			if ix < len(members):
+				os.write(1, b'\n')
+
 def main(argv, cfg):
 	descr = 'show setup.json, dataset list, etc for jobs'
 	parser = ArgumentParser(
@@ -89,6 +107,7 @@ def main(argv, cfg):
 	group.add_argument('-o', '--output', action='store_true', help='show job output')
 	group.add_argument('-O', '--just-output', action='store_true', help='show only job output')
 	group.add_argument('-P', '--just-path', action='store_true', help='show only job path')
+	group.add_argument('-s', '--source', action='store_true', help='show source used to produce job')
 	parser.add_argument(
 		'jobid',
 		nargs='+', metavar='jobid/jobspec',
@@ -114,6 +133,8 @@ def main(argv, cfg):
 					print(out, end='' if out.endswith('\n') else '\n')
 			elif args.just_path:
 				print(job.path)
+			elif args.source:
+				show_source(job)
 			else:
 				show(cfg.url, job, args.output)
 		except JobNotFound as e:
