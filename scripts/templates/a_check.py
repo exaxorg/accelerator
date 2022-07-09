@@ -1,4 +1,5 @@
 from accelerator import Job
+import sys
 
 options = {'prefix': str, 'version': int}
 
@@ -34,3 +35,11 @@ def synthesis(job):
 		[],
 		[(44444, 'fits in 5 bytes')],
 	)
+	# Test for accidental recursion.
+	sys.setrecursionlimit(49)
+	ds51 = Job('%s-%d' % (options.prefix, 51)).dataset()
+	assert len(ds51.chain()) == 50, '%s should have had a dataset chain of length 50' % (job,)
+	# And check the chain actually contains the expected stuff (i.e. nothing past the first ds).
+	# (Also to check that iterating the chain doesn't recurse more.)
+	ds2 = Job('%s-%d' % (options.prefix, 2)).dataset()
+	assert list(ds2.iterate(None)) == list(ds51.iterate_chain(None))

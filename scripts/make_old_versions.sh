@@ -1,7 +1,8 @@
 #!/bin/sh
 #
-# Generate three jobs (csvimport, dataset_type, dataset_hashpart) each on
-# five older versions, with increasing Dataset and setup.json versions.
+# Generate three jobs (csvimport, dataset_type, dataset_hashpart, plus 49
+# extra in a chain) each on five older versions, with increasing Dataset
+# and setup.json versions.
 #
 # Doesn't work past Python 3.7 because of bugs in older accelerator versions.
 

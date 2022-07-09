@@ -8,8 +8,10 @@ def main(urd):
 		datasets=dict(source=jid),
 		options=dict(column2type={'a': 'number', 'b': 'ascii'}),
 	)
-	urd.build(
-		'dataset_$HASHPART',
-		datasets=dict(source=jid),
-		options=dict(hashlabel='b'),
-	)
+	previous = None
+	for _ in range(50):
+		previous = urd.build(
+			'dataset_$HASHPART',
+			datasets=dict(source=jid, previous=previous),
+			options=dict(hashlabel='b'),
+		)
