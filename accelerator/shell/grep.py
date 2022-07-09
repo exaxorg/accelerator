@@ -186,9 +186,12 @@ def main(argv, cfg):
 
 	datasets = args.datasets
 	patterns = []
+	re_flags = re.DOTALL
+	if args.ignore_case:
+		re_flags |= re.IGNORECASE
 	for pattern in args.patterns:
 		try:
-			patterns.append(re.compile(pattern, re.IGNORECASE if args.ignore_case else 0))
+			patterns.append(re.compile(pattern, re_flags))
 		except re.error as e:
 			print("Bad pattern %r:\n%s" % (pattern, e,), file=sys.stderr)
 			return 1
