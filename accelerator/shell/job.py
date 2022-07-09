@@ -79,10 +79,11 @@ def show(url, job, show_output):
 		print('%s produced %d bytes of output, use --output/-o to see it' % (job, len(out),))
 		print()
 
-def show_source(job):
+def show_source(job, pattern='*'):
 	import tarfile
+	from fnmatch import fnmatch
 	with tarfile.open(job.filename('method.tar.gz'), 'r:gz') as tar:
-		members = [info for info in tar.getmembers() if info.isfile()]
+		members = [info for info in tar.getmembers() if info.isfile() and fnmatch(info.path, pattern)]
 		for ix, info in enumerate(members, 1):
 			if len(members) > 1:
 				print(info.path)
@@ -108,6 +109,7 @@ def main(argv, cfg):
 	group.add_argument('-O', '--just-output', action='store_true', help='show only job output')
 	group.add_argument('-P', '--just-path', action='store_true', help='show only job path')
 	group.add_argument('-s', '--source', action='store_true', help='show source used to produce job')
+	group.add_argument('-S', '--source-file', metavar='PATTERN', help='show specified file(s) from source used to produce job')
 	parser.add_argument(
 		'jobid',
 		nargs='+', metavar='jobid/jobspec',
@@ -135,6 +137,8 @@ def main(argv, cfg):
 				print(job.path)
 			elif args.source:
 				show_source(job)
+			elif args.source_file:
+				show_source(job, args.source_file)
 			else:
 				show(cfg.url, job, args.output)
 		except JobNotFound as e:
