@@ -159,10 +159,20 @@ def cmd_abort(argv):
 cmd_abort.help = '''abort running job(s)'''
 
 def cmd_alias(argv):
-	parser = ArgumentParser(prog=argv.pop(0), description=cmd_alias.help)
+	parser = ArgumentParser(
+		prog=argv.pop(0),
+		description='''shows all aliases with no arguments, or the expansion of the specified aliases.''',
+	)
+	parser.add_argument('alias', nargs='*', help='')
 	args = parser.parse_intermixed_args(argv)
-	for item in sorted(aliases.items()):
-		print('%s = %s' % item)
+	if args.alias:
+		from accelerator.compat import shell_quote
+		for alias in args.alias:
+			a, b = expand_aliases([], [alias])
+			print(' '.join(map(shell_quote, a + b)))
+	else:
+		for item in sorted(aliases.items()):
+			print('%s = %s' % item)
 cmd_alias.help = '''show defined aliases'''
 
 def cmd_server(argv):
