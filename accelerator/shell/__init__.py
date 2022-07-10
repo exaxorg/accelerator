@@ -393,6 +393,28 @@ def printdesc(items, columns, colour_prefix, full=False):
 		else:
 			print(preamble)
 
+def expand_aliases(main_argv, argv):
+	used_aliases = []
+	while argv and argv[0] in aliases:
+		alias = argv[0]
+		if alias == 'noalias': # save the user from itself
+			break
+		try:
+			expanded = shlex.split(aliases[alias])
+		except ValueError as e:
+			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
+		more_main_argv, argv = split_args(expanded + argv[1:])
+		main_argv.extend(more_main_argv)
+		if expanded and alias == expanded[0]:
+			break
+		used_aliases.append(alias)
+		if alias in used_aliases[:-1]:
+			raise ValueError('Alias loop: %r' % (used_aliases,))
+
+	while argv and argv[0] == 'noalias':
+		argv.pop(0)
+	return main_argv, argv
+
 def main():
 	# Several commands use SIGUSR1 which (naturally...) defaults to killing the
 	# process, so start by blocking that to minimise the race time.
@@ -439,25 +461,7 @@ def main():
 	parse_user_config(aliases, colour_d)
 	colour._names.update(colour_d)
 
-	used_aliases = []
-	while argv and argv[0] in aliases:
-		alias = argv[0]
-		if alias == 'noalias': # save the user from itself
-			break
-		try:
-			expanded = shlex.split(aliases[alias])
-		except ValueError as e:
-			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
-		more_main_argv, argv = split_args(expanded + argv[1:])
-		main_argv.extend(more_main_argv)
-		if expanded and alias == expanded[0]:
-			break
-		used_aliases.append(alias)
-		if alias in used_aliases[:-1]:
-			raise ValueError('Alias loop: %r' % (used_aliases,))
-
-	while argv and argv[0] == 'noalias':
-		argv.pop(0)
+	main_argv, argv = expand_aliases(main_argv, argv)
 
 	epilog = ['commands:', '']
 	cmdlen = max(len(cmd) for cmd in COMMANDS)
