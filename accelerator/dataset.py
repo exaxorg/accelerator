@@ -34,7 +34,7 @@ from operator import itemgetter
 from math import isnan
 import datetime
 
-from accelerator.compat import unicode, uni, ifilter, imap, iteritems
+from accelerator.compat import unicode, uni, ifilter, imap, iteritems, PY2
 from accelerator.compat import builtins, open, getarglist, izip, izip_longest
 from accelerator.compat import str_types, int_types, FileNotFoundError
 
@@ -1536,6 +1536,8 @@ class DatasetWriter(object):
 			self._compressions = dict.fromkeys(self.columns, compressions)
 		else:
 			self._compressions.update(compressions)
+		if PY2:
+			self._compressions = {uni(k): uni(v) for k, v in self._compressions.items()}
 
 	def finish(self):
 		"""Normally you don't need to call this, but if you want to
