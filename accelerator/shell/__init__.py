@@ -158,6 +158,13 @@ def cmd_abort(argv):
 		print("Killed %d running job%s." % (res.killed, '' if res.killed == 1 else 's'))
 cmd_abort.help = '''abort running job(s)'''
 
+def cmd_alias(argv):
+	parser = ArgumentParser(prog=argv.pop(0), description=cmd_alias.help)
+	args = parser.parse_intermixed_args(argv)
+	for item in sorted(aliases.items()):
+		print('%s = %s' % item)
+cmd_alias.help = '''show defined aliases'''
+
 def cmd_server(argv):
 	from accelerator.server import main
 	from accelerator.methods import MethodLoadException
@@ -268,6 +275,7 @@ cmd_version.help = '''show installed accelerator version'''
 
 COMMANDS = {
 	'abort': cmd_abort,
+	'alias': cmd_alias,
 	'board-server': cmd_board_server,
 	'ds': cmd_ds,
 	'grep': cmd_grep,
@@ -415,6 +423,7 @@ def main():
 	sys.stderr = AutoFlush(sys.stderr)
 
 	# configuration defaults
+	global aliases
 	aliases = {
 		'cat': 'grep -e ""',
 	}
@@ -479,7 +488,7 @@ def main():
 			print('Unknown command "%s"' % (args.command,), file=sys.stderr)
 		sys.exit(2)
 	config_fn = args.config
-	if args.command in ('init', 'intro', 'version',):
+	if args.command in ('init', 'intro', 'version', 'alias',):
 		config_fn = False
 	cmd = COMMANDS[args.command]
 	debug_cmd = getattr(cmd, 'is_debug', False)
