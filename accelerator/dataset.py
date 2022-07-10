@@ -114,7 +114,14 @@ def _dsid(t):
 
 # If we want to add fields to later versions, using a versioned name will
 # allow still loading the old versions without messing with the constructor.
-_DatasetColumn_3_3 = namedtuple('_DatasetColumn_3_3', 'type compression location min max offsets none_support')
+_dscol_3_3 = namedtuple('_DatasetColumn_3_3', 'type compression location min max offsets none_support')
+class _DatasetColumn_3_3(_dscol_3_3):
+	def __new__(cls, type, compression, location, min, max, offsets, none_support):
+		# Older dataset_3_3-releases (up to 2022.6.30.dev1) can sometimes write
+		# .compression as a bytes-str on PY2, this is a workaround for that.
+		if isinstance(compression, bytes):
+			compression = compression.decode('ascii')
+		return _dscol_3_3.__new__(cls, type, compression, location, min, max, offsets, none_support)
 DatasetColumn = _DatasetColumn_3_3
 # It's probably usually best to generate the new type so the rest of the code needs no special handling.
 class _DatasetColumn_3_2(object):
