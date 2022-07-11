@@ -28,6 +28,8 @@ from accelerator.compat import monotonic
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from sys import exit
+import os
+import sys
 
 description = '''
 Run the tests. Needs at least 3 slices to work.
@@ -303,9 +305,10 @@ def main(urd):
 
 	print()
 	print("Test shell commands")
-	from sys import argv
 	from accelerator.shell import cfg
-	command_prefix = [argv[0], '--config', cfg.config_filename]
+	# sys.argv[0] is absolute for unqualified commands ("ax"), but exactly what
+	# the user wrote otherwise ("./venv/bin/ax"). This makes either absolute.
+	command_prefix = [os.path.join(cfg.user_cwd, sys.argv[0]), '--config', cfg.config_filename]
 	urd.truncate("tests_urd", 0)
 	# These have to be rebuilt every time, or the resolving might give other jobs.
 	urd.begin("tests_urd", 1)
