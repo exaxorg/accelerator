@@ -393,6 +393,21 @@ def printdesc(items, columns, colour_prefix, full=False):
 		else:
 			print(preamble)
 
+def expand_env(words, alias):
+	from os import environ
+	for word in words:
+		if word.startswith('${') and word.endswith('}'):
+			k = word[2:-1]
+			if k in environ:
+				try:
+					expanded = shlex.split(environ[k])
+				except ValueError as e:
+					raise ValueError('Failed to expand alias %s (%s -> %r): %s' % (alias, word, environ[k], e,))
+				for word in expanded:
+					yield word
+		else:
+			yield word
+
 def expand_aliases(main_argv, argv):
 	used_aliases = []
 	while argv and argv[0] in aliases:
@@ -403,6 +418,7 @@ def expand_aliases(main_argv, argv):
 			expanded = shlex.split(aliases[alias])
 		except ValueError as e:
 			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
+		expanded = list(expand_env(expanded, alias))
 		more_main_argv, argv = split_args(expanded + argv[1:])
 		main_argv.extend(more_main_argv)
 		if expanded and alias == expanded[0]:
