@@ -278,8 +278,8 @@ class CurrentJob(Job):
 		from accelerator.extras import saved_files
 		saved_files[filename] = 0
 
-	def input_filename(self, filename):
-		return os.path.join(self.input_directory, filename)
+	def input_filename(self, *parts):
+		return os.path.join(self.input_directory, *parts)
 
 	def open_input(self, filename, mode='r', encoding=None, errors=None):
 		assert 'r' in mode, "Don't write to input files"
