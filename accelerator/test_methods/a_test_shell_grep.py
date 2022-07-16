@@ -730,3 +730,56 @@ def synthesis(job, slices):
 			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '   ', '0', '   ', '0'),
 		], sep='',
 	)
+
+	# test --lined
+	def mk_lined_ds(name, *lines, **kw):
+		dw = job.datasetwriter(name=name, allow_missing_slices=True, **kw)
+		dw.add('a', 'ascii')
+		dw.add('b', 'ascii')
+		for sliceno, lines in enumerate(lines):
+			dw.set_slice(sliceno)
+			for line in lines:
+				dw.write(*line)
+		return dw.finish()
+	lined_a = mk_lined_ds('lined_a', [('aaa', 'aab'), ('abb', 'bbb'), ('AAA', 'BBB')])
+	lined_b = mk_lined_ds('lined_b', [('BAAA', 'BAAB')], [('BABB', 'BBBB')], previous=lined_a)
+
+	# "grep -i a" will match all lines, with highlights that only sometimes
+	# align with field boundaries.
+	# all lines in -c lined_b is three lines in one ds in slice 0, then another
+	# in slice 0 from the next ds, and then one in slice 1.
+	ODDLINE = '\x1b[30;107m'
+	EVENLINE = '\x1b[30;47m'
+	TRAILER = '\x1b[K\x1b[m'
+	SEP = SEP_HI + '\t\x1b[24;30m'
+	grep_text(['--lined', '--colour=always', '-S', '-L', '-c', '-i', 'a', lined_b], [
+		[ODDLINE  + '0', '0', '\x1b[31maaa\x1b[30m', '\x1b[31maa\x1b[30mb' + TRAILER],
+		[EVENLINE + '0', '1', '\x1b[31ma\x1b[30mbb', 'bbb' + TRAILER],
+		[ODDLINE  + '0', '2', '\x1b[31mAAA\x1b[30m', 'BBB' + TRAILER],
+		[EVENLINE + '0', '0', 'B\x1b[31mAAA\x1b[30m', 'B\x1b[31mAA\x1b[30mB' + TRAILER],
+		[ODDLINE  + '1', '0', 'B\x1b[31mA\x1b[30mBB', 'BBBB' + TRAILER],
+	], sep=SEP)
+	# all lines in just lined_b is one line each for slice 0 and 1.
+	# these two together should catch any issues with switchovers restarting
+	# the lining pattern.
+	grep_text(['--lined', '--colour=always', '-S', '-L', '-i', 'a', lined_b], [
+		[ODDLINE + '0', '0', 'B\x1b[31mAAA\x1b[30m', 'B\x1b[31mAA\x1b[30mB' + TRAILER],
+		[EVENLINE  + '1', '0', 'B\x1b[31mA\x1b[30mBB', 'BBBB' + TRAILER],
+	], sep=SEP)
+
+	# try with just fg and just bg for the lines, both for the match
+	os.mkdir('accelerator')
+	with open('accelerator/config', 'w') as fh:
+		fh.write('''[colour]
+			grep/oddlines = GREEN
+			grep/evenlines = GREENBG
+			grep/highlight = WHITEBG RED
+		''')
+	# odd lines keep only the non-underline (24) from the end of the separator and add their own green (32)
+	SEP_ODD = SEP_HI + '\t\x1b[24;32m'
+	# even lines keep the whole reset and don't add any sequence of their own (as the separator doesn't touch the bg)
+	SEP_EVEN = TAB_HI
+	grep_text(['--lined', '--colour=always', '-S', '-L', '-i', 'a', lined_b], [
+		SEP_ODD.join(['\x1b[32m0', '0', 'B\x1b[47;31mAAA\x1b[32;49m', 'B\x1b[47;31mAA\x1b[32;49mB\x1b[m']),
+		SEP_EVEN.join(['\x1b[42m1', '0', 'B\x1b[47;31mA\x1b[39;42mBB', 'BBBB' + TRAILER]),
+	], sep='')
