@@ -1285,8 +1285,6 @@ class DatasetWriter(object):
 			typed_writer(coltype) # gives error for unknown types
 		except ValueError as e:
 			raise DatasetUsageError(str(e))
-		if none_support and coltype.startswith('bits'):
-			raise DatasetUsageError("%s columns can't have None support" % (coltype,))
 		self.columns[colname] = (coltype, default, none_support)
 		self._order.append(colname)
 		self._filenames[colname] = next(self._fngen)
