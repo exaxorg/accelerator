@@ -28,8 +28,6 @@ def synthesis(job):
 	for   t         , good_value    , default_value, bad1        , bad2 in (
 		('int64'    , 1             , 2            , float('inf'), None),
 		('int32'    , 1             , 2            , float('inf'), None),
-		('bits64'   , 1             , 2            , -1          , None),
-		('bits32'   , 1             , 2            , -1          , None),
 		('float64'  , 0.1           , 0.2          , 'bad'       , None),
 		('float32'  , 1             , 2            , 'bad'       , None),
 		('number'   , 1             , 2.1          , 'bad'       , None),
@@ -63,28 +61,27 @@ def synthesis(job):
 		want = [good_value, default_value, default_value]
 		got = list(ds.iterate(0, 'data'))
 		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
-		if not t.startswith('bits'):
-			# no none_support in the bits types
-			dw = job.datasetwriter(name=t + ' default=None', allow_missing_slices=True)
-			dw.add('data', t, default=None, none_support=True)
-			dw.set_slice(0)
-			dw.write(good_value)
-			dw.write(bad1)
-			dw.write(bad2)
-			ds = dw.finish()
-			want = [good_value, None, None]
-			got = list(ds.iterate(0, 'data'))
-			assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
 
-			# make sure default=None hashes correctly
-			if t != 'json':
-				dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
-				dw.add('data', t, default=None, none_support=True)
-				w = dw.get_split_write()
-				w(bad1)
-				w(None)
-				w(bad1) # bad2 might be None, so don't use that.
-				ds = dw.finish()
-				want = [None, None, None]
-				got = list(ds.iterate(0, 'data'))
-				assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
+		dw = job.datasetwriter(name=t + ' default=None', allow_missing_slices=True)
+		dw.add('data', t, default=None, none_support=True)
+		dw.set_slice(0)
+		dw.write(good_value)
+		dw.write(bad1)
+		dw.write(bad2)
+		ds = dw.finish()
+		want = [good_value, None, None]
+		got = list(ds.iterate(0, 'data'))
+		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
+
+		# make sure default=None hashes correctly
+		if t != 'json':
+			dw = job.datasetwriter(name=t + ' default=None hashed', hashlabel='data')
+			dw.add('data', t, default=None, none_support=True)
+			w = dw.get_split_write()
+			w(bad1)
+			w(None)
+			w(bad1) # bad2 might be None, so don't use that.
+			ds = dw.finish()
+			want = [None, None, None]
+			got = list(ds.iterate(0, 'data'))
+			assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
