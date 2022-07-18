@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019 Carl Drougge                                          #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -72,4 +72,5 @@ def synthesis(prepare_res, slices, job):
 		dw_synthesis_manual.set_slice(sliceno)
 		dw_synthesis_manual.write(sliceno)
 		dw_nonetest.set_slice(sliceno)
-		dw_nonetest.write(**{k: v[0] if k in test_data.not_none_capable else None for k, v in test_data.data.items()})
+		nones = (None,) * len(test_data.data)
+		dw_nonetest.write(*nones)

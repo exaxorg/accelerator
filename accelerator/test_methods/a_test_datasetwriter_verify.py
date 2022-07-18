@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -57,5 +57,5 @@ def analysis(sliceno, params):
 	synthesis_manual = Dataset(datasets.source, "synthesis_manual")
 	assert list(synthesis_manual.iterate(sliceno, "sliceno")) == [sliceno]
 	nonetest = Dataset(datasets.source, "nonetest")
-	good = tuple(v[0] if k in test_data.not_none_capable else None for k, v in sorted(test_data.data.items()))
+	good = (None,) * len(test_data.data)
 	assert list(nonetest.iterate(sliceno)) == [good]

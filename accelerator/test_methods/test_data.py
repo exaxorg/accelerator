@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2020 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -43,8 +43,6 @@ data = {
 	"float32": (100.0, -0.0, 2.0),
 	"int64": (9223372036854775807, -9223372036854775807, 100),
 	"int32": (-2147483647, 2147483647, -1),
-	"bits64": (0, 18446744073709551615, 0x55aa55aa55aa55aa),
-	"bits32": (0, 4294967295, 0xaa55aa55),
 	"bool": (True, False, True,),
 	"datetime": (datetime(1916, 2, 29, 23, 59, 59, 999999), datetime(1916, 2, 29, 23, 59, 59, 999998), datetime(1970, 1, 1, 0, 0, 0, 1)),
 	"date": (date(2016, 2, 29), date(2016, 2, 28), date(2017, 6, 27),),
@@ -69,9 +67,7 @@ value_cnt = {len(v) for v in data.values()}
 assert len(value_cnt) == 1, "All tuples in data must have the same length."
 value_cnt = first_value(value_cnt)
 
-not_none_capable = {"bits64", "bits32",}
-
-columns = {t: t if t in not_none_capable else (t, True) for t in data}
+columns = {t: (t, True) for t in data}
 
 def sort_data_for_slice(sliceno):
 	# numeric types use only (modified) v[0], other types cycle through their values.
@@ -103,9 +99,7 @@ def sort_data_for_slice(sliceno):
 	# (Sorts first except for date/times where they sort last.)
 	res = []
 	for k in sorted(data):
-		if k in not_none_capable:
-			res.append(data[k][0])
-		elif k == 'json':
+		if k == 'json':
 			res.append(0)
 		else:
 			res.append(None)
