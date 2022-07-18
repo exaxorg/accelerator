@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019 Carl Drougge                                          #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -33,8 +33,6 @@ def synthesis():
 	typerename = dict(
 		int64="int64_10",
 		int32="int32_10",
-		bits64="bits64_10",
-		bits32="bits32_10",
 		bool="strbool",
 		datetime="datetime:%Y-%m-%d %H:%M:%S.%f",
 		date="date:%Y-%m-%d",
