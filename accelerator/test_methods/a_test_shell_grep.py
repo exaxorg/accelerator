@@ -514,8 +514,6 @@ def synthesis(job, slices):
 	alltypes = mk_ds('alltypes',
 		[
 			'ascii',
-			'bits32',
-			'bits64',
 			'bool',
 			'bytes',
 			'complex32',
@@ -530,8 +528,6 @@ def synthesis(job, slices):
 			'unicode',
 		], [
 			'foo',
-			11111,
-			99999,
 			True,
 			b'\xff\x00octets',
 			1+2j,
@@ -546,8 +542,6 @@ def synthesis(job, slices):
 			'codepoints\x00\xe4',
 		], [
 			'',
-			0,
-			0,
 			False,
 			b'',
 			0j,
@@ -562,20 +556,18 @@ def synthesis(job, slices):
 			'',
 		],
 	)
-	grep_text(['json', alltypes], [['', 0, 0, 'False', '', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 'json', 0, '01:01:01', '']])
+	grep_text(['json', alltypes], [['', 'False', '', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 'json', 0, '01:01:01', '']])
 	grep_text(['-g', 'json', 'foo', alltypes], [])
 	grep_text(['-g', 'bytes', 'tet', alltypes, 'ascii', 'unicode'], [['foo', 'codepoints\x00\xe4']])
 	grep_text(['-g', 'bytes', '\\x00', alltypes, 'bool'], [['True']])
 	if PY3:
 		# python2 doesn't really handle non-utf8 bytes
 		grep_text(['-g', 'bytes', '\\udcff', alltypes, 'bool'], [['True']])
-	grep_text(['--format=raw', '-g', 'json', '-i', 'foo', alltypes], [[b'foo', b'11111', b'99999', b'True', b'\xff\x00octets' if PY3 else b'\xef\xbf\xbd\x00octets', b'(1+2j)', b'(1.5-0.5j)', b'2021-09-20', b'2021-09-20 01:02:03', b'0.125', b'1e+42', b"[1, 2, 3, {'FOO': 'BAR'}, None]" if PY3 else b"[1, 2, 3, {u'FOO': u'BAR'}, None]", b'-2', b'04:05:06', b'codepoints\x00\xc3\xa4']], sep=b'\t', encoding=None)
+	grep_text(['--format=raw', '-g', 'json', '-i', 'foo', alltypes], [[b'foo', b'True', b'\xff\x00octets' if PY3 else b'\xef\xbf\xbd\x00octets', b'(1+2j)', b'(1.5-0.5j)', b'2021-09-20', b'2021-09-20 01:02:03', b'0.125', b'1e+42', b"[1, 2, 3, {'FOO': 'BAR'}, None]" if PY3 else b"[1, 2, 3, {u'FOO': u'BAR'}, None]", b'-2', b'04:05:06', b'codepoints\x00\xc3\xa4']], sep=b'\t', encoding=None)
 	grep_json([':05:', alltypes, 'bool', 'time', 'unicode', 'bytes'], [{'bool': True, 'time': '04:05:06', 'unicode': 'codepoints\x00\xe4', 'bytes': '\udcff\x00octets' if PY3 else '\ufffd\x00octets'}])
 
 	columns = [
 		'ascii',
-		'bits32',
-		'bits64',
 		'bytes',
 		'complex32',
 		'complex64',
@@ -591,40 +583,36 @@ def synthesis(job, slices):
 		'unicode',
 	]
 	d = mk_ds('d', columns,
-		['42', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 42, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 42, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'42', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 42+0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 42+0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(42, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(42, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 42.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 42.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 42, 0, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 42, '', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '42', 0, datetime.time(1, 1, 1), '',],
-		['', 0, 0, b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 42, datetime.time(1, 1, 1), '',],
-		['a', 0, 0, b'b', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 42), '',],
-		['B', 0, 0, b'A', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '42',],
+		['42', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'42', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 42+0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 42+0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(42, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(42, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 42.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 42.0, 0, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 42, 0, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 42, '', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '42', 0, datetime.time(1, 1, 1), '',],
+		['', b'', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 42, datetime.time(1, 1, 1), '',],
+		['a', b'b', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 42), '',],
+		['B', b'A', 0j, 0j, datetime.date(1, 1, 1), datetime.datetime(1, 1, 1, 1, 1, 1), 0.0, 0.0, 0, 0, '', 0, datetime.time(1, 1, 1), '42',],
 	)
 	want = [
-		['42', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 42, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 42, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '42', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 42+0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 42+0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0042-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0042-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 42.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 42.0, 0, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 42, 0, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 42, '', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '42', 0, '01:01:01', ''],
-		['', 0, 0, '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 42, '01:01:01', ''],
-		['a', 0, 0, 'b', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:42', ''],
-		['B', 0, 0, 'A', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', '42'],
+		['42', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '42', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 42+0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 42+0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0042-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0042-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 42.0, 0.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 42.0, 0, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 42, 0, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 42, '', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '42', 0, '01:01:01', ''],
+		['', '', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 42, '01:01:01', ''],
+		['a', 'b', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:42', ''],
+		['B', 'A', 0j, 0j, '0001-01-01', '0001-01-01 01:01:01', 0.0, 0.0, 0, 0, '', 0, '01:01:01', '42'],
 	]
 	grep_text(['42', d], want)
 	def json_fixup(line):
@@ -637,12 +625,12 @@ def synthesis(job, slices):
 	grep_json(['42', d], want_json)
 	grep_json(['-D', '42', d], [{'dataset': d, 'data': data} for data in want_json])
 	grep_text(['-i', 'a', d], [
-		['a', 0, 0, 'b', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 0, 0, '', 0, '01:01:42', ''],
-		['B', 0, 0, 'A', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 0, 0, '', 0, '01:01:01', '42'],
+		['a', 'b', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 0, 0, '', 0, '01:01:42', ''],
+		['B', 'A', '0j', '0j', '0001-01-01', '0001-01-01 01:01:01', '0.0', '0.0', 0, 0, '', 0, '01:01:01', '42'],
 	])
 	grep_text(['-i', 'a', d, 'unicode', 'ascii'], [['', 'a']])
 	grep_text(['-i', '-g', 'bytes', 'a', d, 'unicode', 'ascii'], [['42', 'B']])
-	grep_json(['-g', 'bits32', '-g', 'ascii', '-D', '-L', '-S', '42', d], [
+	grep_json(['-g', 'bytes', '-g', 'ascii', '-D', '-L', '-S', '42', d], [
 		{'dataset': d, 'sliceno': 0, 'lineno': 0, 'data': want_json[0]},
 		{'dataset': d, 'sliceno': 1, 'lineno': 0, 'data': want_json[1]},
 	])
@@ -698,10 +686,10 @@ def synthesis(job, slices):
 	# with field_len=11 which is not a multiple of tab_len=8
 	# f          f          f          f          f          f          f
 	# t       t       t       t       t       t       t       t       t       t
-	# date            datetime        float32 float64 int32   int64           bits32
+	# date            datetime        float32 float64 int32   int64           number
 	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0       0       0
-	grep_text(['--color=always', '--tab-length=8/11/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
-			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', ' ', 'int32', '   ', 'int64', '           ', 'bits32'),
+	grep_text(['--color=always', '--tab-length=8/11/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'number'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', ' ', 'int32', '   ', 'int64', '           ', 'number'),
 			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0', '       ', '0'),
 			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '       ', '0', '       ', '0'),
 		], sep='',
@@ -710,10 +698,10 @@ def synthesis(job, slices):
 	# with field_len=13 which is not a multiple of tab_len=8
 	# f            f            f            f            f            f            f
 	# t       t       t       t       t       t       t       t       t       t       t
-	# date            datetime        float32 float64         int32           int64   bits32
+	# date            datetime        float32 float64         int32           int64   number
 	# 0042-01-01      0042-01-01 01:01:01     0.0     0.0     0               0       0
-	grep_text(['--color=always', '--tab-length=8/13/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
-			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', '         ', 'int32', '           ', 'int64', '   ', 'bits32'),
+	grep_text(['--color=always', '--tab-length=8/13/1', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'number'], [
+			hdrsepframe('date', '            ', 'datetime', '        ', 'float32', ' ', 'float64', '         ', 'int32', '           ', 'int64', '   ', 'number'),
 			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '               ', '0', '       ', '0'),
 			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '               ', '0', '       ', '0'),
 		], sep='',
@@ -722,10 +710,10 @@ def synthesis(job, slices):
 	# exercise the parser a bit more (this is 4/8/3, written stupidly)
 	# f       f       f       f       f       f       f       f       f
 	# t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t   t
-	# date    datetime    float32     float64     int32   int64   bits32
+	# date    datetime    float32     float64     int32   int64   number
 	# 0042-01-01      0001-01-01 01:01:01     0.0     0.0     0   0   0
-	grep_text(['--color=always', '--tab-length=1/min_LENGTH=3/8', '-T', 'tablen=4', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'bits32'], [
-			hdrsepframe('date', '    ', 'datetime', '    ', 'float32', '     ', 'float64', '     ', 'int32', '   ', 'int64', '   ', 'bits32'),
+	grep_text(['--color=always', '--tab-length=1/min_LENGTH=3/8', '-T', 'tablen=4', '-H', '42-01', d, 'date', 'datetime', 'float32', 'float64', 'int32', 'int64', 'number'], [
+			hdrsepframe('date', '    ', 'datetime', '    ', 'float32', '     ', 'float64', '     ', 'int32', '   ', 'int64', '   ', 'number'),
 			sepframe('00\x1b[31m42-01\x1b[39m-01', '      ', '0001-01-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '   ', '0', '   ', '0'),
 			sepframe('0001-01-01', '      ', '00\x1b[31m42-01\x1b[39m-01 01:01:01', '     ', '0.0', '     ', '0.0', '     ', '0', '   ', '0', '   ', '0'),
 		], sep='',
