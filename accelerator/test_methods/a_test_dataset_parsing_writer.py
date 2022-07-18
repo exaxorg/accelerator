@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -41,10 +41,10 @@ def hashfilter(typ, values, sliceno):
 		return [v for v in values if h(v) % slices == sliceno]
 
 def synthesis(job, slices):
-	def test(typ, write_values, want_values, bad_values=[], allow_none=True):
+	def test(typ, write_values, want_values, bad_values=[]):
 		dw = job.datasetwriter(
 			name=typ,
-			columns={'value': ('parsed:' + typ, allow_none)},
+			columns={'value': ('parsed:' + typ, True)},
 			hashlabel=None if typ == 'json' else 'value',
 		)
 		write = dw.get_split_write()
@@ -102,18 +102,6 @@ def synthesis(job, slices):
 		[None, '42', 0, '-99', '1', 2, 3, 4, 5, '\r9\n', '011', '+0'],
 		[None,  42,  0,  -99,   1,  2, 3, 4, 5,   9,       11,    0],
 		['1.', '.1', '1.0', '1+1', '+', '-', ''],
-	)
-	test('bits32',
-		['42', 0, '-0', '1', 2, 3, 4, 5, '\r9\n', '011', '+0'],
-		[ 42,  0,   0,   1,  2, 3, 4, 5,   9,       11,    0],
-		['1.', '.1', '1.0', '1+1', '+', '-', '', '-99'],
-		allow_none=False,
-	)
-	test('bits64',
-		['42', 0, '-0', '1', 2, 3, 4, 5, '\r9\n', '011', '+0',],
-		[ 42,  0,   0,   1,  2, 3, 4, 5,   9,       11,    0],
-		['1.', '.1', '1.0', '1+1', '+', '-', '', '-99'],
-		allow_none=False,
 	)
 	test('json',
 		[[1, 2], '[3, 4]', '"foo"', None, 'null', 'NaN', nan, '{"foo": [-Infinity]}'],
