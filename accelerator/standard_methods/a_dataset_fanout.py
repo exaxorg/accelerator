@@ -72,22 +72,17 @@ def prepare(job):
 		if 'unicode' in types:
 			types.discard('ascii')
 		if 'number' in types:
-			types.discard('bits32')
-			types.discard('bits64')
 			types.discard('int32')
 			types.discard('int64')
 			types.discard('float32')
 			types.discard('float64')
-		if 'bits64' in types:
-			types.discard('bits32')
 		if 'complex64' in types:
 			types.discard('complex32')
 		if 'float64' in types:
 			types.discard('float32')
 		if 'int64' in types:
-			types.discard('bits32')
 			types.discard('int32')
-		if len(types) > 1 and not (types - {'bits32', 'bits64', 'int32', 'int64', 'float32', 'float64'}):
+		if len(types) > 1 and not (types - {'int32', 'int64', 'float32', 'float64'}):
 			types = {'number'}
 		if len(types) > 1:
 			raise Exception("Column %r has incompatible types: %r" % (name, types,))
