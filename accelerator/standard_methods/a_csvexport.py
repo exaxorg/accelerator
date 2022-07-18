@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -149,7 +149,7 @@ def csvexport(sliceno, filename, labelsonfirstline):
 		if not options.lazy_quotes:
 			return True
 		# maybe we can skip quoting because values that need quoting are impossible?
-		if typ in ('int32', 'int64', 'bits32', 'bits64',):
+		if typ in ('int32', 'int64',):
 			possible = '0123456789-'
 		elif typ in ('float32', 'float64', 'number',):
 			possible = '0123456789-+einfa.'
