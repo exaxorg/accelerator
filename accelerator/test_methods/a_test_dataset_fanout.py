@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -109,21 +109,21 @@ def synthesis(job):
 	# test more type combinations, and switching hashlabel (to an included column)
 	tt_a = mk(
 		'tt_a',
-		('ascii', 'int32', 'bits64', 'float32', 'number', 'complex32', 'number'),
-		[('a', 1, 2, 2.5, 3, 1+2j, 3.14)],
+		('ascii', 'int32', 'float32', 'number', 'complex32', 'number'),
+		[('a', 1, 2.5, 3, 1+2j, 3.14)],
 		hashlabel='B',
 	)
 	tt_b = mk(
 		'tt_b',
-		('ascii', 'int64', 'bits32', 'float64', 'int32', 'complex64', 'float64'),
-		[('a', 11, 12, 12.5, 13, 11+2j, 13.14)],
+		('ascii', 'int64', 'float64', 'int32', 'complex64', 'float64'),
+		[('a', 11, 12.5, 13, 11+2j, 13.14)],
 		hashlabel='B',
 		previous=tt_a,
 	)
 	tt_c = mk(
 		'tt_c',
-		('ascii', 'int32', 'bits64', 'int64', 'float64', 'complex32', 'float32'),
-		[('a', 111, 112, 112, 113.5, 111+2j, 314.0), ('b', 0, 0, 0, 0, 0, 0)],
+		('ascii', 'int32', 'int64', 'float64', 'complex32', 'float32'),
+		[('a', 111, 112, 113.5, 111+2j, 314.0), ('b', 0, 0, 0, 0, 0)],
 		hashlabel='C',
 		previous=tt_b,
 	)
@@ -132,9 +132,9 @@ def synthesis(job):
 	j_tt_b = subjobs.build('dataset_fanout', source=tt_b, column='A')
 	chk(
 		j_tt_b,
-		'BCDEFG',
-		('int64', 'bits64', 'float64', 'number', 'complex64', 'number'),
-		{'a': [(1, 2, 2.5, 3, 1+2j, 3.14), (11, 12, 12.5, 13, 11+2j, 13.14)]},
+		'BCDEF',
+		('int64', 'float64', 'number', 'complex64', 'number'),
+		{'a': [(1, 2.5, 3, 1+2j, 3.14), (11, 12.5, 13, 11+2j, 13.14)]},
 		hashlabel='B',
 	)
 
@@ -142,9 +142,9 @@ def synthesis(job):
 	j_tt_c = subjobs.build('dataset_fanout', source=tt_c, column='A')
 	chk(
 		j_tt_c,
-		'BCDEFG',
-		('int64', 'bits64', 'number', 'number', 'complex64', 'number'),
-		{'a': [(1, 2, 2.5, 3, 1+2j, 3.14), (11, 12, 12.5, 13, 11+2j, 13.14), (111, 112, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0, 0)]},
+		'BCDEF',
+		('int64', 'number', 'number', 'complex64', 'number'),
+		{'a': [(1, 2.5, 3, 1+2j, 3.14), (11, 12.5, 13, 11+2j, 13.14), (111, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0)]},
 		hashlabel=None,
 	)
 
@@ -152,9 +152,9 @@ def synthesis(job):
 	j_tt_c_len2 = subjobs.build('dataset_fanout', source=tt_c, column='A', length=2)
 	chk(
 		j_tt_c_len2,
-		'BCDEFG',
-		('int64', 'bits64', 'number', 'number', 'complex64', 'float64'),
-		{'a': [(11, 12, 12.5, 13, 11+2j, 13.14), (111, 112, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0, 0)]},
+		'BCDEF',
+		('int64', 'number', 'number', 'complex64', 'float64'),
+		{'a': [(11, 12.5, 13, 11+2j, 13.14), (111, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0)]},
 		hashlabel=None,
 	)
 
@@ -163,9 +163,9 @@ def synthesis(job):
 	j_tt_c_b = subjobs.build('dataset_fanout', source=tt_c, column='A', previous=j_tt_b)
 	chk(
 		j_tt_c_b,
-		'BCDEFG',
-		('int32', 'bits64', 'int64', 'float64', 'complex32', 'float32'),
-		{'a': [(111, 112, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0, 0)]},
+		'BCDEF',
+		('int32', 'int64', 'float64', 'complex32', 'float32'),
+		{'a': [(111, 112, 113.5, 111+2j, 314.0)], 'b': [(0, 0, 0, 0, 0)]},
 		hashlabel='C',
 		previous={'a': j_tt_b.dataset('a')},
 	)
@@ -177,14 +177,13 @@ def synthesis(job):
 	want_data = []
 	for ix, types in enumerate(zip(
 		cycle(['ascii']), # this is the split column
-		['bits32', 'bits64', 'int32', 'int64', 'float32', 'float64', 'number'],
-		cycle(['bits64', 'bits32']),
+		['int32', 'int64', 'float32', 'float64', 'number'],
 		cycle(['complex64', 'complex32']),
 		cycle(['float64', 'float32']),
-		cycle(['int64', 'bits32', 'int32']),
+		cycle(['int64', 'int32']),
 		cycle(['unicode', 'ascii']),
 	)):
-		data = [('data',) + (ix + 1000,) * 5 + (unicode(ix),)]
+		data = [('data',) + (ix + 1000,) * 4 + (unicode(ix),)]
 		want_data.append(data[0][1:])
 		all_types.append(
 			mk('all types %d' % (ix,), types, data, previous=previous)
@@ -194,8 +193,8 @@ def synthesis(job):
 	j_all = subjobs.build('dataset_fanout', source=all_types[-1], column='A')
 	chk(
 		j_all,
-		'BCDEFG',
-		('number', 'bits64', 'complex64', 'float64', 'int64', 'unicode'),
+		'BCDEF',
+		('number', 'complex64', 'float64', 'int64', 'unicode'),
 		{'data': want_data},
 	)
 
@@ -203,7 +202,7 @@ def synthesis(job):
 	j_all_except_number = subjobs.build('dataset_fanout', source=all_types[-2], column='A')
 	chk(
 		j_all_except_number,
-		'BCDEFG',
-		('number', 'bits64', 'complex64', 'float64', 'int64', 'unicode'),
+		'BCDEF',
+		('number', 'complex64', 'float64', 'int64', 'unicode'),
 		{'data': want_data[:-1]},
 	)
