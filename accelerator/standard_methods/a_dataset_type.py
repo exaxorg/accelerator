@@ -185,10 +185,7 @@ def prepare(job, slices):
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
 	def needs_none_support(typ, colname):
-		needs = colname in none_support or chain.none_support(rev_rename.get(colname, colname))
-		if needs and typ.startswith('bits'):
-			raise Exception("Can't type column %r as %s because it has none_support" % (colname, typ,))
-		return needs
+		return colname in none_support or chain.none_support(rev_rename.get(colname, colname))
 	columns = {
 		colname: (typ, needs_none_support(typ, colname))
 		for colname, typ in columns.items()
@@ -483,11 +480,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	if cfunc:
 		default_value = options.defaults.get(dest_colname, cstuff.NULL)
 		if for_hasher and default_value is cstuff.NULL:
-			if coltype.startswith('bits'):
-				# No None-support.
-				default_value = '0'
-			else:
-				default_value = None
+			default_value = None
 		default_len = 0
 		if default_value is None:
 			default_value = cstuff.NULL

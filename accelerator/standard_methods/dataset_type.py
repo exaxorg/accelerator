@@ -924,12 +924,8 @@ convert_template = r'''
 		err1(!ptr);
 	}
 	if (default_value_is_None) {
-#if %(noneval_support)d
 		memcpy(defbuf, &%(noneval_name)s, sizeof(%(noneval_name)s));
 		default_value = ""; // Used as a bool later
-#else
-		goto err;
-#endif
 	}
 	%(minmax_setup)s;
 	int64_t i = 0;
@@ -951,15 +947,11 @@ more_infiles:
 			continue;
 		}
 		char *ptr = buf;
-#if %(noneval_support)d
 		if (line == NoneMarker) {
 			memcpy(ptr, &%(noneval_name)s, %(datalen)s);
 		} else {
 			%(convert)s;
 		}
-#else
-		%(convert)s;
-#endif
 		if (!ptr) {
 			if (record_bad && !default_value) {
 				badmap[i / 8] |= 1 << (i %% 8);
@@ -1641,9 +1633,8 @@ for name, ct in sorted(list(convfuncs.items()) + list(hidden_convfuncs.items()))
 		proto = proto_template % (shortname,)
 		destname = typerename.get(shortname, shortname)
 		mm = minmaxfuncs[destname]
-		noneval_support = not destname.startswith('bits')
 		noneval_name = 'noneval_' + destname
-		code = convert_template % dict(proto=proto, datalen=ct.size, convert=ct.conv_code_str, minmax_setup=mm.setup, minmax_code=mm.code, minmax_extra=mm.extra, noneval_support=noneval_support, noneval_name=noneval_name)
+		code = convert_template % dict(proto=proto, datalen=ct.size, convert=ct.conv_code_str, minmax_setup=mm.setup, minmax_code=mm.code, minmax_extra=mm.extra, noneval_name=noneval_name)
 	else:
 		proto = proto_template % (name.replace(':*', '').replace(':', '_'),)
 		args = dict(proto=proto, convert=ct.conv_code_str, setup='', cleanup='')
