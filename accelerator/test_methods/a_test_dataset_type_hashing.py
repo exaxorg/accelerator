@@ -92,7 +92,7 @@ def synthesis(job, slices):
 		test(src_ds, dict(column2type={'a': 'int64_10', 'b': 'number', 'c': 'json'}, filter_bad=True), 666)
 		test(src_ds, dict(column2type={'a': 'floatint32ei', 'b': 'number:int', 'c': 'json'}, filter_bad=True), 533)
 		test(src_ds, dict(column2type={'from_a': 'number', 'from_b': 'float64', 'from_c': 'ascii'}, rename=dict(a='from_a', b='from_b', c='from_c')), 1000)
-		test(src_ds, dict(column2type={'c': 'bits32_16', 'a': 'float32', 'b': 'bytes'}, rename=dict(a='c', b='a', c='b')), 1000)
+		test(src_ds, dict(column2type={'c': 'int32_16', 'a': 'float32', 'b': 'bytes'}, rename=dict(a='c', b='a', c='b')), 1000)
 
 	# this doesn't test as many permutations, it's just to test more column types.
 	dw = job.datasetwriter(name='more types')
@@ -142,8 +142,6 @@ def synthesis(job, slices):
 	dw = job.datasetwriter(name='rehash all types', columns={
 		'2type'   : ('ascii', True),
 		'ascii'   : ('ascii', True),
-		'bits32'  : ('bits32', False),
-		'bits64'  : ('bits64', False),
 		'bool'    : ('bool', True),
 		'bytes'   : ('bytes', True),
 		'date'    : ('date', True),
@@ -159,9 +157,9 @@ def synthesis(job, slices):
 	})
 	write = dw.get_split_write()
 	data = {
-		'42': ('ascii string', 100, 1000,  True, b'bytes string', date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
-		None: (          None,   0,    0,  None,            None,               None,                              None, None,      None, None, None,     None,  None,            None,             None),
-		'18': ('ASCII STRING', 111, 1111, False, b'BYTES STRING', date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
+		'42': ('ascii string', True, b'bytes string', date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
+		None: (          None, None,            None,               None,                              None, None,      None, None, None,    None,  None,            None,             None),
+		'18': ('ASCII STRING', False, b'BYTES STRING', date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
 	}
 	write('42', *data['42'])
 	write(None, *data[None])
@@ -174,8 +172,6 @@ def synthesis(job, slices):
 		'date'    : 'unicode:ascii',
 		'datetime': 'unicode:ascii',
 		'time'    : 'unicode:ascii',
-		'bits32'  : 'int32_10', # can't type as bits since that doesn't support None
-		'bits64'  : 'int64_10', # can't type as bits since that doesn't support None
 		'bytes'   : 'bytes',
 		'float32' : 'float32',
 		'float64' : 'float64',
