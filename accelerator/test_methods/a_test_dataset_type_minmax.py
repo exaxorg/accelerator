@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -51,9 +51,6 @@ groupdata = {
 	'i64': {
 		'fitsinfloat': (['400', '3002399751580330', '-8589934595'], -8589934595, 3002399751580330),
 		'i64': (['0', '999999999999', '-9223372036854775807'], -9223372036854775807, 999999999999),
-	},
-	'u64': {
-		'u64': (['18446744073709551615', '5555555', '9393939393'], 5555555, 18446744073709551615),
 	},
 	'inty floats': {
 		'inty floats': (['18.0', '-3.000', '5.000000000000000000000000000', '.0', '99.'], -3, 99),
@@ -118,8 +115,6 @@ for d in groupdata.values():
 		data[name] = d
 
 tests = {
-	'bits32_10'  : ['u32'],
-	'bits64_10'  : ['u32', 'u64'],
 	'int32_10'   : ['small int', 'i32'],
 	'int64_10'   : ['small int', 'i32', 'u32', 'i64'],
 	'number'     : ['small int', 'i32', 'u32', 'i64', 'float32', 'float64', 'huge', 'infinity', 'nan'],
