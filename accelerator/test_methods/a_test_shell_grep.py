@@ -734,8 +734,9 @@ def synthesis(job, slices):
 	# test --lined
 	def mk_lined_ds(name, *lines, **kw):
 		dw = job.datasetwriter(name=name, allow_missing_slices=True, **kw)
-		dw.add('a', 'ascii')
-		dw.add('b', 'ascii')
+		if 'columns' not in kw:
+			dw.add('a', 'ascii')
+			dw.add('b', 'ascii')
 		for sliceno, lines in enumerate(lines):
 			dw.set_slice(sliceno)
 			for line in lines:
@@ -774,6 +775,7 @@ def synthesis(job, slices):
 			grep/oddlines = GREEN
 			grep/evenlines = GREENBG
 			grep/highlight = WHITEBG RED
+			grep/header = YELLOWBG
 		''')
 	# odd lines keep only the non-underline (24) from the end of the separator and add their own green (32)
 	SEP_ODD = SEP_HI + '\t\x1b[24;32m'
@@ -782,4 +784,36 @@ def synthesis(job, slices):
 	grep_text(['--lined', '--colour=always', '-S', '-L', '-i', 'a', lined_b], [
 		SEP_ODD.join(['\x1b[32m0', '0', 'B\x1b[47;31mAAA\x1b[32;49m', 'B\x1b[47;31mAA\x1b[32;49mB\x1b[m']),
 		SEP_EVEN.join(['\x1b[42m1', '0', 'B\x1b[47;31mA\x1b[39;42mBB', 'BBBB' + TRAILER]),
+	], sep='')
+	# make sure newlines and such are ok, and a colour set in the value
+	# (all of this will normally be escaped, but we test with --format=raw)
+	lined_silly = mk_lined_ds('lined\nsilly', [('abc\ndef', 'ghi'), ('jkl', 'm\x1b[35mno\n\npq\x1b[mr')], columns={'\n': 'ascii', '\r': 'ascii'})
+	grep_text(['--lined', '--colour=always', '-D', '-H', '--format=raw', '[ij]', lined_silly], [
+		# line 1 (the header) starts here
+		'\x1b[32m\x1b[43m[DATASET]\x1b[49m' + SEP_ODD + '\x1b[43m',
+		'\x1b[49m' + SEP_ODD + '\x1b[43m\r\x1b[49m\x1b[m',
+		# line 2 (abc...) starts here
+		'\x1b[42m' + job + '/lined\x1b[K',
+		'silly' + SEP_EVEN + 'abc\x1b[K',
+		'def' + SEP_EVEN + 'gh\x1b[47;31mi\x1b[39;42m' + TRAILER,
+		# line 3 (jkl...) starts here
+		'\x1b[32m' + job + '/lined',
+		'silly' + SEP_ODD + '\x1b[47;31mj\x1b[32;49mkl' + SEP_ODD + 'm\x1b[35mno',
+		'',
+		'pq\x1b[;32mr\x1b[m',
+	], sep='')
+	# and make sure newlines don't get messed up when --lined gets disabled by no colour
+	grep_text(['--lined', '--colour=never', '-D', '-H', '--format=raw', '[ij]', lined_silly], [
+		# line 1 (the header) starts here
+		'[DATASET]\t',
+		'\t\r',
+		# line 2 (abc...) starts here
+		job + '/lined',
+		'silly\tabc',
+		'def\tghi',
+		# line 3 (jkl...) starts here
+		job + '/lined',
+		'silly\tjkl\tm\x1b[35mno', # the colour in the value stays
+		'',
+		'pq\x1b[mr',
 	], sep='')
