@@ -31,8 +31,6 @@ _convfuncs = {
 	'float32'  : _dsutil.WriteFloat32,
 	'int64'    : _dsutil.WriteInt64,
 	'int32'    : _dsutil.WriteInt32,
-	'bits64'   : _dsutil.WriteBits64,
-	'bits32'   : _dsutil.WriteBits32,
 	'bool'     : _dsutil.WriteBool,
 	'datetime' : _dsutil.WriteDateTime,
 	'date'     : _dsutil.WriteDate,
@@ -47,8 +45,6 @@ _convfuncs = {
 	'parsed:float32'  : _dsutil.WriteParsedFloat32,
 	'parsed:int64'    : _dsutil.WriteParsedInt64,
 	'parsed:int32'    : _dsutil.WriteParsedInt32,
-	'parsed:bits64'   : _dsutil.WriteParsedBits64,
-	'parsed:bits32'   : _dsutil.WriteParsedBits32,
 }
 
 _type2iter = {
@@ -59,8 +55,6 @@ _type2iter = {
 	'float32'  : _dsutil.ReadFloat32,
 	'int64'    : _dsutil.ReadInt64,
 	'int32'    : _dsutil.ReadInt32,
-	'bits64'   : _dsutil.ReadBits64,
-	'bits32'   : _dsutil.ReadBits32,
 	'bool'     : _dsutil.ReadBool,
 	'datetime' : _dsutil.ReadDateTime,
 	'date'     : _dsutil.ReadDate,
