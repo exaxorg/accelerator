@@ -248,7 +248,6 @@ def main(urd):
 		urd.warn(e.format_msg())
 	urd.build("test_dataset_type_corner_cases", numeric_comma=not comma_broken)
 	urd.build("test_dataset_type_minmax")
-	urd.build("test_dataset_unbits")
 
 	print()
 	print("Testing dataset chaining, filtering, callbacks and rechaining")
