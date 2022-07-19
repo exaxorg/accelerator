@@ -113,7 +113,7 @@ def test_numbers():
 	if options.numeric_comma:
 		verify('numeric_comma', ['complex32', 'complex64', 'float32', 'float64', 'number'], [b'1,5', b'1.0', b'9'], [1.5, 42.0, 9.0], '42', numeric_comma=True)
 	verify('float32 rounds', ['complex32', 'float32'], [b'1.2'], [1.2000000476837158])
-	verify('filter_bad', ['int32_10', 'int64_10', 'bits32_10', 'bits64_10', 'complex32', 'complex64', 'float32', 'float64', 'number'], [b'4', b'nah', b'1', b'0'], [4, 1, 0], filter_bad=True)
+	verify('filter_bad', ['int32_10', 'int64_10', 'complex32', 'complex64', 'float32', 'float64', 'number'], [b'4', b'nah', b'1', b'0'], [4, 1, 0], filter_bad=True)
 
 	all_source_types = True
 	for base, values in (
@@ -122,7 +122,7 @@ def test_numbers():
 		(16, (b'1b', b'0x1b', b'\r001b',),),
 		( 0, (b'27', b'\r033', b'0x1b',),),
 	):
-		types = ['%s_%d' % (typ, base,) for typ in ('int32', 'int64', 'bits32', 'bits64')]
+		types = ['%s_%d' % (typ, base,) for typ in ('int32', 'int64',)]
 		verify('base %d' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
 		types = [typ + 'i' for typ in types]
 		if base == 10:
@@ -139,13 +139,11 @@ def test_numbers():
 	verify('integer with L', ['number'], [b'42L'], [42], want_fail=PY3)
 
 	# tests both that values outside the range are rejected
-	# and that None works as a default value for relevant types.
+	# and that None works as a default value.
 	for typ, values, default in (
 		('int32_10', (b'2147483648', b'-2147483648', b'1O',), '123',),
 		('int32_16', (b'80000000', b'-80000000', b'1O',), None,),
 		('int64_10', (b'36893488147419103231', b'9223372036854775808', b'-9223372036854775808', b'1O',), None,),
-		('bits32_10', (b'4294967296', b'8589934591', b'-1', b'1O',), '456',),
-		('bits64_10', (b'36893488147419103231', b'18446744073709551616', b'-1', b'1O',), '789',),
 	):
 		if default is None:
 			want = [None] * len(values)
