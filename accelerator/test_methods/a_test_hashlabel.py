@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -45,12 +45,11 @@ def prepare(params):
 		("unhashed_split"     , None  , "int64"),     # split_write interlaved
 		("up_checked"         , "up"  , "float32"),   # hashed on up using dw.hashcheck
 		("up_split"           , "up"  , "float64"),   # hashed on up using split_write
-		("down_checked"       , "down", "bits32"),    # hashed on down using dw.hashcheck
-		("down_discarded"     , "down", "bits64"),    # hashed on down using discarding writes
+		("down_checked"       , "down", "complex32"), # hashed on down using dw.hashcheck
+		("down_discarded"     , "down", "complex64"), # hashed on down using discarding writes
 		("down_discarded_list", "down", "number"),    # hashed on down using discarding list writes
 		("down_discarded_dict", "down", "complex32"), # hashed on down using discarding dict writes
 		# we have too many types, so we need more datasets
-		("unhashed_complex64" , None  , "complex64"),
 		("unhashed_bytes"     , None  , "bytes"),
 		("up_ascii"           , "up"  , "ascii"),
 		("down_unicode"       , "down", "unicode"),
@@ -85,7 +84,6 @@ def analysis(sliceno, prepare_res, params):
 			dws.down_checked.write(up, down)
 		if ix % params.slices == sliceno:
 			dws.unhashed_manual.write(up, down)
-			dws.unhashed_complex64.write(up, down)
 			dws.unhashed_bytes.write(str(up).encode("ascii"), str(down).encode("ascii"))
 		dws.down_discarded.write(up, down)
 		dws.down_discarded_list.write_list([up, down])
@@ -165,12 +163,12 @@ def synthesis(prepare_res, params, job, slices):
 				assert got == good, "%s doesn't match %s in slice %d" % (data[0][0], name, sliceno,)
 
 	# Verify that both up and down hashed on the expected column
-	hash = typed_writer("int32").hash
+	hash = typed_writer("complex64").hash
 	for colname in ("up", "down"):
 		ds = all_ds[colname + "_checked"]
 		for sliceno in range(slices):
 			for value in ds.iterate(sliceno, colname):
-				assert hash(int(value)) % slices == sliceno, "Bad hashing on %s in slice %d" % (colname, sliceno,)
+				assert hash(value) % slices == sliceno, "Bad hashing on %s in slice %d" % (colname, sliceno,)
 
 	# Verify that up and down are not the same, to catch hashing
 	# not actually hashing.
