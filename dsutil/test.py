@@ -3,7 +3,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2021 Carl Drougge                       #
+# Modifications copyright (c) 2018-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -41,9 +41,6 @@ if version_info[0] > 2:
 else:
 	l = long
 
-# The Bits types don't accept floats, the others Int types do.
-# This wasn't really intentional, but the right thing.
-
 dttm0 = datetime(1789, 7, 14, 12, 42, 1, 82933)
 dttm1 = datetime(2500, 12, 31, 23, 59, 59, 999999)
 dttm2 = datetime(2015, 1, 1, 0, 0, 0, 0)
@@ -64,9 +61,7 @@ for name, data, bad_cnt, res_data in (
 	("Float64"       , ["0", float, 0   , 4.2, -0.01, 1e42, inf, ninf, None], 2, [0.0, 4.2, -0.01, 1e42, inf, ninf, None]),
 	("Float32"       , ["0", float, l(0), 4.2, -0.01, 1e42, inf, ninf, None], 2, [0.0, 4.199999809265137, -0.009999999776482582, inf , inf, ninf, None]),
 	("Int64"         , ["0", int, 0x8000000000000000, -0x8000000000000000, 0, 0x7fffffffffffffff, l(-5), None], 4, [0, 0x7fffffffffffffff, -5, None]),
-	("Bits64"        , ["0", int, None, l(-5), -5, 0.1, 0x8000000000000000, 0x7fffffffffffffff, l(0x8000000000000000)], 6, [0x8000000000000000, 0x7fffffffffffffff, 0x8000000000000000]),
 	("Int32"         , ["0", int, 0x80000000, -0x80000000, 0, 0x7fffffff, l(-5), None], 4, [0, 0x7fffffff, -5, None]),
-	("Bits32"        , ["0", int, None, l(-5), -5, 0.1, 0x80000000, 0x7fffffff, l(0x80000000)], 6, [0x80000000, 0x7fffffff, 0x80000000]),
 	("Number"        , ["0", int, 1 << 1007, -(1 << 1007), 1, l(0), -1, 0.5, 0x8000000000000000, -0x800000000000000, 1 << 340, (1 << 1007) - 1, -(1 << 1007) + 1, None], 4, [1, 0, -1, 0.5, 0x8000000000000000, -0x800000000000000, 1 << 340, (1 << 1007) - 1, -(1 << 1007) + 1, None]),
 	("Complex64"     , ["0", float, 0   , 4.2+1e42j, inf, ninf, complex(inf, ninf), None], 2, [0+0j, 4.2+1e42j, inf, ninf, complex(inf, ninf), None]),
 	("Complex32"     , ["0", float, l(0), 4.2+1e42j, inf, ninf, complex(inf, ninf), None], 2, [0+0j, complex(4.199999809265137, inf), inf, ninf, complex(inf, ninf), None]),
@@ -81,9 +76,7 @@ for name, data, bad_cnt, res_data in (
 	("ParsedFloat32" , [float, "1 thing", "", "0", " 4.2", -0.01, "1e42 ", " inf", "-inf ", None], 3, [0.0, 4.199999809265137, -0.009999999776482582, inf , inf, ninf, None]),
 	("ParsedNumber"  , [int, "", str(1 << 1007), str(-(1 << 1007)), "0.0", 1, 0.0, "-1", "9223372036854775809", -0x800000000000000, str(1 << 340), str((1 << 1007) - 1), str(-(1 << 1007) + 1), None, "1e25"], 4, [0.0, 1, 0, -1, 0x8000000000000001, -0x800000000000000, 1 << 340, (1 << 1007) - 1, -(1 << 1007) + 1, None, 1e25]),
 	("ParsedInt64"   , [int, "", "9223372036854775808", -0x8000000000000000, "0.1", 1, 0.1, "9223372036854775807", " -5 ", None], 5, [1, 0, 0x7fffffffffffffff, -5, None]),
-	("ParsedBits64"  , [int, "", None, l(-5), "-5", 0.1, " 9223372036854775808", "9223372036854775807 ", "0", 1], 5, [0, 0x8000000000000000, 0x7fffffffffffffff, 0, 1]),
 	("ParsedInt32"   , [int, "", 0x80000000, -0x80000000, "0.1", 0.1, "-7", "-0", "2147483647", " -5 ", None, 1], 5, [0, -7, 0, 0x7fffffff, -5, None, 1]),
-	("ParsedBits32"  , [int, "", None, l(-5), -5, 0.1, "2147483648", "2147483647", l(0x80000000), 1], 5, [0, 0x80000000, 0x7fffffff, 0x80000000, 1]),
 ):
 	print(name)
 	r_name = "Read" + name[6:] if name.startswith("Parsed") else "Read" + name
@@ -91,7 +84,6 @@ for name, data, bad_cnt, res_data in (
 	w_typ = getattr(_dsutil, "Write" + name)
 	r_mk = partial(r_typ, compression=COMPRESSION)
 	w_mk = partial(w_typ, compression=COMPRESSION)
-	none_support = ("Bits" not in name)
 	# verify that failures in init are handled reasonably.
 	for typ in (r_typ, w_typ,):
 		try:
@@ -111,8 +103,6 @@ for name, data, bad_cnt, res_data in (
 			raise Exception("%r does not give TypeError for bad keyword argument" % (typ,))
 	# test that the right data fails to write
 	for test_none_support in (False, True):
-		if test_none_support and not none_support:
-			continue
 		with w_mk(TMP_FN, none_support=test_none_support) as fh:
 			assert fh.compression == COMPRESSION
 			count = 0
@@ -145,7 +135,7 @@ for name, data, bad_cnt, res_data in (
 	for ix, default in enumerate(data):
 		# Verify that defaults are accepted where expected
 		try:
-			with w_mk(TMP_FN, default=default, none_support=none_support) as fh:
+			with w_mk(TMP_FN, default=default, none_support=True) as fh:
 				pass
 			assert ix >= bad_cnt, repr(default)
 		except AssertionError:
@@ -153,7 +143,7 @@ for name, data, bad_cnt, res_data in (
 		except Exception:
 			assert ix < bad_cnt, repr(default)
 		if ix >= bad_cnt:
-			with w_mk(TMP_FN, default=default, none_support=none_support) as fh:
+			with w_mk(TMP_FN, default=default, none_support=True) as fh:
 				count = 0
 				for value in data:
 					try:
@@ -173,7 +163,7 @@ for name, data, bad_cnt, res_data in (
 		sliced_res = []
 		total_count = 0
 		for sliceno in range(slices):
-			with w_mk(TMP_FN, hashfilter=(sliceno, slices, spread_None), none_support=none_support) as fh:
+			with w_mk(TMP_FN, hashfilter=(sliceno, slices, spread_None), none_support=True) as fh:
 				count = 0
 				for ix, value in enumerate(data):
 					try:
@@ -194,8 +184,7 @@ for name, data, bad_cnt, res_data in (
 			assert len(tmp) == count, "%s (%d, %d): %d lines written, claims %d" % (name, sliceno, slices, len(tmp), count,)
 			for v in tmp:
 				assert (spread_None and v is None) or w_typ.hash(v) % slices == sliceno, "Bad hash for %r" % (v,)
-				if "Bits" not in name or v < 0x8000000000000000:
-					assert w_typ.hash(v) == _dsutil.hash(v), "Inconsistent hash for %r" % (v,)
+				assert w_typ.hash(v) == _dsutil.hash(v), "Inconsistent hash for %r" % (v,)
 			res.extend(tmp)
 			sliced_res.append(tmp)
 			if can_minmax(name):
@@ -211,7 +200,7 @@ for name, data, bad_cnt, res_data in (
 		assert len(res) == len(res_data), "%s (%d): %d lines written, should be %d" % (name, slices, len(res), len(res_data),)
 		assert set(res) == set(res_data), "%s (%d): Wrong data: %r != %r" % (name, slices, res, res_data,)
 		# verify reading back with hashfilter gives the same as writing with it
-		with w_mk(TMP_FN, none_support=none_support) as fh:
+		with w_mk(TMP_FN, none_support=True) as fh:
 			for value in data[bad_cnt:]:
 				fh.write(value)
 		for sliceno in range(slices):
@@ -222,20 +211,19 @@ for name, data, bad_cnt, res_data in (
 		slice_test(slices, False)
 		slice_test(slices, True)
 		# and a simple check to verify that None actually gets spread too
-		if "Bits" not in name:
-			kw = dict(hashfilter=(slices - 1, slices, True), none_support=none_support)
-			value = None
-			for _ in range(2):
-				# first lap verifies with normal writing,
-				# second lap with invalid values writing the default.
-				with w_mk(TMP_FN, **kw) as fh:
-					for _ in range(slices * 3):
-						fh.write(value)
-				with r_mk(TMP_FN) as fh:
-					tmp = list(fh)
-					assert tmp == [None, None, None], "Bad spread_None %sfor %d slices" % ("from default " if "default" in kw else "", slices,)
-				kw["default"] = None
-				value = object
+		kw = dict(hashfilter=(slices - 1, slices, True), none_support=True)
+		value = None
+		for _ in range(2):
+			# first lap verifies with normal writing,
+			# second lap with invalid values writing the default.
+			with w_mk(TMP_FN, **kw) as fh:
+				for _ in range(slices * 3):
+					fh.write(value)
+			with r_mk(TMP_FN) as fh:
+				tmp = list(fh)
+				assert tmp == [None, None, None], "Bad spread_None %sfor %d slices" % ("from default " if "default" in kw else "", slices,)
+			kw["default"] = None
+			value = object
 
 print("Empty and None values in stringlike types")
 for name, value in (
