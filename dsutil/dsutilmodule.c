@@ -35,17 +35,13 @@
 // Choose some python number functions based on the size of long.
 #if LONG_MAX == INT64_MAX
 #  define pyLong_AsS64   PyInt_AsLong
-#  define pyLong_AsU64   PyLong_AsUnsignedLong
 #  define pyInt_FromS32  PyInt_FromLong
-#  define pyInt_FromU32  PyInt_FromLong
 #  define pyInt_FromS64  PyInt_FromLong
 #  define pyInt_FromU64  PyLong_FromUnsignedLong
 #  define py64T          long
 #elif PY_LLONG_MAX == INT64_MAX
 #  define pyLong_AsS64   PyLong_AsLongLong
-#  define pyLong_AsU64   PyLong_AsUnsignedLongLong
 #  define pyInt_FromS32  PyInt_FromLong
-#  define pyInt_FromU32  PyLong_FromUnsignedLong
 #  define pyInt_FromS64  PyLong_FromLongLong
 #  define pyInt_FromU64  PyLong_FromUnsignedLongLong
 #  define py64T          PY_LONG_LONG
@@ -53,9 +49,8 @@
 #  error "Unable to find a 64 bit type for PyLong*"
 #endif
 #if LONG_MAX == INT32_MAX
-// If not these will be defined as functions further down
+// If not this will be defined as a function further down
 #  define pyLong_AsS32 PyInt_AsLong
-#  define pyLong_AsU32 PyLong_AsUnsignedLong
 #endif
 
 // Must be a multiple of the largest fixed size type
@@ -287,11 +282,6 @@ static uint64_t hash_32bits(const void *ptr)
 static uint64_t hash_bool(const uint8_t *ptr)
 {
 	return !!*ptr;
-}
-static uint64_t hash_uint64(const uint64_t *ptr)
-{
-	if (!*ptr) return 0;
-	return hash(ptr, 8);
 }
 static uint64_t hash_int64(const int64_t *ptr)
 {
@@ -724,8 +714,6 @@ MKITER(ReadFloat64  , double   , PyFloat_FromDouble    , hash_double   , double 
 MKITER(ReadFloat32  , float    , PyFloat_FromDouble    , hash_double   , double   , 1)
 MKITER(ReadInt64    , int64_t  , pyInt_FromS64         , hash_int64    , int64_t  , 1)
 MKITER(ReadInt32    , int32_t  , pyInt_FromS32         , hash_int64    , int64_t  , 1)
-MKITER(ReadBits64   , uint64_t , pyInt_FromU64         , hash_uint64   , uint64_t , 0)
-MKITER(ReadBits32   , uint32_t , pyInt_FromU32         , hash_uint64   , uint64_t , 0)
 MKITER(ReadBool     , uint8_t  , PyBool_FromLong       , hash_bool     , uint8_t  , 1)
 
 static PyObject *ReadNumber_iternext(Read *self)
@@ -946,8 +934,6 @@ MKTYPE(ReadFloat64);
 MKTYPE(ReadFloat32);
 MKTYPE(ReadInt64);
 MKTYPE(ReadInt32);
-MKTYPE(ReadBits64);
-MKTYPE(ReadBits32);
 MKTYPE(ReadBool);
 MKTYPE(ReadDateTime);
 MKTYPE(ReadDate);
@@ -1385,8 +1371,6 @@ MK_MINMAX_SET(Float64 , PyFloat_FromDouble(*(double *)cmp_value));
 MK_MINMAX_SET(Float32 , PyFloat_FromDouble(*(float *)cmp_value));
 MK_MINMAX_SET(Int64   , pyInt_FromS64(*(int64_t *)cmp_value));
 MK_MINMAX_SET(Int32   , pyInt_FromS32(*(int32_t *)cmp_value));
-MK_MINMAX_SET(Bits64  , pyInt_FromU64(*(uint64_t *)cmp_value));
-MK_MINMAX_SET(Bits32  , pyInt_FromU32(*(uint32_t *)cmp_value));
 MK_MINMAX_SET(Bool    , PyBool_FromLong(*(uint8_t *)cmp_value));
 MK_MINMAX_SET(DateTime, unfmt_datetime((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)cmp_value));
 MK_MINMAX_SET(Date    , unfmt_date(*(uint32_t *)cmp_value));
@@ -1567,20 +1551,10 @@ is_none:                                                                        
 		return value;                                                            	\
 	}
 
-   MKpy2AsFix(uint64_t, U64, 64);
-#  undef pyLong_AsU64
-#  define pyLong_AsU64 fix_pyLong_AsU64
-
 #  ifdef pyLong_AsS32
      MKpy2AsFix(int32_t, S32, 32);
 #    undef pyLong_AsS32
 #    define pyLong_AsS32 fix_pyLong_AsS32
-#  endif
-
-#  ifdef pyLong_AsU32
-     MKpy2AsFix(uint32_t, U32, 32);
-#    undef pyLong_AsU32
-#    define pyLong_AsU32 fix_pyLong_AsU32
 #  endif
 #endif
 
@@ -1592,19 +1566,6 @@ static int32_t pyLong_AsS32(PyObject *l)
 	if (value != real_value) {
 		PyErr_SetString(PyExc_OverflowError, "Value doesn't fit in 32 bits");
 		return -1;
-	}
-	return value;
-}
-#endif
-
-#ifndef pyLong_AsU32
-static uint32_t pyLong_AsU32(PyObject *l)
-{
-	uint64_t value = pyLong_AsU64(l);
-	uint32_t real_value = value;
-	if (value != real_value) {
-		PyErr_SetString(PyExc_OverflowError, "Value doesn't fit in 32 bits");
-		return (uint32_t)-1;
 	}
 	return value;
 }
@@ -1633,8 +1594,6 @@ MKWRITER_C(WriteFloat64  , double   , double   , PyFloat_AsDouble      , 1, valu
 MKWRITER_C(WriteFloat32  , float    , double   , PyFloat_AsDouble      , 1, value == -1.0     , MINMAX_FLOAT, , minmax_set_Float32, hash_double   );
 MKWRITER(WriteInt64      , int64_t  , int64_t  , pyLong_AsS64          , 1,                                   , minmax_set_Int64  , hash_int64    );
 MKWRITER(WriteInt32      , int32_t  , int64_t  , pyLong_AsS32          , 1,                                   , minmax_set_Int32  , hash_int64    );
-MKWRITER(WriteBits64     , uint64_t , uint64_t , pyLong_AsU64          , 0,                                   , minmax_set_Bits64 , hash_uint64   );
-MKWRITER(WriteBits32     , uint32_t , uint64_t , pyLong_AsU32          , 0,                                   , minmax_set_Bits32 , hash_uint64   );
 MKWRITER(WriteBool       , uint8_t  , uint8_t  , pyLong_AsBool         , 1,                                   , minmax_set_Bool   , hash_bool     );
 static uint64_t fmt_datetime(PyObject *dt)
 {
@@ -2014,8 +1973,6 @@ MKPARSED_C(Float64, double  , double  , PyNumber_Float, PyFloat_AsDouble , 1, va
 MKPARSED_C(Float32, float   , double  , PyNumber_Float, PyFloat_AsDouble , 1, value == -1.0, -1, MINMAX_FLOAT, minmax_set_Float32, hash_double);
 MKPARSED(Int64  , int64_t , int64_t , PyNumber_Int  , pyLong_AsS64     , 1, minmax_set_Int64  , hash_int64);
 MKPARSED(Int32  , int32_t , int64_t , PyNumber_Int  , pyLong_AsS32     , 1, minmax_set_Int32  , hash_int64);
-MKPARSED(Bits64 , uint64_t, uint64_t, PyNumber_Long , pyLong_AsU64     , 0, minmax_set_Bits64 , hash_uint64);
-MKPARSED(Bits32 , uint32_t, uint64_t, PyNumber_Int  , pyLong_AsU32     , 0, minmax_set_Bits32 , hash_uint64);
 
 static PyMemberDef w_default_members[] = {
 	{"name"      , T_STRING   , offsetof(Write, name       ), READONLY},
@@ -2093,8 +2050,6 @@ MKWTYPE(WriteFloat32);
 MKWTYPE(WriteNumber);
 MKWTYPE(WriteInt64);
 MKWTYPE(WriteInt32);
-MKWTYPE(WriteBits64);
-MKWTYPE(WriteBits32);
 MKWTYPE(WriteBool);
 MKWTYPE(WriteDateTime);
 MKWTYPE(WriteDate);
@@ -2107,8 +2062,6 @@ MKWTYPE(WriteParsedFloat64);
 MKWTYPE(WriteParsedFloat32);
 MKWTYPE(WriteParsedInt64);
 MKWTYPE(WriteParsedInt32);
-MKWTYPE(WriteParsedBits64);
-MKWTYPE(WriteParsedBits32);
 
 static PyObject *generic_hash(PyObject *dummy, PyObject *obj)
 {
@@ -2228,8 +2181,6 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 	INIT(ReadFloat32);
 	INIT(ReadInt64);
 	INIT(ReadInt32);
-	INIT(ReadBits64);
-	INIT(ReadBits32);
 	INIT(ReadBool);
 	INIT(ReadDateTime);
 	INIT(ReadDate);
@@ -2244,8 +2195,6 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 	INIT(WriteFloat32);
 	INIT(WriteInt64);
 	INIT(WriteInt32);
-	INIT(WriteBits64);
-	INIT(WriteBits32);
 	INIT(WriteBool);
 	INIT(WriteDateTime);
 	INIT(WriteDate);
@@ -2257,8 +2206,6 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 	INIT(WriteParsedFloat32);
 	INIT(WriteParsedInt64);
 	INIT(WriteParsedInt32);
-	INIT(WriteParsedBits64);
-	INIT(WriteParsedBits32);
 	compression_dict = PyDict_New();
 	if (!compression_dict) return INITERR;
 	compression_funcs[1] = &dsu_gz;
