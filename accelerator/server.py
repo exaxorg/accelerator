@@ -35,7 +35,7 @@ from string import ascii_letters
 import random
 import atexit
 
-from accelerator.compat import unicode, ArgumentParser, monotonic
+from accelerator.compat import unicode, monotonic
 
 from accelerator.web import ThreadedHTTPServer, ThreadedUnixHTTPServer, BaseWebHandler
 
@@ -45,6 +45,7 @@ from accelerator.extras import json_encode, json_decode, DotDict
 from accelerator.build import JobError
 from accelerator.job import Job
 from accelerator.setupfile import load_setup
+from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import statmsg_sink, children, print_status_stacks, status_stacks_export
 from accelerator import iowrapper, board, g, __version__ as ax_version
 

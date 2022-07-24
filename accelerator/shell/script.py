@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2021 Anders Berkeman                                       #
-# Modifications copyright (c) 2021 Carl Drougge                            #
+# Modifications copyright (c) 2021-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -25,9 +25,10 @@ import sys
 from glob import glob
 from os.path import dirname, basename
 from importlib import import_module
-from accelerator.compat import terminal_size, ArgumentParser
+from accelerator.compat import terminal_size
 from accelerator.colourwrapper import colour
 from accelerator.shell import printdesc
+from accelerator.shell.parser import ArgumentParser
 
 
 def main(argv, cfg):

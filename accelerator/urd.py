@@ -37,9 +37,10 @@ import sys
 import os
 import signal
 
-from accelerator.compat import iteritems, itervalues, unicode, ArgumentParser
+from accelerator.compat import iteritems, itervalues, unicode
 from accelerator.colourwrapper import colour
 from accelerator.extras import DotDict, PY3
+from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
 
 LOGFILEVERSION = '3'

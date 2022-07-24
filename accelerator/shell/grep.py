@@ -34,12 +34,11 @@ import datetime
 import operator
 import signal
 
-from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, izip, PY2
 from accelerator.compat import monotonic
 from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
-from .parser import name2ds
+from .parser import name2ds, ArgumentParser
 from accelerator.error import NoSuchWhateverError
 from accelerator.extras import DotDict
 from accelerator import g

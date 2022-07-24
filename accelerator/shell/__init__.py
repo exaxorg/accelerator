@@ -32,9 +32,9 @@ import shlex
 import signal
 from argparse import RawDescriptionHelpFormatter
 
-from accelerator.compat import ArgumentParser
 from accelerator.colourwrapper import colour
 from accelerator.error import UserError
+from accelerator.shell.parser import ArgumentParser
 
 cfg = None
 

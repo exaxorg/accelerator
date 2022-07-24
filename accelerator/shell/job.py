@@ -26,12 +26,11 @@ import errno
 from argparse import RawTextHelpFormatter
 import sys
 
-from accelerator.compat import ArgumentParser
 from accelerator.colourwrapper import colour
 from accelerator.setupfile import encode_setup
 from accelerator.compat import FileNotFoundError, url_quote
 from accelerator.unixhttp import call
-from .parser import name2job, JobNotFound
+from .parser import name2job, JobNotFound, ArgumentParser
 
 def show(url, job, show_output):
 	print(job.path)

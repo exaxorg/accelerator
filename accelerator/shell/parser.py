@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2019 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -23,6 +23,7 @@
 
 from __future__ import division, print_function
 
+import argparse
 import sys
 from os.path import join, exists, realpath, split
 from os import readlink, environ
@@ -32,7 +33,7 @@ from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote
+from accelerator.compat import url_quote, PY2
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -234,3 +235,17 @@ def name2ds(cfg, n):
 	else:
 		g.slices = slices
 	return ds
+
+
+# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
+# it also regrettably disables -abc for -a -b -c until 3.8.
+if PY2:
+	ArgumentParser = argparse.ArgumentParser
+else:
+	class ArgumentParser(argparse.ArgumentParser):
+		def __init__(self, *a, **kw):
+			return argparse.ArgumentParser.__init__(self, *a, allow_abbrev=False, **kw)
+
+# parse_intermixed_args is new in 3.7
+if not hasattr(ArgumentParser, 'parse_intermixed_args'):
+	ArgumentParser.parse_intermixed_args = ArgumentParser.parse_args

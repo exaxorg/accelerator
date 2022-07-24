@@ -32,7 +32,6 @@ from base64 import b64encode
 from importlib import import_module
 from argparse import RawTextHelpFormatter
 
-from accelerator.compat import ArgumentParser
 from accelerator.compat import unicode, str_types, PY3
 from accelerator.compat import urlencode
 from accelerator.compat import getarglist
@@ -41,6 +40,7 @@ from accelerator import setupfile
 from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, DotDict, _ListTypePreserver
 from accelerator.job import Job
+from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
 from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
 from accelerator import g

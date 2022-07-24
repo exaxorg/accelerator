@@ -25,9 +25,8 @@ import locale
 from datetime import datetime, time, date
 from math import ceil, floor, log10, isinf, isnan
 
-from accelerator.compat import ArgumentParser
 from accelerator.compat import terminal_size
-from .parser import name2ds, name2job
+from .parser import name2ds, name2job, ArgumentParser
 from accelerator.colourwrapper import colour
 from accelerator.error import NoSuchWhateverError
 from accelerator.extras import quote

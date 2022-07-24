@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -164,7 +164,7 @@ def main(argv):
 	from os.path import exists, join, realpath, dirname
 	from sys import version_info
 	from argparse import RawTextHelpFormatter
-	from accelerator.compat import ArgumentParser
+	from accelerator.shell.parser import ArgumentParser
 	from accelerator.error import UserError
 	from accelerator.extras import DotDict
 
