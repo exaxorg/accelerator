@@ -33,7 +33,7 @@ from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote, PY2
+from accelerator.compat import url_quote, PY3
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -237,15 +237,40 @@ def name2ds(cfg, n):
 	return ds
 
 
-# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
-# it also regrettably disables -abc for -a -b -c until 3.8.
-if PY2:
-	ArgumentParser = argparse.ArgumentParser
-else:
-	class ArgumentParser(argparse.ArgumentParser):
-		def __init__(self, *a, **kw):
-			return argparse.ArgumentParser.__init__(self, *a, allow_abbrev=False, **kw)
+class ArgumentParser(argparse.ArgumentParser):
+	def __init__(self, *a, **kw):
+		kw = dict(kw)
+		kw['prefix_chars'] = '-+'
+		if PY3:
+			# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
+			# it also regrettably disables -abc for -a -b -c until 3.8.
+			kw['allow_abbrev'] = False
+		return argparse.ArgumentParser.__init__(self, *a, **kw)
 
-# parse_intermixed_args is new in 3.7
-if not hasattr(ArgumentParser, 'parse_intermixed_args'):
-	ArgumentParser.parse_intermixed_args = ArgumentParser.parse_args
+	def add_argument(self, *a, **kw):
+		if kw.get('action') == 'store_true':
+			# automatically add negated version of boolean args.
+			# uses all negations (--no, --not and --dont) if none is specified.
+			from argparse import SUPPRESS
+			for name in a:
+				if name.startswith('--'):
+					dest = name[2:]
+					break
+			else:
+				dest = a[0].lstrip('-')
+			dest = kw.get('dest', dest.replace('-', '_'))
+			for name in a:
+				if len(name) == 2:
+					# short args negate with +, in traditional unix fashion
+					neg_names = ['+' + name[1]]
+				elif name.startswith('--no-'):
+					neg_names = ['--yes' + name[4:]]
+				else:
+					neg_names = ['--no' + name[1:], '--not' + name[1:], '--dont' + name[1:]]
+				for neg_name in neg_names:
+					argparse.ArgumentParser.add_argument(self, neg_name, dest=dest, action='store_const', const=False, help=SUPPRESS)
+		return argparse.ArgumentParser.add_argument(self, *a, **kw)
+
+	# parse_intermixed_args is new in python 3.7
+	if not hasattr(argparse.ArgumentParser, 'parse_intermixed_args'):
+		parse_intermixed_args = argparse.ArgumentParser.parse_args
