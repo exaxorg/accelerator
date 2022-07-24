@@ -260,17 +260,15 @@ class ArgumentParser(argparse.ArgumentParser):
 				dest = a[0].lstrip('-')
 			kw = dict(kw)
 			dest = kw.get('dest', dest.replace('-', '_'))
-			negation = kw.pop('negation', None)
+			negation = kw.pop('negation')
 			for name in a:
 				if len(name) == 2:
 					# short args negate with +, in traditional unix fashion
 					neg_names = ['+' + name[1]]
 				elif name.startswith('--no-'):
-					neg_names = ['--yes' + name[4:]]
-				elif negation:
-					neg_names = ['--' + negation + name[1:]]
+					neg_names = ['--' + negation + name[4:]]
 				else:
-					neg_names = ['--no' + name[1:], '--not' + name[1:], '--dont' + name[1:]]
+					neg_names = ['--' + negation + name[1:]]
 				for neg_name in neg_names:
 					argparse.ArgumentParser.add_argument(self, neg_name, dest=dest, action='store_const', const=False, help=SUPPRESS)
 		return argparse.ArgumentParser.add_argument(self, *a, **kw)
