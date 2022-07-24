@@ -187,7 +187,7 @@ def main(argv):
 	parser.add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
 	parser.add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
 	parser.add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
-	options = parser.parse_args(argv)
+	options = parser.parse_intermixed_args(argv)
 
 	assert options.name
 	assert '/' not in options.name

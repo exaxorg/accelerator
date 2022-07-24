@@ -150,7 +150,7 @@ cmd_run.help = '''run a build script'''
 def cmd_abort(argv):
 	parser = ArgumentParser(prog=argv.pop(0))
 	parser.add_argument('-q', '--quiet', action='store_true', negation='not', help="no output")
-	args = parser.parse_args(argv)
+	args = parser.parse_intermixed_args(argv)
 	from accelerator.build import Automata
 	a = Automata(cfg.url)
 	res = a.abort()
@@ -471,7 +471,7 @@ def main():
 	)
 	parser.add_argument('--config', metavar='CONFIG_FILE', help='configuration file')
 	parser.add_argument('--version', action='store_true', negation='no', help='alias for the version command')
-	args = parser.parse_args(main_argv)
+	args = parser.parse_intermixed_args(main_argv)
 	if args.version:
 		sys.exit(cmd_version((), False))
 	args.command = argv.pop(0) if argv else None

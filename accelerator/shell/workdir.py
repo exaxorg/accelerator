@@ -81,7 +81,7 @@ def main(argv, cfg):
 	parser.add_argument('-a', '--all',       action='store_true', negation='not',  help="list all workdirs")
 	parser.add_argument('-p', '--full-path', action='store_true', negation='no',   help="show full path")
 	parser.add_argument('workdirs', nargs='*', default=[])
-	args = parser.parse_args(argv)
+	args = parser.parse_intermixed_args(argv)
 
 	if args.all:
 		args.workdirs.extend(sorted(set(cfg.workdirs) - set(args.workdirs)))

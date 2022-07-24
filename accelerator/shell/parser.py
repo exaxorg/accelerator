@@ -276,3 +276,6 @@ class ArgumentParser(argparse.ArgumentParser):
 	# parse_intermixed_args is new in python 3.7
 	if not hasattr(argparse.ArgumentParser, 'parse_intermixed_args'):
 		parse_intermixed_args = argparse.ArgumentParser.parse_args
+
+	def parse_args(self, *a, **kw):
+		raise Exception("Don't use parse_args, use parse_intermixed_args")

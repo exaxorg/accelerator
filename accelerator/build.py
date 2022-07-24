@@ -716,7 +716,7 @@ def main(argv, cfg):
 	parser.add_argument('--horizon',        default=None,                         help="time horizon - dates after this are not visible in\nurd.latest")
 	parser.add_argument('script',           default='build'   ,                   help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='?')
 
-	options = parser.parse_args(argv)
+	options = parser.parse_intermixed_args(argv)
 
 	if '.' in options.script:
 		options.package, options.script = options.script.rsplit('.', 1)
