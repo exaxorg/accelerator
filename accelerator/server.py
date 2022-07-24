@@ -367,8 +367,8 @@ def main(argv, config):
 	g.running = 'server'
 
 	parser = ArgumentParser(prog=argv.pop(0))
-	parser.add_argument('--keep-temp-files', action='store_true', help='keep temporary files in jobs')
-	parser.add_argument('--debuggable', action='store_true', help='make breakpoint() work in methods. note that this makes a failing method kill the whole server.')
+	parser.add_argument('--keep-temp-files', action='store_true', negation='dont', help='keep temporary files in jobs')
+	parser.add_argument('--debuggable',      action='store_true', negation='not',  help='make breakpoint() work in methods. note that this makes a failing method kill the whole server.')
 	options = parser.parse_args(argv)
 
 	config.debuggable = options.debuggable

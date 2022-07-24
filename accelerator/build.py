@@ -705,16 +705,16 @@ def main(argv, cfg):
 		usage="%(prog)s [options] [script]",
 		formatter_class=RawTextHelpFormatter,
 	)
-	parser.add_argument('-f', '--flags',    default='',          help="comma separated list of flags", )
-	parser.add_argument('-q', '--quick',    action='store_true', help="skip method updates and checking workdirs for new jobs", )
-	parser.add_argument('-c', '--concurrency', action='append',  metavar='SPEC', help="set max concurrency for methods, either method=N\nor just N to set for all other methods", )
-	parser.add_argument('-w', '--workdir',  default=None,        help="build in this workdir\nset_workdir() and workdir= override this.", )
-	parser.add_argument('-W', '--just_wait',action='store_true', help="just wait for running job, don't run any build script", )
-	parser.add_argument('-p', '--full-path',action='store_true', help="print full path to jobdirs")
-	parser.add_argument('--verbose',        default='status',    help="verbosity style {no, status, dots, log}")
-	parser.add_argument('--quiet',          action='store_true', help="same as --verbose=no")
-	parser.add_argument('--horizon',        default=None,        help="time horizon - dates after this are not visible in\nurd.latest")
-	parser.add_argument('script',           default='build'   ,  help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='?')
+	parser.add_argument('-f', '--flags',    default='',                           help="comma separated list of flags", )
+	parser.add_argument('-q', '--quick',    action='store_true', negation='not',  help="skip method updates and checking workdirs for new jobs", )
+	parser.add_argument('-c', '--concurrency', action='append',  metavar='SPEC',  help="set max concurrency for methods, either method=N\nor just N to set for all other methods", )
+	parser.add_argument('-w', '--workdir',  default=None,                         help="build in this workdir\nset_workdir() and workdir= override this.", )
+	parser.add_argument('-W', '--just-wait',action='store_true', negation='dont', help="just wait for running job, don't run any build script", )
+	parser.add_argument('-p', '--full-path',action='store_true', negation='no',   help="print full path to jobdirs")
+	parser.add_argument('--verbose',        default='status',                     help="verbosity style {no, status, dots, log}")
+	parser.add_argument('--quiet',          action='store_true', negation='not',  help="same as --verbose=no")
+	parser.add_argument('--horizon',        default=None,                         help="time horizon - dates after this are not visible in\nurd.latest")
+	parser.add_argument('script',           default='build'   ,                   help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='?')
 
 	options = parser.parse_args(argv)
 

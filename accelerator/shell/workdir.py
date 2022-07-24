@@ -78,8 +78,8 @@ def workdir_jids(cfg, name):
 def main(argv, cfg):
 	usage = "%(prog)s [-p] [-a | [workdir [workdir [...]]]"
 	parser = ArgumentParser(usage=usage, prog=argv.pop(0))
-	parser.add_argument('-a', '--all', action='store_true', help="list all workdirs")
-	parser.add_argument('-p', '--full-path', action='store_true', help="show full path")
+	parser.add_argument('-a', '--all',       action='store_true', negation='not',  help="list all workdirs")
+	parser.add_argument('-p', '--full-path', action='store_true', negation='no',   help="show full path")
 	parser.add_argument('workdirs', nargs='*', default=[])
 	args = parser.parse_args(argv)
 

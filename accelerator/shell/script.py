@@ -37,9 +37,9 @@ def main(argv, cfg):
 		prog=argv.pop(0),
 		description=descr,
 	)
-	parser.add_argument('-s', '--short', action='store_true', help='short listing')
-	parser.add_argument('-p', '--path', action='store_true', help='show package paths')
-	parser.add_argument('match', nargs='*', default=[], help='substring used for matching')
+	parser.add_argument('-s', '--short', action='store_true', negation='not',  help='short listing')
+	parser.add_argument('-p', '--path',  action='store_true', negation='no',   help='show package paths')
+	parser.add_argument('match', nargs='*', default=[],                        help='substring used for matching')
 	args = parser.parse_intermixed_args(argv)
 	columns = terminal_size().columns
 

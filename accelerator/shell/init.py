@@ -182,10 +182,10 @@ def main(argv):
 	parser.add_argument('--slices', default=None, type=int, help='override slice count detection')
 	parser.add_argument('--name', default='dev', help='name of method dir and workdir, default "dev"')
 	parser.add_argument('--input', default='# /some/path where you want import methods to look.', help='input directory')
-	parser.add_argument('--force', action='store_true', help='go ahead even though directory is not empty, or workdir\nexists with incompatible slice count')
+	parser.add_argument('--force', action='store_true', negation='dont', help='go ahead even though directory is not empty, or workdir\nexists with incompatible slice count')
 	parser.add_argument('--tcp', default=False, metavar='HOST/PORT', nargs='?', help='listen on TCP instead of unix sockets.\nspecify HOST (can be IP) to listen on that host\nspecify PORT to use range(PORT, PORT + 3)\nspecify both as HOST:PORT')
-	parser.add_argument('--no-git', action='store_true', help='don\'t create git repository')
-	parser.add_argument('--examples', action='store_true', help='copy examples to project directory')
+	parser.add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
+	parser.add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
 	parser.add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
 	options = parser.parse_args(argv)
 

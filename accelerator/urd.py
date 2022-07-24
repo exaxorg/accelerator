@@ -564,8 +564,8 @@ def main(argv, cfg):
 	parser.add_argument('--path', type=str, default='urd.db',
 		help='database directory (can be relative to project directory) (default: urd.db)',
 	)
-	parser.add_argument('--allow-passwordless', action='store_true', help='accept any pass for users not in passwd.')
-	parser.add_argument('--quiet', action='store_true', help='less chatty.')
+	parser.add_argument('--allow-passwordless', action='store_true', negation='dont', help='accept any pass for users not in passwd.')
+	parser.add_argument('--quiet',              action='store_true', negation='not',  help='less chatty.')
 	args = parser.parse_args(argv)
 	if not args.quiet:
 		print('-'*79)
