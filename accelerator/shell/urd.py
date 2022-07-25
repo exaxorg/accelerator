@@ -126,7 +126,7 @@ def fmt(res, entry):
 		else:
 			return '\n'.join(res)
 	joblist = JobList(Job(j, m) for m, j in res['joblist'])
-	if entry:
+	if entry is not None:
 		return joblist.get(entry, '')
 	if res['deps']:
 		deps = sorted(
