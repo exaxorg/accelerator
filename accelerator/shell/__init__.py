@@ -187,11 +187,6 @@ def cmd_urd_server(argv):
 	main(argv, cfg)
 cmd_urd_server.help = '''run the urd server'''
 
-def cmd_curl(argv):
-	from accelerator.shell.curl import main
-	return main(argv, cfg)
-cmd_curl.help = '''http request (with curl) to urd or the server'''
-
 def cmd_method(argv):
 	from accelerator.shell.method import main
 	main(argv, cfg)
@@ -277,7 +272,6 @@ cmd_version.help = '''show installed accelerator version'''
 COMMANDS = {
 	'abort': cmd_abort,
 	'board-server': cmd_board_server,
-	'curl': cmd_curl,
 	'ds': cmd_ds,
 	'grep': cmd_grep,
 	'init': cmd_init,
