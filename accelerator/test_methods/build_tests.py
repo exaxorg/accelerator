@@ -322,6 +322,7 @@ def main(urd):
 	urd.begin("tests_urd", "2021-09-27T03:14+1")
 	e = urd.build('test_shell_data', jobs={'previous': d})
 	urd.finish("tests_urd")
+	urd.build('test_shell_commands', command_prefix=command_prefix)
 	# ~ finds earlier jobs with that method, ^ follows jobs.previous falling back to datasets.previous.
 	want = {
 		'test_shell_data': e, # just the plain method -> job resolution.
