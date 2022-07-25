@@ -31,6 +31,7 @@ from accelerator.unixhttp import call, WaitressServer
 from accelerator.build import fmttime
 from accelerator.configfile import resolve_listen
 from accelerator.error import NoSuchWhateverError
+from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.workdir import job_data, workdir_jids
 from accelerator.compat import setproctitle, url_quote, urlencode
 from accelerator import __version__ as ax_version
@@ -199,23 +200,16 @@ def ds_json(d):
 	return res
 
 def main(argv, cfg):
-	prog = argv.pop(0)
-	if '-h' in argv or '--help' in argv or len(argv) not in (0, 1):
-		print('usage: %s [listen_on]' % (prog,))
-		print('runs a web server on listen_on (default localhost:8520, can be socket path)')
-		print('for displaying results (result_directory)')
-		return
-	if argv:
-		listen = argv[0]
-	else:
-		listen = 'localhost:8520'
-	cfg.board_listen = resolve_listen(listen)[0]
+	parser = ArgumentParser(prog=argv.pop(0), description='''runs a web server on listen_on (default localhost:8520, can be socket path) for displaying results (result_directory)''')
+	parser.add_argument('listen_on', default='localhost:8520', nargs='?', help='host:port or path/to/socket')
+	args = parser.parse_intermixed_args(argv)
+	cfg.board_listen = resolve_listen(args.listen_on)[0]
 	if isinstance(cfg.board_listen, str):
 		# The listen path may be relative to the directory the user started us
 		# from, but the reloader will exec us from the project directory, so we
 		# have to be a little gross.
 		cfg.board_listen = os.path.join(cfg.user_cwd, cfg.board_listen)
-		sys.argv[sys.argv.index(listen)] = cfg.board_listen
+		sys.argv[2:] = [cfg.board_listen]
 	run(cfg, from_shell=True)
 
 def run(cfg, from_shell=False):

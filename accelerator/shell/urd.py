@@ -22,8 +22,10 @@ from __future__ import unicode_literals
 
 import sys
 from os import environ
+from argparse import RawDescriptionHelpFormatter
 from accelerator.build import JobList
 from accelerator.job import Job
+from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import split_tildes, urd_call_w_tildes
 from accelerator.error import UrdError
 from accelerator.compat import url_quote
@@ -32,32 +34,36 @@ from accelerator.compat import url_quote
 def main(argv, cfg):
 	prog = argv.pop(0)
 	user = environ.get('USER', 'NO-USER')
-	if '--help' in argv or '-h' in argv:
-		fh = sys.stdout if argv else sys.stderr
-		print('usage: %s path [path [...]]' % (prog,), file=fh)
-		print(file=fh)
-		print('path is an optionally shortened path to an urd list.', file=fh)
-		print('one element is a list name, two elements are list and timestamp.', file=fh)
-		print('(and three elements are the whole thing, user/list/timestamp.)', file=fh)
-		print(file=fh)
-		print('use "path/since/ts" or just "path/" to list timestamps', file=fh)
-		print('use "/" (or nothing) to list all lists', file=fh)
-		print(file=fh)
-		print('you can also use :urdlist:[entry] job specifiers. urdlist follows the same', file=fh)
-		print('path rules as above, entry is an optional argument to joblist.get() printing', file=fh)
-		print('just the resultant jobid.', file=fh)
-		print(file=fh)
-		print('in job specifiers you can use ~ to move to forwards (later, down) along a', file=fh)
-		print('list of timestamps and ^ to move backwards (earlier, up).', file=fh)
-		print(file=fh)
-		print('examples:', file=fh)
-		print('  "%s example" is "%s %s/example/latest"' % (prog, prog, user,), file=fh)
-		print('  "%s :example:" is also "%s %s/example/latest"' % (prog, prog, user,), file=fh)
-		print('  "%s example/2021-04-14" is "%s %s/example/2021-04-14"' % (prog, prog, user,), file=fh)
-		print('  "%s :foo/bar/first:" is "%s foo/bar/first"' % (prog, prog,), file=fh)
-		print('  "%s :bar/first~:" is the second timestamp in %s/bar' % (prog, user,), file=fh)
-		print('  "%s example/" is "%s %s/example/since/0"' % (prog, prog, user,), file=fh)
-		return not argv
+	description = '''
+		path is an optionally shortened path to an urd list.
+		one element is a list name, two elements are list and timestamp.
+		(and three elements are the whole thing, user/list/timestamp.)
+
+		use "path/since/ts" or just "path/" to list timestamps
+		use "/" (or nothing) to list all lists
+
+		you can also use :urdlist:[entry] job specifiers. urdlist follows the same
+		path rules as above, entry is an optional argument to joblist.get() printing
+		just the resultant jobid.
+
+		in job specifiers you can use ~ to move to forwards (later, down) along a
+		list of timestamps and ^ to move backwards (earlier, up).
+
+		examples:
+		  "%(prog)s example" is "%(prog)s %(user)s/example/latest"
+		  "%(prog)s :example:" is also "%(prog)s %(user)s/example/latest"
+		  "%(prog)s example/2021-04-14" is "%(prog)s %(user)s/example/2021-04-14"
+		  "%(prog)s :foo/bar/first:" is "%(prog)s foo/bar/first"
+		  "%(prog)s :bar/first~:" is the second timestamp in %(user)s/bar
+		  "%(prog)s example/" is "%(prog)s %(user)s/example/since/0"
+	'''.strip().replace('\t', '') % dict(prog=prog, user=user)
+	parser = ArgumentParser(
+		prog=prog,
+		formatter_class=RawDescriptionHelpFormatter,
+		description=description,
+	)
+	parser.add_argument('path', nargs='*', default=['/'])
+	args = parser.parse_intermixed_args(argv)
 	def resolve_path_part(path):
 		if not path:
 			return []
@@ -107,7 +113,7 @@ def main(argv, cfg):
 			print(e, file=sys.stderr)
 			res = None
 		return res, entry
-	for path in argv or ('/',):
+	for path in args.path:
 		res, entry = urd_get(path)
 		if not res:
 			continue

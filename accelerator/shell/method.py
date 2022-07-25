@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2021 Carl Drougge                                     #
+# Copyright (c) 2020-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2021 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -24,19 +24,17 @@ from __future__ import unicode_literals
 from accelerator.compat import terminal_size
 from accelerator.unixhttp import call
 from accelerator.shell import printdesc
+from accelerator.shell.parser import ArgumentParser
 from collections import defaultdict
 
 def main(argv, cfg):
-	prog = argv.pop(0)
-	if '--help' in argv or '-h' in argv:
-		print('usage: %s [method]' % (prog,))
-		print('gives description and options for method,')
-		print('or lists methods with no method specified.')
-		return
+	parser = ArgumentParser(prog=argv.pop(0), description='''gives description and options for method(s), or lists methods with no method specified.''')
+	parser.add_argument('method', nargs='*')
+	args = parser.parse_intermixed_args(argv)
 	methods = call(cfg.url + '/methods')
 	columns = terminal_size().columns
-	if argv:
-		for name in argv:
+	if args.method:
+		for name in args.method:
 			if name in methods:
 				data = methods[name]
 				print('%s.%s:' % (data.package, name,))

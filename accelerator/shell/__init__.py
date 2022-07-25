@@ -210,6 +210,8 @@ def cmd_board_server(argv):
 cmd_board_server.help = '''runs a webserver for displaying results'''
 
 def cmd_intro(argv):
+	parser = ArgumentParser(prog=argv.pop(0))
+	parser.parse_intermixed_args(argv)
 	from accelerator import __version__ as ax_version
 	def cmd(txt, *a):
 		print('  ' + colour(txt, 'intro/highlight', *a))
@@ -246,27 +248,22 @@ cmd_intro.help = '''show introduction text'''
 
 def cmd_version(argv, as_command=True):
 	from accelerator import __version__ as ax_version
-	if len(argv) > 1:
-		if '-h' in argv or '--help' in argv:
-			print('Usage:', argv[0])
-			return 0
-		else:
-			print('Usage:', argv[0], file=sys.stderr)
-			return 1
-	else:
-		print(ax_version)
-		if as_command:
-			py_version = ''
-			suffix = sys.version.strip()
-			try:
-				# sys.implementation does not exist in python 2.
-				py_version = sys.implementation.name
-				suffix = ' (%s)' % (suffix.split('\n')[0].strip(),)
-				impl_version = '.'.join(map(str, sys.implementation.version))
-				py_version = '%s %s' % (py_version, impl_version,)
-			except Exception:
-				pass
-			print('Running on ' + py_version + suffix)
+	if as_command:
+		parser = ArgumentParser(prog=argv.pop(0))
+		parser.parse_intermixed_args(argv)
+	print(ax_version)
+	if as_command:
+		py_version = ''
+		suffix = sys.version.strip()
+		try:
+			# sys.implementation does not exist in python 2.
+			py_version = sys.implementation.name
+			suffix = ' (%s)' % (suffix.split('\n')[0].strip(),)
+			impl_version = '.'.join(map(str, sys.implementation.version))
+			py_version = '%s %s' % (py_version, impl_version,)
+		except Exception:
+			pass
+		print('Running on ' + py_version + suffix)
 cmd_version.help = '''show installed accelerator version'''
 
 COMMANDS = {
