@@ -153,6 +153,9 @@ class ReadJson(object):
 	def __next__(self):
 		return self.decode(next(self.fh))
 	next = __next__
+	@property
+	def count(self):
+		return self.fh.count
 	def close(self):
 		self.fh.close()
 	def __iter__(self):
@@ -195,6 +198,9 @@ class ReadPickle(object):
 	def __next__(self):
 		return pickle_loads(next(self.fh))
 	next = __next__
+	@property
+	def count(self):
+		return self.fh.count
 	def close(self):
 		self.fh.close()
 	def __iter__(self):

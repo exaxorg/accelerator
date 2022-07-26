@@ -933,6 +933,7 @@ static PyMethodDef Read_methods[] = {
 static PyMemberDef r_default_members[] = {
 	{"name"      , T_STRING   , offsetof(Read, name       ), READONLY},
 	{"hashfilter", T_OBJECT_EX, offsetof(Read, hashfilter ), READONLY},
+	{"count"     , T_LONGLONG , offsetof(Read, count      ), READONLY},
 	{0}
 };
 MKTYPE(ReadBytes);
