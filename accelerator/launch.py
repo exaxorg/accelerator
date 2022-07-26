@@ -273,9 +273,9 @@ def fmt_tb(skip_level):
 	msg.append("Traceback (most recent call last):\n")
 	msg.extend(tb)
 	from accelerator.statmsg import _exc_status
-	if len(_exc_status[1]) > 1:
+	if len(_exc_status) > 1:
 		msg.append("Status when the exception occurred:\n")
-		for ix, txt in enumerate(_exc_status[1], 1):
+		for ix, txt in enumerate(_exc_status, 1):
 			msg.append("  " * ix)
 			msg.append(txt)
 			msg.append("\n")

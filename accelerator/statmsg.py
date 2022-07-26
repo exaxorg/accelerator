@@ -75,7 +75,7 @@ children = Children()
 _cookie = 0
 
 _local_status = []
-_exc_status = (None, ())
+_exc_status = ()
 
 @contextmanager
 def status(msg):
@@ -83,6 +83,8 @@ def status(msg):
 		yield lambda _: None
 		return
 	global _cookie
+	global _exc_status
+	_exc_status = ()
 	_cookie += 1
 	cookie = str(_cookie)
 	t = str(monotonic())
@@ -97,14 +99,17 @@ def status(msg):
 	update(msg)
 	update_local = partial(_local_status.__setitem__, len(_local_status) - 1)
 	typ = 'update'
+	# Exceptions work a bit strangely in context managers, so we may not
+	# actually see the exception, but the finally block still runs.
+	missed_exception = True
 	try:
 		yield update
-	except Exception as e:
-		global _exc_status
-		if _exc_status[0] != e:
-			_exc_status = (e, list(_local_status))
-		raise
+		missed_exception = False
+		_exc_status = ()
 	finally:
+		if missed_exception and not _exc_status:
+			# only the innermost one saves, so we preserve the whole list
+			_exc_status = list(_local_status)
 		_local_status.pop()
 		_send('pop', cookie)
 
