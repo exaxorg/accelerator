@@ -21,6 +21,7 @@ from __future__ import print_function
 from __future__ import division
 
 from traceback import print_exc
+from collections import OrderedDict
 from datetime import datetime, date, time, timedelta
 import sys
 
@@ -123,7 +124,8 @@ class DepTree:
 					sample_v = first_value(default_v)
 					for chk_v in itervalues(default_v):
 						assert isinstance(chk_v, type(sample_v))
-					return {k: convert(sample_v, v) for k, v in iteritems(v)}
+					assert isinstance(v, OrderedDict)
+					return OrderedDict((k, convert(sample_v, v)) for k, v in iteritems(v))
 				else:
 					return v
 			if isinstance(default_v, (list, set, tuple,)) and isinstance(v, str_types + (list, set, tuple,)):

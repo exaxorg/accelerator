@@ -25,7 +25,7 @@ import os
 import sys
 import datetime
 from glob import glob
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from importlib import import_module
 
 from accelerator.compat import iteritems, itervalues, first_value
@@ -152,7 +152,8 @@ def _reprify(o):
 	if isinstance(o, (list, tuple)):
 		return '[%s]' % (', '.join(map(_reprify, o)),)
 	if isinstance(o, dict):
-		return '{%s}' % (', '.join('%s: %s' % (_reprify(k), _reprify(v),) for k, v in sorted(iteritems(o))),)
+		assert isinstance(o, OrderedDict)
+		return '{%s}' % (', '.join('%s: %s' % (_reprify(k), _reprify(v),) for k, v in iteritems(o)),)
 	if isinstance(o, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta,)):
 		return str(o)
 	raise AcceleratorError('Unhandled %s in dependency resolution' % (type(o),))
@@ -171,9 +172,12 @@ def params2defaults(params):
 		d[key] = r
 	def fixup(item):
 		if isinstance(item, dict):
-			d = {k: fixup(v) for k, v in iteritems(item)}
+			items = iteritems(item)
+			if not isinstance(item, OrderedDict):
+				items = sorted(items)
+			d = OrderedDict((k, fixup(v)) for k, v in items)
 			if len(d) == 1 and first_value(d) is None and first_value(item) is not None:
-				return {}
+				d.clear()
 			return d
 		if isinstance(item, (list, tuple, set,)):
 			l = [fixup(v) for v in item]
