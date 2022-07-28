@@ -188,6 +188,17 @@ def main(urd):
 		d = OrderedDict((k, 0) for k in key_order)
 		d['inner'] = OrderedDict((k, 1) for k in key_order)
 		urd.build("test_options_dict_order", dict=d, key_order=key_order)
+	print("And that changing order rebuilds when expected")
+	chars4rebuild_test = 'bfhnaeolkgjdmci' # same order as the default in the method
+	rb_noopt  = urd.build('test_options_rebuild')
+	rb_same   = urd.build('test_options_rebuild', dict=OrderedDict([(c, c) for c in chars4rebuild_test]))
+	rb_unord  = urd.build('test_options_rebuild', dict={c: c for c in chars4rebuild_test}) # not ordered, so will be sorted
+	rb_sorted = urd.build('test_options_rebuild', dict=OrderedDict([(c, c) for c in sorted(chars4rebuild_test)]))
+	rb_other  = urd.build('test_options_rebuild', dict=OrderedDict([(c, c) for c in reversed(chars4rebuild_test)]))
+	assert rb_noopt == rb_same  , 'OrderedDict rebuilt job equivalent to default'
+	assert rb_unord == rb_sorted, 'OrderedDict rebuilt equivalent non-ordered job'
+	assert rb_noopt != rb_unord , 'OrderedDict did not rebuild job with different order'
+	assert rb_noopt != rb_other , 'OrderedDict did not rebuild job with different order'
 
 	print()
 	print("Testing ['lists'] of datasets and jobs")
