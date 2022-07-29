@@ -222,12 +222,11 @@ class CurrentJob(Job):
 	"""The currently running job (as passed to the method),
 	with extra functions for writing data."""
 
-	__slots__ = ('result_directory', 'input_directory')
+	__slots__ = ('input_directory',)
 
-	def __new__(cls, jobid, params, result_directory, input_directory):
+	def __new__(cls, jobid, params, input_directory):
 		obj = Job.__new__(cls, jobid, params.method)
 		obj._cache['params'] = params
-		obj.result_directory = result_directory
 		obj.input_directory = input_directory
 		return obj
 

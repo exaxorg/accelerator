@@ -301,7 +301,7 @@ def execute_process(workdir, jobid, slices, concurrency, result_directory, input
 	method_ref = import_module(params.package+'.a_'+params.method)
 	g.sliceno = -1
 
-	g.job = CurrentJob(jobid, params, result_directory, input_directory)
+	g.job = CurrentJob(jobid, params, input_directory)
 	g.slices = slices
 
 	g.options          = params.options
