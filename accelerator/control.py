@@ -88,7 +88,7 @@ class Main:
 		""" Some information about main workspace, some parts of config """
 		return dict(
 			[(key, getattr(self.workspaces[self.target_workdir], key),) for key in ('slices',)] +
-			[(key, self.config.get(key),) for key in ('input_directory', 'result_directory', 'common_directory', 'urd',)]
+			[(key, self.config.get(key),) for key in ('input_directory', 'result_directory', 'urd',)]
 		)
 
 
