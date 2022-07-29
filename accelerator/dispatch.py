@@ -90,7 +90,6 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 		slices=slices,
 		concurrency=concurrency,
 		jobid=jobid,
-		result_directory=config.get('result_directory', ''),
 		input_directory=config.get('input_directory', ''),
 		workdirs=active_workdirs,
 		server_url=server_url,
