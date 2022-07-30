@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2022 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -64,7 +64,7 @@ def _job_candidates_options(candidates):
 			optdiff[section][name] = setup[section][name]
 		yield jobid, optdiff
 
-def initialise_jobs(setup, target_WorkSpace, DataBase, Methods, verbose=False):
+def initialise_jobs(setup, target_WorkSpace, DataBase, Methods, config):
 
 	# create a DepTree object used to track options and make status
 	DepTree = deptree.DepTree(Methods, setup)
@@ -112,6 +112,7 @@ def initialise_jobs(setup, target_WorkSpace, DataBase, Methods, verbose=False):
 				jobs=params['jobs'],
 				package=method['package'],
 				description=Methods.descriptions[data['method']],
+				input_directory=config.get('input_directory'),
 			)
 			new_setup.hash = Methods.hash[data['method']][0]
 			new_setup.seed = randint(0, 2**63 - 1)

@@ -168,6 +168,7 @@ class Main:
 			self.workspaces[ws],
 			self.DataBase,
 			self.Methods,
+			self.config,
 		)
 
 

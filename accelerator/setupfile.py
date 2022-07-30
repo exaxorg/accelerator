@@ -31,12 +31,14 @@ from accelerator.error import AcceleratorError, NoSuchJobError
 from accelerator.extras import DotDict, json_load, json_save, json_encode
 from accelerator.job import Job
 
-def generate(caption, method, options=None, datasets=None, jobs=None, package=None, description=None, why_build=False, force_build=False):
+def generate(caption, method, options=None, datasets=None, jobs=None, package=None, description=None, why_build=False, force_build=False, input_directory=None):
 	data = DotDict()
 	data.caption = caption
 	data.method  = method
 	if package:
 		data.package = package
+	if input_directory:
+		data.input_directory = input_directory
 	data.versions = DotDict()
 	if description:
 		data.versions.python_path = description['interpreter']
