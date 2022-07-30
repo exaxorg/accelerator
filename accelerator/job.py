@@ -98,6 +98,10 @@ class Job(unicode):
 	def method(self):
 		return self.params.method
 
+	@_cachedprop
+	def input_directory(self):
+		return self.params.get('input_directory', None)
+
 	@property
 	def path(self):
 		if self.workdir not in WORKDIRS:
