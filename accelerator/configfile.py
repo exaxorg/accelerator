@@ -223,6 +223,10 @@ def load_config(filename):
 		if 'project_directory' not in res:
 			res.project_directory = os.path.dirname(filename)
 		res.project_directory = os.path.realpath(res.project_directory)
+		if 'input_directory' not in res:
+			res.input_directory = fixpath('')
+		if 'result_directory' not in res:
+			res.result_directory = fixpath('')
 		res.workdirs = dict(res.workdirs)
 		if res.target_workdir not in res.workdirs:
 			raise _E('target workdir %r not in defined workdirs %r' % (res.target_workdir, set(res.workdirs),))
