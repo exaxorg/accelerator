@@ -105,15 +105,6 @@ input directory: {input}
 """
 
 
-def quote(v):
-	from accelerator.compat import PY2
-	if PY2:
-		return '"%s"' % (v.replace('"', '\\"'),) # good enough, hopefully
-	else:
-		import shlex
-		return shlex.quote(v)
-
-
 def find_free_ports(low, high, count=3, hostname='localhost'):
 	import random
 	import socket
@@ -165,6 +156,7 @@ def main(argv):
 	from sys import version_info
 	from argparse import RawTextHelpFormatter
 	from accelerator.shell.parser import ArgumentParser
+	from accelerator.compat import shell_quote
 	from accelerator.error import UserError
 	from accelerator.extras import DotDict
 
@@ -219,7 +211,7 @@ def main(argv):
 		)
 
 	if not options.input.startswith('#'):
-		options.input = quote(realpath(options.input))
+		options.input = shell_quote(realpath(options.input))
 	prefix = realpath(options.directory)
 	workdir = join(prefix, 'workdirs', options.name)
 	slices_conf = join(workdir, '.slices')
@@ -269,14 +261,14 @@ def main(argv):
 		examples = '# accelerator.examples'
 	with open('accelerator.conf', 'w') as fh:
 		fh.write(config_template.format(
-			name=quote(options.name),
+			name=shell_quote(options.name),
 			slices=options.slices,
 			examples=examples,
 			input=options.input,
 			major=version_info.major,
 			minor=version_info.minor,
 			micro=version_info.micro,
-			listen=DotDict({k: quote(v) for k, v in listen.items()}),
+			listen=DotDict({k: shell_quote(v) for k, v in listen.items()}),
 		))
 	if not options.no_git:
 		git(method_dir)

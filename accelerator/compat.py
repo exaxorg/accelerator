@@ -83,6 +83,8 @@ if sys.version_info[0] == 2:
 			except Exception:
 				fb_lines, fb_columns = 24, 80
 		return namedtuple('terminal_size', 'columns lines')(columns or fb_columns, lines or fb_lines)
+	def shell_quote(v):
+		return '"%s"' % (v.replace('"', '\\"'),) # good enough, hopefully
 else:
 	PY2 = False
 	PY3 = True
@@ -116,6 +118,7 @@ else:
 		from inspect import getfullargspec
 		return getfullargspec(func).args
 	from shutil import get_terminal_size as terminal_size
+	from shlex import quote as shell_quote
 
 def first_value(d):
 	return next(itervalues(d) if isinstance(d, dict) else iter(d))
