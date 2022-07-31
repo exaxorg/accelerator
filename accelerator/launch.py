@@ -285,7 +285,7 @@ def fmt_tb(skip_level):
 	return ''.join(msg)
 
 
-def execute_process(workdir, jobid, slices, concurrency, input_directory, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0):
+def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0):
 	WORKDIRS.update(workdirs)
 
 	g.job = jobid
@@ -301,7 +301,7 @@ def execute_process(workdir, jobid, slices, concurrency, input_directory, index=
 	method_ref = import_module(params.package+'.a_'+params.method)
 	g.sliceno = -1
 
-	g.job = CurrentJob(jobid, params, input_directory)
+	g.job = CurrentJob(jobid, params)
 	g.slices = slices
 
 	g.options          = params.options
@@ -420,11 +420,11 @@ def execute_process(workdir, jobid, slices, concurrency, input_directory, index=
 	return None, (prof, saved_files, _record)
 
 
-def run(workdir, jobid, slices, concurrency, input_directory, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0, prof_fd=-1, debuggable=False):
+def run(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0, prof_fd=-1, debuggable=False):
 	global g_allesgut, _prof_fd
 	_prof_fd = prof_fd
 	try:
-		data = execute_process(workdir, jobid, slices, concurrency, input_directory, index=index, workdirs=workdirs, server_url=server_url, subjob_cookie=subjob_cookie, parent_pid=parent_pid)
+		data = execute_process(workdir, jobid, slices, concurrency, index=index, workdirs=workdirs, server_url=server_url, subjob_cookie=subjob_cookie, parent_pid=parent_pid)
 		g_allesgut = True
 	except Exception:
 		msg = fmt_tb(2)

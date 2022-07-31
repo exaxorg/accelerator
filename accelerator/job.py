@@ -228,10 +228,10 @@ class CurrentJob(Job):
 
 	__slots__ = ('input_directory',)
 
-	def __new__(cls, jobid, params, input_directory):
+	def __new__(cls, jobid, params):
 		obj = Job.__new__(cls, jobid, params.method)
 		obj._cache['params'] = params
-		obj.input_directory = input_directory
+		obj.input_directory = params.input_directory
 		return obj
 
 	def finish_early(self, result=None):
