@@ -84,7 +84,11 @@ if sys.version_info[0] == 2:
 				fb_lines, fb_columns = 24, 80
 		return namedtuple('terminal_size', 'columns lines')(columns or fb_columns, lines or fb_lines)
 	def shell_quote(v):
-		return '"%s"' % (v.replace('"', '\\"'),) # good enough, hopefully
+		ok = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.:/+-_')
+		if any(c not in ok for c in v):
+		    return "'%s'" % (v.replace("'", "'\"'\"'"),)
+		else:
+			return v or "''"
 else:
 	PY2 = False
 	PY3 = True
