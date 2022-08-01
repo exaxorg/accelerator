@@ -117,6 +117,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--colour', '--color', nargs='?', const='always', choices=['auto', 'never', 'always'], type=str.lower, help="colour matched text. can be auto, never or always", metavar='WHEN', )
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
+	parser.add_argument('-F', '--fixed-strings',action='store_true', negation='not',  help="patterns are fixed strings, not regular expressions", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
@@ -191,6 +192,8 @@ def main(argv, cfg):
 	if args.ignore_case:
 		re_flags |= re.IGNORECASE
 	for pattern in args.patterns:
+		if args.fixed_strings:
+			pattern = re.escape(pattern)
 		try:
 			patterns.append(re.compile(pattern, re_flags))
 		except re.error as e:
