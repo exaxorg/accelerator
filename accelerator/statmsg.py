@@ -94,8 +94,9 @@ def status(msg):
 	update_local = _local_status.append
 	def update(msg):
 		assert msg and isinstance(msg, str_types) and '\0' not in msg
-		update_local(msg)
+		update_local((msg, update._line_report))
 		_send(typ, '\0'.join((msg, t, cookie)), pid=pid)
+	update._line_report = [None] # a list so it can be updated without access to the update object
 	update(msg)
 	update_local = partial(_local_status.__setitem__, len(_local_status) - 1)
 	typ = 'update'

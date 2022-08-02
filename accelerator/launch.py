@@ -275,9 +275,11 @@ def fmt_tb(skip_level):
 	from accelerator.statmsg import _exc_status
 	if len(_exc_status) > 1:
 		msg.append("Status when the exception occurred:\n")
-		for ix, txt in enumerate(_exc_status, 1):
+		for ix, (txt, line_report) in enumerate(_exc_status, 1):
 			msg.append("  " * ix)
 			msg.append(txt)
+			if line_report and line_report[0]:
+				msg.append(' reached line %d' % (line_report[0].count,))
 			msg.append("\n")
 	msg.extend(format_exception_only(e_type, e))
 	return ''.join(msg)

@@ -422,7 +422,7 @@ class Dataset(unicode):
 		_datasets_written.append(name)
 		return job.dataset(name) # new_ds has the wrong string value, so we must make a new instance here.
 
-	def _column_iterator(self, sliceno, col, _type=None, **kw):
+	def _column_iterator(self, sliceno, col, _type=None, _line_report=None, **kw):
 		if sliceno is not None and self.lines[sliceno] == 0:
 			return _dummy_iter
 		dc = self.columns[col]
@@ -430,9 +430,12 @@ class Dataset(unicode):
 		def one_slice(sliceno):
 			fn = self.column_filename(col, sliceno)
 			if dc.offsets:
-				return mkiter(fn, seek=dc.offsets[sliceno], want_count=self.lines[sliceno])
+				it = mkiter(fn, seek=dc.offsets[sliceno], want_count=self.lines[sliceno])
 			else:
-				return mkiter(fn, want_count=self.lines[sliceno])
+				it = mkiter(fn, want_count=self.lines[sliceno])
+			if _line_report:
+				_line_report[0] = it
+			return it
 		if sliceno is None:
 			from accelerator.g import slices
 			from itertools import chain
@@ -440,16 +443,17 @@ class Dataset(unicode):
 		else:
 			return one_slice(sliceno)
 
-	def _iterator(self, sliceno, columns=None, copy_mode=False):
+	def _iterator(self, sliceno, columns=None, copy_mode=False, _line_report=None):
 		res = []
 		not_found = []
 		for col in columns or sorted(self.columns):
 			if col in self.columns:
 				if copy_mode:
 					t = _copy_mode_overrides.get(self.columns[col].type)
-					res.append(self._column_iterator(sliceno, col, _type=t))
+					res.append(self._column_iterator(sliceno, col, _type=t, _line_report=_line_report))
 				else:
-					res.append(self._column_iterator(sliceno, col))
+					res.append(self._column_iterator(sliceno, col, _line_report=_line_report))
+				_line_report = None # only on the first column
 			else:
 				not_found.append(col)
 		if not_found:
@@ -793,6 +797,7 @@ class Dataset(unicode):
 			def update_status(ix, d, sliceno, rehash):
 				update('%s, %d/%d (%s)' % (msg_head, ix, len(to_iter), fmt_dsname(d, sliceno, rehash)))
 		with status(msg_head) as update:
+			update_status._line_report = update._line_report
 			yield update_status
 
 	@staticmethod
@@ -851,7 +856,7 @@ class Dataset(unicode):
 						continue
 					except StopIteration:
 						return
-				it = d._iterator(None if rehash is not None else sliceno, columns, copy_mode=copy_mode)
+				it = d._iterator(None if rehash is not None else sliceno, columns, copy_mode=copy_mode, _line_report=getattr(update, '_line_report', None))
 				for ix, trans in translators.items():
 					it[ix] = imap(trans, it[ix])
 				if want_tuple:
