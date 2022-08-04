@@ -426,7 +426,14 @@ class Dataset(unicode):
 		if sliceno is not None and self.lines[sliceno] == 0:
 			return _dummy_iter
 		dc = self.columns[col]
-		mkiter = partial(_type2iter[_type or dc.type], compression=dc.compression, **kw)
+		if not _type:
+			_type = dc.type
+		if _type not in _type2iter:
+			msg = 'Unsupported column type %r on %r in %s' % (_type, col, self.quoted,)
+			if _type.startswith('bits'):
+				msg += ". If you need to use this column, please install the 2022.8.4.dev1 release and use the dataset_unbits methods to convert it."
+			raise DatasetError(msg)
+		mkiter = partial(_type2iter[_type], compression=dc.compression, **kw)
 		def one_slice(sliceno):
 			fn = self.column_filename(col, sliceno)
 			if dc.offsets:
