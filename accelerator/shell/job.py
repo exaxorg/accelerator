@@ -56,7 +56,10 @@ def show(url, job, show_output):
 		print()
 		print('subjobs:')
 		for sj in sorted(post.subjobs):
-			print('   ', sj)
+			print('   ', sj, end='')
+			if not call(url + '/job_is_current/' + url_quote(sj)):
+				print('', colour('(not current)', 'job/info'), end='')
+			print()
 	if post and post.files:
 		print()
 		print('files:')
