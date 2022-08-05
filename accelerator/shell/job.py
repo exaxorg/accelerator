@@ -29,7 +29,7 @@ import sys
 
 from accelerator.colourwrapper import colour
 from accelerator.setupfile import encode_setup
-from accelerator.compat import FileNotFoundError, url_quote
+from accelerator.compat import FileNotFoundError, url_quote, urlencode
 from accelerator.unixhttp import call
 from .parser import name2job, JobNotFound, ArgumentParser
 
@@ -55,9 +55,11 @@ def show(url, job, show_output):
 	if post and post.subjobs:
 		print()
 		print('subjobs:')
-		for sj in sorted(post.subjobs):
+		postdata = urlencode({'jobs': '\0'.join(post.subjobs)}).encode('utf-8')
+		subjobs = call(url + '/jobs_are_current', data=postdata)
+		for sj, is_current in sorted(subjobs.items()):
 			print('   ', sj, end='')
-			if not call(url + '/job_is_current/' + url_quote(sj)):
+			if not is_current:
 				print('', colour('(not current)', 'job/info'), end='')
 			print()
 	if post and post.files:

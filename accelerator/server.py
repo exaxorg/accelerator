@@ -184,6 +184,13 @@ class XtdHandler(BaseWebHandler):
 			job = self.ctrl.DataBase.db_by_workdir[job.workdir].get(job)
 			self.do_response(200, 'text/json', bool(job and job['current']))
 
+		elif path == ['jobs_are_current']:
+			res = {}
+			for jid in args['jobs'].split('\0'):
+				job = self.ctrl.DataBase.db_by_workdir[Job(jid).workdir].get(jid)
+				res[jid] = bool(job and job['current'])
+			self.do_response(200, 'text/json', res)
+
 		elif path==['submit']:
 			if self.ctrl.broken:
 				self.do_response(500, "text/json", {'broken': self.ctrl.broken, 'error': 'Broken methods: ' + ', '.join(sorted(m.split('.')[-1][2:] for m in self.ctrl.broken))})
