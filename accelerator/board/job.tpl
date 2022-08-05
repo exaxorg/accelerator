@@ -81,8 +81,12 @@
 		<h2>subjobs</h2>
 		<div class="box">
 			<ul>
-				% for j in subjobs:
-					<li><a href="/job/{{ j }}">{{ j }}</a> {{ j.method }}</li>
+				% for j, is_current in subjobs:
+					<li><a href="/job/{{ j }}">{{ j }}</a> {{ j.method }}
+					% if not is_current:
+						<span class="warning">not current</span>
+					% end
+					</li>
 				% end
 			</ul>
 		</div>

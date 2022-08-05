@@ -216,8 +216,12 @@ def run(cfg, from_shell=False):
 	project = os.path.split(cfg.project_directory)[1]
 	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
 
-	def call_s(*path):
-		return call(os.path.join(cfg.url, *map(url_quote, path)))
+	def call_s(*path, **kw):
+		if kw:
+			data = urlencode(kw).encode('utf-8')
+		else:
+			data = None
+		return call(os.path.join(cfg.url, *map(url_quote, path)), data=data)
 
 	def call_u(*path, **kw):
 		url = os.path.join(cfg.urd, *map(url_quote, path))
@@ -322,8 +326,11 @@ def run(cfg, from_shell=False):
 		if post:
 			aborted = False
 			files = [fn for fn in job.files() if fn[0] != '/']
-			subjobs = [Job(jobid) for jobid in post.subjobs]
-			current = call_s('job_is_current', job)
+			jobs = list(post.subjobs)
+			jobs.append(job)
+			jobs = call_s('jobs_are_current', jobs='\0'.join(jobs))
+			subjobs = [(Job(jobid), jobs[jobid]) for jobid in post.subjobs]
+			current = jobs[job]
 		else:
 			aborted = True
 			current = False
