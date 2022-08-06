@@ -104,8 +104,8 @@ def show_source(job, pattern='*'):
 			return res
 		for ix, info in enumerate(members, 1):
 			if len(members) > 1:
-				print(info.path)
-				print('=' * len(info.path))
+				print(colour(info.path, 'job/header'))
+				print(colour('=' * len(info.path), 'job/header'))
 			data = tar.extractfile(info).read()
 			has_nl = data.endswith(b'\n')
 			while data:
@@ -135,8 +135,8 @@ def show_file(job, pattern):
 		return res
 	for ix, fn in enumerate(files, 1):
 		if len(files) > 1:
-			print(fn)
-			print('=' * len(fn))
+			print(colour(fn, 'job/header'))
+			print(colour('=' * len(fn), 'job/header'))
 		with job.open(fn, 'rb') as fh:
 			data = fh.read()
 		has_nl = data.endswith(b'\n')
