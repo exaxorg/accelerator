@@ -91,11 +91,17 @@ def show_source(job, pattern='*'):
 		all_members = [info for info in tar.getmembers() if info.isfile()]
 		members = [info for info in all_members if fnmatch(info.path, pattern)]
 		if not members:
-			print(colour('No sources matching %r in %s.' % (pattern, job,), 'job/warning'), file=sys.stderr)
-			print('Available sources:', file=sys.stderr)
+			if pattern:
+				print(colour('No sources matching %r in %s.' % (pattern, job,), 'job/warning'), file=sys.stderr)
+				fh = sys.stderr
+				res = 1
+			else:
+				fh = sys.stdout
+				res = 0
+			print('Available sources:', file=fh)
 			for info in all_members:
-				print('    ' + info.path, file=sys.stderr)
-			return 1
+				print('    ' + info.path, file=fh)
+			return res
 		for ix, info in enumerate(members, 1):
 			if len(members) > 1:
 				print(info.path)
@@ -122,7 +128,7 @@ def main(argv, cfg):
 	group.add_argument('-O', '--just-output', action='store_true', help='show only job output')
 	group.add_argument('-P', '--just-path', action='store_true', help='show only job path')
 	group.add_argument('-s', '--source', action='store_true', help='show source used to produce job')
-	group.add_argument('-S', '--source-file', metavar='PATTERN', help='show specified file(s) from source used to produce job')
+	group.add_argument('-S', '--source-file', metavar='PATTERN', nargs='?', const='', help='show specified file(s) from source used to produce job')
 	parser.add_argument(
 		'jobid',
 		nargs='+', metavar='jobid/jobspec',
@@ -150,7 +156,7 @@ def main(argv, cfg):
 				print(job.path)
 			elif args.source:
 				res |= show_source(job)
-			elif args.source_file:
+			elif args.source_file is not None:
 				res |= show_source(job, args.source_file)
 			else:
 				show(cfg.url, job, args.output)
