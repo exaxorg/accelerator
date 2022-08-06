@@ -88,7 +88,14 @@ def show_source(job, pattern='*'):
 	import tarfile
 	from fnmatch import fnmatch
 	with tarfile.open(job.filename('method.tar.gz'), 'r:gz') as tar:
-		members = [info for info in tar.getmembers() if info.isfile() and fnmatch(info.path, pattern)]
+		all_members = [info for info in tar.getmembers() if info.isfile()]
+		members = [info for info in all_members if fnmatch(info.path, pattern)]
+		if not members:
+			print(colour('No sources matching %r in %s.' % (pattern, job,), 'job/warning'), file=sys.stderr)
+			print('Available sources:', file=sys.stderr)
+			for info in all_members:
+				print('    ' + info.path, file=sys.stderr)
+			return 1
 		for ix, info in enumerate(members, 1):
 			if len(members) > 1:
 				print(info.path)
@@ -101,6 +108,7 @@ def show_source(job, pattern='*'):
 				os.write(1, b'\n')
 			if ix < len(members):
 				os.write(1, b'\n')
+	return 0
 
 def main(argv, cfg):
 	descr = 'show setup.json, dataset list, etc for jobs'
@@ -141,9 +149,9 @@ def main(argv, cfg):
 			elif args.just_path:
 				print(job.path)
 			elif args.source:
-				show_source(job)
+				res |= show_source(job)
 			elif args.source_file:
-				show_source(job, args.source_file)
+				res |= show_source(job, args.source_file)
 			else:
 				show(cfg.url, job, args.output)
 		except JobNotFound as e:
