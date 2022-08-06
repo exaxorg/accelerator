@@ -116,6 +116,38 @@ def show_source(job, pattern='*'):
 				os.write(1, b'\n')
 	return 0
 
+def show_file(job, pattern):
+	files = job.files(pattern)
+	if not files and pattern and os.path.exists(job.filename(pattern)):
+		# special case so you can name unregistered files
+		files = [pattern]
+	if not files:
+		if pattern:
+			fh = sys.stderr
+			print(colour('No files matching %r in %s.' % (pattern, job,), 'job/warning'), file=fh)
+			res = 1
+		else:
+			fh = sys.stdout
+			res = 0
+		print('Available files:', file=fh)
+		for fn in job.files():
+			print('    ' + fn, file=fh)
+		return res
+	for ix, fn in enumerate(files, 1):
+		if len(files) > 1:
+			print(fn)
+			print('=' * len(fn))
+		with job.open(fn, 'rb') as fh:
+			data = fh.read()
+		has_nl = data.endswith(b'\n')
+		while data:
+			data = data[os.write(1, data):]
+		if not has_nl:
+			os.write(1, b'\n')
+		if ix < len(files):
+			os.write(1, b'\n')
+	return 0
+
 def main(argv, cfg):
 	descr = 'show setup.json, dataset list, etc for jobs'
 	parser = ArgumentParser(
@@ -129,6 +161,7 @@ def main(argv, cfg):
 	group.add_argument('-P', '--just-path', action='store_true', help='show only job path')
 	group.add_argument('-s', '--source', action='store_true', help='show source used to produce job')
 	group.add_argument('-S', '--source-file', metavar='PATTERN', nargs='?', const='', help='show specified file(s) from source used to produce job')
+	group.add_argument('-f', '--file', metavar='PATTERN', nargs='?', const='', help='show specified file(s) produced by job')
 	parser.add_argument(
 		'jobid',
 		nargs='+', metavar='jobid/jobspec',
@@ -158,6 +191,8 @@ def main(argv, cfg):
 				res |= show_source(job)
 			elif args.source_file is not None:
 				res |= show_source(job, args.source_file)
+			elif args.file is not None:
+				res |= show_file(job, args.file)
 			else:
 				show(cfg.url, job, args.output)
 		except JobNotFound as e:
