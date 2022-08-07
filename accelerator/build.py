@@ -778,7 +778,18 @@ def print_user_part_traceback():
 		if code.co_filename != build_fn:
 			break
 		tb = tb.tb_next
-	traceback.print_exception(etype, e, tb or fallback_tb)
+	# cut away everything after entering this file again
+	# (because this can easily be >30 lines the user does not care about)
+	print_tb = tb or fallback_tb
+	tb_cut_at = tb
+	while tb is not None:
+		code = tb.tb_frame.f_code
+		if code.co_filename == build_fn:
+			tb_cut_at.tb_next = None
+			break
+		tb_cut_at = tb
+		tb = tb.tb_next
+	traceback.print_exception(etype, e, print_tb)
 
 
 def print_minimal_traceback():
