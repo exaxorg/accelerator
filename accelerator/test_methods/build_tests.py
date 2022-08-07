@@ -303,6 +303,10 @@ def main(urd):
 	urd.build("test_jobchain")
 
 	print()
+	print("Testing that the status stack is correct in exceptions from job building")
+	urd.build("test_status_in_exceptions")
+
+	print()
 	print("Test shell commands")
 	from accelerator.shell import cfg
 	# sys.argv[0] is absolute for unqualified commands ("ax"), but exactly what
