@@ -2,7 +2,7 @@
 # This is for running in a manylinux2010 docker image, so /bin/bash is fine.
 # (or manylinux2014 on non-x86 platforms)
 #
-# docker run -it -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2010_x86_64:2021-02-06-c17986e /accelerator/scripts/build_prepare.sh
+# docker run -it -v /some/where:/out:ro -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2010_x86_64:2021-02-06-c17986e /accelerator/scripts/build_prepare.sh
 #
 # build_wheels.sh will call this, but it's a separate script so you can run
 # it once and save that docker image.
@@ -13,6 +13,9 @@ shopt -s nullglob
 
 test -d /accelerator/.git || exit 1
 test -d /accelerator/accelerator || exit 1
+
+VERSION=5
+ENDIANNESS="$(python -c 'import sys; print(sys.byteorder)')"
 
 if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
 	if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
@@ -29,13 +32,21 @@ if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
 fi
 
 if [ -e /prepare/.done ]; then
-	if [ "$(cat /prepare/.done)" = "4" ]; then
+	if [ "$(cat /prepare/.done)" = "$VERSION" ]; then
 		exit 0
 	fi
 fi
 
+if [ ! -e "/out/old_versions.$VERSION.$ENDIANNESS.tar.gz" ]; then
+	echo "First use build_old_versions.sh to produce /out/old_versions.$VERSION.$ENDIANNESS.tar.gz"
+	exit 1
+fi
+
 rm -rf /prepare
 mkdir /prepare
+
+cd /prepare
+tar zxf "/out/old_versions.$VERSION.$ENDIANNESS.tar.gz"
 
 # The numeric_comma test needs a locale which uses numeric comma.
 localedef -i da_DK -f UTF-8 da_DK.UTF-8
@@ -63,20 +74,7 @@ for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
 done
 
 
-# (Don't use ACCELERATOR_BUILD_STATIC_ZLIB, because these old versions don't understand it.)
-VE=/opt/python/cp27-cp27mu/bin/virtualenv
-for V in cp27-cp27mu cp37-cp37m; do
-	if [ -e "/opt/python/$V/bin/python" ]; then
-		mkdir "/prepare/old.$V"
-		CPPFLAGS="-I$ZLIB_PREFIX/include" \
-		LDFLAGS="-L$ZLIB_PREFIX/lib" \
-		USER="DUMMY" \
-		/accelerator/scripts/make_old_versions.sh "/opt/python/$V/bin/python" /accelerator "/prepare/old.$V" $VE
-	fi
-	VE=""
-done
-
-echo 4 >/prepare/.done
+echo "$VERSION" >/prepare/.done
 
 set +x
 
