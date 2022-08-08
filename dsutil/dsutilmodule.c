@@ -1088,7 +1088,7 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 			goto err;
 		}
 		// check that the object is acceptable by hashing it
-		PyObject *res = PyObject_CallMethod(self, "hash", "(O)", default_obj);
+		PyObject *res = PyObject_CallMethod(self_, "hash", "(O)", default_obj);
 		err1(!res);
 		Py_DECREF(res);
 		self->default_obj = default_obj;
