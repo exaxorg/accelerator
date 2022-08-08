@@ -42,16 +42,9 @@ localedef -i da_DK -f UTF-8 da_DK.UTF-8
 
 
 ZLIB_PREFIX="/prepare/zlib-ng"
+/accelerator/scripts/build_zlib-ng.sh "$ZLIB_PREFIX"
 
 cd /tmp
-rm -rf zlib-ng
-git clone https://github.com/zlib-ng/zlib-ng.git
-cd zlib-ng
-git checkout b56a2fd0b126cfe5f13e68ab9090cd4f6a773286 # 2.0.6
-CFLAGS="-fPIC -fvisibility=hidden" ./configure --zlib-compat --static --prefix="$ZLIB_PREFIX"
-make install
-cd ..
-rm -rf zlib-ng
 
 # oldest deps we can use for <3.9, newest on >=3.9
 for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
