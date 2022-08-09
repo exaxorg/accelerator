@@ -28,10 +28,11 @@ import os
 import sys
 
 from accelerator.colourwrapper import colour
+from accelerator.error import NoSuchJobError
 from accelerator.setupfile import encode_setup
 from accelerator.compat import FileNotFoundError, url_quote, urlencode
 from accelerator.unixhttp import call
-from .parser import name2job, JobNotFound, ArgumentParser
+from .parser import name2job, ArgumentParser
 
 def show(url, job, show_output):
 	print(job.path)
@@ -195,7 +196,7 @@ def main(argv, cfg):
 				res |= show_file(job, args.file)
 			else:
 				show(cfg.url, job, args.output)
-		except JobNotFound as e:
+		except NoSuchJobError as e:
 			print(e)
 			res = 1
 		except Exception as e:
