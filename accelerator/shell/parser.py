@@ -115,6 +115,8 @@ def name2job(cfg, n):
 			job = method2job(cfg, job.method, count, start_from=job)
 		else:
 			job = job_up(job, count)
+	if not exists(job.filename('setup.json')):
+		raise JobNotFound('Job resolved to %r but that job does not exist' % (job,))
 	return job
 
 def _name2job(cfg, n):
