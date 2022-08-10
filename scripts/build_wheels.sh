@@ -1,7 +1,7 @@
 #!/bin/bash
-# This is for running in a manylinux2010 docker image, so /bin/bash is fine.
-# (or manylinux2014 on non-x86 platforms)
+# This is for running in a manylinux docker image, so /bin/bash is fine.
 #
+# docker run -it --rm -v /some/where:/out:rw -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2014_x86_64 /accelerator/scripts/build_wheels.sh 20xx.xx.xx.dev1 commit/tag/branch
 # docker run -it --rm -v /some/where:/out:rw -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2010_x86_64:2021-02-06-c17986e /accelerator/scripts/build_wheels.sh 20xx.xx.xx.dev1 commit/tag/branch
 #
 # or preferably:
@@ -11,11 +11,26 @@
 
 set -euo pipefail
 
+if [ -z "${AUDITWHEEL_ARCH-}" ]; then
+	echo "Run in a recent manylinux2014 container."
+	exit 1
+fi
+
+if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
+	X86="true"
+else
+	X86="false"
+fi
+
 if [ "$#" != "2" ]; then
 	echo "Usage: $0 ACCELERATOR_BUILD_VERSION commit/tag/branch"
 	echo
-	echo "Run first in a recent manylinux2010 or manylinux2014 container,"
-	echo "then in one from 2021-02-06-c17986e or earlier."
+	if [ "$X86" = "true" ]; then
+		echo "Run first in a recent manylinux2014 container,"
+		echo "then in manylinux2010:2021-02-06-c17986e or earlier."
+	else
+		echo "Run in a recent manylinux2014 container."
+	fi
 	exit 1
 fi
 
@@ -54,34 +69,28 @@ BUILT=()
 
 /tmp/accelerator/scripts/build_prepare.sh
 
-
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
-AUDITWHEEL_ARCH="${AUDITWHEEL_PLAT/${MANYLINUX_VERSION}_}"
 ZLIB_PREFIX="/prepare/zlib-ng"
 
-if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
-	# The 2010 wheels are in our case 1-compatible
-	AUDITWHEEL_PLAT="manylinux1_$AUDITWHEEL_ARCH"
-	FN_AUDITWHEEL_PLAT="$AUDITWHEEL_PLAT"
-	FN_AUDITWHEEL_PLAT_NEW="manylinux_2_5_$AUDITWHEEL_ARCH.$AUDITWHEEL_PLAT"
-else
-	FN_AUDITWHEEL_PLAT="$AUDITWHEEL_PLAT"
-	FN_AUDITWHEEL_PLAT_NEW="manylinux_2_17_$AUDITWHEEL_ARCH.$AUDITWHEEL_PLAT"
-fi
-
-
-if [ -e /opt/python/cp310-cp310/bin/python ]; then
+if [ "$MANYLINUX_VERSION" = "manylinux2014" ]; then
 	BUILD_STEP="new"
-	VERSIONS=(/opt/python/cp39-* /opt/python/cp31[0-9]-*)
-	FN_AUDITWHEEL_PLAT="$FN_AUDITWHEEL_PLAT_NEW"
+	if [ "$X86" = "true" ]; then
+		VERSIONS=(/opt/python/cp31[0-9]-*)
+	else
+		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
+	fi
 else
 	BUILD_STEP="old"
-	VERSIONS=(/opt/python/cp[23][5-8]-*)
-	if [ ! -e "/out/wheelhouse/$NAME-cp39-cp39-$FN_AUDITWHEEL_PLAT_NEW.whl" ]; then
-		echo "First build in a newer $MANYLINUX_VERSION container"
+	VERSIONS=(/opt/python/cp[23][5-9]-*)
+	CP310=("/out/wheelhouse/$NAME-cp310-cp310-"*_"$AUDITWHEEL_ARCH".whl)
+	if [ "${#CP310[@]}" = 0 ]; then
+		echo "First build in a manylinux2014 container"
 		exit 1
 	fi
+	# The 2010 wheels are in our case 1-compatible
+	AUDITWHEEL_PLAT="manylinux1_$AUDITWHEEL_ARCH"
 fi
+
 
 SDIST="/out/wheelhouse/$NAME.tar.gz"
 if [ -e "$SDIST" ]; then
@@ -121,7 +130,7 @@ build_one_wheel() {
 	CPPFLAGS="-I$ZLIB_PREFIX/include" \
 	"/opt/python/$V/bin/pip" wheel "$SDIST" --no-deps -w /tmp/wheels/
 	auditwheel repair "$UNFIXED_NAME" -w /tmp/wheels/fixed/
-	"/opt/python/$V/bin/pip" install "$FIXED_NAME"
+	"/opt/python/$V/bin/pip" install "/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl
 }
 
 Vs=()
@@ -132,10 +141,9 @@ for V in "${VERSIONS[@]}"; do
 	V="${V/\/opt\/python\//}"
 	test -e "/opt/python/$V/bin/ax" && exit 1
 	UNFIXED_NAME="/tmp/wheels/$NAME-$V-linux_$AUDITWHEEL_ARCH.whl"
-	FIXED_NAME="/tmp/wheels/fixed/$NAME-$V-$FN_AUDITWHEEL_PLAT.whl"
-	test -e "/out/wheelhouse/${FIXED_NAME/*\//}" && continue
-	rm -f "$UNFIXED_NAME" "$FIXED_NAME"
-	build_one_wheel "$UNFIXED_NAME" "$FIXED_NAME" &
+	test -e "/out/wheelhouse/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl && continue
+	rm -f "$UNFIXED_NAME" "/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl
+	build_one_wheel &
 	Vs+=("$V")
 done
 
@@ -209,31 +217,28 @@ for V in "${Vs[@]}"; do
 		exit 1
 	fi
 	# The wheel passed the tests, copy it to the wheelhouse (later).
-	BUILT+=("/tmp/wheels/fixed/$NAME-$V-$FN_AUDITWHEEL_PLAT.whl")
+	BUILT+=("/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl)
 done
 
 
 if [ "$BUILD_STEP" = "old" ]; then
-	/opt/python/cp39-cp39/bin/pip install "/out/wheelhouse/$NAME-cp39-cp39-$FN_AUDITWHEEL_PLAT_NEW.whl"
-	if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
-		# Test running 2.7 and 3.5 under a 3.8 server
-		/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-			/opt/python/cp38-cp38/bin \
-			/opt/python/cp27-cp27mu/bin \
-			/opt/python/cp35-cp35m/bin
+	# Test running 2.7 and 3.5 under a 3.8 server
+	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
+		/opt/python/cp38-cp38/bin \
+		/opt/python/cp27-cp27mu/bin \
+		/opt/python/cp35-cp35m/bin
 
-		# Test running 3.6 and 3.9 under a 2.7 server
-		/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-			/opt/python/cp27-cp27m/bin \
-			/opt/python/cp36-cp36m/bin \
-			/opt/python/cp39-cp39/bin
-	else
-		# Test running 3.9 and 3.5 under a 3.8 server
-		/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-			/opt/python/cp38-cp38/bin \
-			/opt/python/cp39-cp39/bin \
-			/opt/python/cp35-cp35m/bin
-	fi
+	# Test running 3.6 and 3.9 under a 2.7 server
+	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
+		/opt/python/cp27-cp27m/bin \
+		/opt/python/cp36-cp36m/bin \
+		/opt/python/cp39-cp39/bin
+elif [ "$X86" = "false" ]; then
+	# Test running 3.10 and 3.6 under a 3.8 server
+	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
+		/opt/python/cp38-cp38/bin \
+		/opt/python/cp310-cp310/bin \
+		/opt/python/cp36-cp36m/bin
 fi
 
 
@@ -255,7 +260,7 @@ echo "Built the following files:"
 for N in "${BUILT[@]}"; do
 	echo "${N/*\//}"
 done
-if [ "$BUILD_STEP" = "new" ]; then
+if [ "$BUILD_STEP" = "new" -a "$X86" = "true" ]; then
 	echo
-	echo "Remember to also build in an older container, several tests only run there."
+	echo "Remember to also build in an old manylinux2010 container."
 fi
