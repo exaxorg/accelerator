@@ -184,7 +184,7 @@ def synthesis(job):
 				t_ds = subjobs.build('dataset_type', column2type={'v': typ}, source=ds).dataset()
 				got_minmax = (t_ds.columns['v'].min, t_ds.columns['v'].max)
 				want_minmax = (mn, mx)
-				chk_minmax(got_minmax, want_minmax, 'Typing %s as %s gave wrong minmax: expected %r, got %r (in %s)' % (ds, typ, want_minmax, got_minmax, t_ds,))
+				chk_minmax(got_minmax, want_minmax, 'Typing %s as %s gave wrong minmax: expected %r, got %r (in %s)' % (ds.quoted, typ, want_minmax, got_minmax, t_ds.quoted,))
 				chk_minmax(got_minmax, (t_ds.min('v'), t_ds.max('v')), 'Dataset.min/max() broken on ' + t_ds)
 				# verify writing the same data normally also gives the correct result
 				dw = DatasetWriter(name='rewrite ' + t_ds, columns=t_ds.columns)
@@ -194,7 +194,7 @@ def synthesis(job):
 				re_ds = dw.finish()
 				got_minmax = (re_ds.columns['v'].min, re_ds.columns['v'].max)
 				want_minmax = (mn, mx)
-				chk_minmax(got_minmax, want_minmax, 'Rewriting %s gave the wrong minmax: expected %r, got %r (in %s)' % (t_ds, want_minmax, got_minmax, re_ds,))
+				chk_minmax(got_minmax, want_minmax, 'Rewriting %s gave the wrong minmax: expected %r, got %r (in %s)' % (t_ds.quoted, want_minmax, got_minmax, re_ds.quoted,))
 
 	# make sure renaming doesn't mix anything up
 	dw = DatasetWriter(name='rename', columns={'a': 'ascii', 'b': 'ascii'})
@@ -214,5 +214,5 @@ def synthesis(job):
 		('int', (2, 3)),
 	):
 		got_minmax = (t_ds.columns[name].min, t_ds.columns[name].max)
-		msg = 'Typing %s gave wrong minmax: expected %r, got %r (in %s)' % (ds, want_minmax, got_minmax, t_ds,)
+		msg = 'Typing %s gave wrong minmax: expected %r, got %r (in %s)' % (ds.quoted, want_minmax, got_minmax, t_ds.quoted,)
 		chk_minmax(got_minmax, want_minmax, msg)
