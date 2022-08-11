@@ -1388,10 +1388,10 @@ MK_MINMAX_SET(Time    , unfmt_time((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)
 	T cmp_value = v;                                                                     	\
 	T min_value = self->min_u.as_ ## T;                                                  	\
 	T max_value = self->max_u.as_ ## T;                                                  	\
-	if (!self->min_obj || (cmp_value < min_value) || isnan(min_value)) {                 	\
+	if (!self->min_obj || (((cmp_value < min_value) || isnan(min_value)) && !isnan(cmp_value))) { \
 		minmax_set(&self->min_obj, obj, &self->min_u, &cmp_value, sizeof(cmp_value));	\
 	}                                                                                    	\
-	if (!self->max_obj || (cmp_value > max_value) || isnan(max_value)) {                 	\
+	if (!self->max_obj || (((cmp_value > max_value) || isnan(max_value)) && !isnan(cmp_value))) { \
 		minmax_set(&self->max_obj, obj, &self->max_u, &cmp_value, sizeof(cmp_value));	\
 	}
 #define MINMAX_DUMMY(T, v, minmax_set) /* Nothing */
