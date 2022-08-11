@@ -1225,7 +1225,11 @@ more_infiles:
 			default_count[chosen_slice] += 1;
 			do_minmax = !default_value_is_None;
 		}
-		// minmax tracking, not done for None-values
+		// minmax tracking, not done for None/NaN-values
+		if (do_minmax && isnan(d_v)) {
+			saw_nan = 1;
+			do_minmax = 0;
+		}
 		if (do_minmax) {
 			if (!o_v && o_col_min) {
 				o_v = PyFloat_FromDouble(d_v);
@@ -1266,15 +1270,13 @@ more_infiles:
 					}
 				}
 			} else {
-				if (!o_v && isnan(d_v)) {
-					saw_nan = 1;
-				} else {
-					memcpy(buf_col_min, ptr, len);
-					memcpy(buf_col_max, ptr, len);
-					minlen = maxlen = len;
-					d_col_min = d_col_max = d_v;
+				memcpy(buf_col_min, ptr, len);
+				memcpy(buf_col_max, ptr, len);
+				minlen = maxlen = len;
+				d_col_min = d_col_max = d_v;
+				if (o_v) {
 					o_col_min = o_col_max = o_v;
-					if (o_v) Py_INCREF(o_v);
+					Py_INCREF(o_v);
 				}
 			}
 		}
