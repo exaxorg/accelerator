@@ -90,7 +90,7 @@ def synthesis(job, slices):
 		assert src_ds.hashlabel == hl
 		test(src_ds, dict(column2type={'a': 'int32_10', 'b': 'number:int'}, filter_bad=True), 800)
 		test(src_ds, dict(column2type={'a': 'int64_10', 'b': 'number', 'c': 'json'}, filter_bad=True), 666)
-		test(src_ds, dict(column2type={'a': 'floatint32ei', 'b': 'number:int', 'c': 'json'}, filter_bad=True), 533)
+		test(src_ds, dict(column2type={'a': 'number', 'b': 'number:int', 'c': 'json'}, filter_bad=True), 533)
 		test(src_ds, dict(column2type={'from_a': 'number', 'from_b': 'float64', 'from_c': 'ascii'}, rename=dict(a='from_a', b='from_b', c='from_c')), 1000)
 		test(src_ds, dict(column2type={'c': 'int32_16', 'a': 'float32', 'b': 'bytes'}, rename=dict(a='c', b='a', c='b')), 1000)
 

@@ -55,10 +55,6 @@ groupdata = {
 	'inty floats': {
 		'inty floats': (['18.0', '-3.000', '5.000000000000000000000000000', '.0', '99.'], -3, 99),
 	},
-	'floatint': { # throwing away the decimals
-		'floatint': (['-3.999', '-4', '-18.9', '.9'], -18, 0),
-		'big floatint': (['-555', '-9999999999', '1.5e6'], -2147483647, 1500000),
-	},
 	'float32': {
 		'float32': (['1.5', '2.5', '0.5', '1.0'], 0.5, 2.5),
 		'float32 neg': (['-1.5', '-2.5', '-0.5', '-1'], -2.5, -0.5),
@@ -121,7 +117,6 @@ tests = {
 	'number:int' : ['small int', 'i32', 'u32', 'i64', 'huge', 'inty floats'],
 	'float32'    : ['small int', 'float32', 'float32 only', 'inty floats', 'infinity', 'nan'],
 	'float64'    : ['small int', 'float32', 'float64', 'inty floats', 'infinity', 'nan'],
-	'floatint32s': ['floatint'],
 	'datetime:%Y-%m-%d %H:%M:%S'   : ['datetime'],
 	'datetime:%Y-%m-%d %H:%M:%S.%f': ['datetime micro'],
 	'time:%H:%M:%S'                : ['time'],

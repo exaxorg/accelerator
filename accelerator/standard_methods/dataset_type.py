@@ -535,49 +535,6 @@ _c_conv_floatbool_template = r'''
 		}
 '''
 
-_c_conv_floatint_exact_template = r'''
-		(void) fmt;
-		char *endptr;
-		double value = strtod(line, &endptr);
-#if %(whole)d
-		while (*endptr == 32 || (*endptr >= 9 && *endptr <= 13)) endptr++;
-		if (*endptr
-#else
-		if (0
-#endif
-		            || isnan(value) || value > %(biggest)s || value < %(smallest)s) {
-			ptr = 0;
-		} else {
-			int%(bitsize)d_t *p = (int%(bitsize)d_t *)ptr;
-			*p = value;
-		}
-'''
-
-_c_conv_floatint_saturate_template = r'''
-		(void) fmt;
-		char *endptr;
-		double value = strtod(line, &endptr);
-#if %(whole)d
-		while (*endptr == 32 || (*endptr >= 9 && *endptr <= 13)) endptr++;
-		if (*endptr
-#else
-		if (0
-#endif
-		            || isnan(value)) { // not a valid float
-			ptr = 0;
-		} else {
-			int%(bitsize)d_t res;
-			if (value <= -INT%(bitsize)d_MAX) {
-				res = -INT%(bitsize)d_MAX;
-			} else if (value >= INT%(bitsize)d_MAX) {
-				res = INT%(bitsize)d_MAX;
-			} else {
-				res = value;
-			}
-			int%(bitsize)d_t *p = (int%(bitsize)d_t *)ptr;
-			*p = res;
-		}
-'''
 
 MinMaxTuple = namedtuple('MinMaxTuple', 'setup code extra')
 def _c_minmax_simple(typename, min_const, max_const, check_none):
@@ -739,14 +696,6 @@ convfuncs = {
 	'float32'      : ConvTuple(4, _c_conv_float_template % dict(type='float', func='strtof', whole=1) , None),
 	'float64i'     : ConvTuple(8, _c_conv_float_template % dict(type='double', func='strtod', whole=0), None),
 	'float32i'     : ConvTuple(4, _c_conv_float_template % dict(type='float', func='strtof', whole=0) , None),
-	'floatint64e'  : ConvTuple(8, _c_conv_floatint_exact_template % dict(bitsize=64, whole=1, biggest='9007199254740992', smallest='-9007199254740992'), None),
-	'floatint32e'  : ConvTuple(4, _c_conv_floatint_exact_template % dict(bitsize=32, whole=1, biggest='INT32_MAX', smallest='-INT32_MAX'), None),
-	'floatint64s'  : ConvTuple(8, _c_conv_floatint_saturate_template % dict(bitsize=64, whole=1), None),
-	'floatint32s'  : ConvTuple(4, _c_conv_floatint_saturate_template % dict(bitsize=32, whole=1), None),
-	'floatint64ei' : ConvTuple(8, _c_conv_floatint_exact_template % dict(bitsize=64, whole=0, biggest='9007199254740992', smallest='-9007199254740992'), None),
-	'floatint32ei' : ConvTuple(4, _c_conv_floatint_exact_template % dict(bitsize=32, whole=0, biggest='INT32_MAX', smallest='-INT32_MAX'), None),
-	'floatint64si' : ConvTuple(8, _c_conv_floatint_saturate_template % dict(bitsize=64, whole=0), None),
-	'floatint32si' : ConvTuple(4, _c_conv_floatint_saturate_template % dict(bitsize=32, whole=0), None),
 	'int64_0'      : ConvTuple(8, _c_conv_int_template % dict(type='int64_t' , rtype=long_t         , func=strtol_f , nonemarker='INT64_MIN', whole=1, base=0 , unsigned=0), None),
 	'int32_0'      : ConvTuple(4, _c_conv_int_template % dict(type='int32_t' , rtype='long'         , func='strtol' , nonemarker='INT32_MIN', whole=1, base=0 , unsigned=0), None),
 	'int64_8'      : ConvTuple(8, _c_conv_int_template % dict(type='int64_t' , rtype=long_t         , func=strtol_f , nonemarker='INT64_MIN', whole=1, base=8 , unsigned=0), None),
@@ -836,14 +785,6 @@ typerename = {
 	'int32_10i'    : 'int32',
 	'int64_16i'    : 'int64',
 	'int32_16i'    : 'int32',
-	'floatint64e'  : 'int64',
-	'floatint32e'  : 'int32',
-	'floatint64s'  : 'int64',
-	'floatint32s'  : 'int32',
-	'floatint64ei' : 'int64',
-	'floatint32ei' : 'int32',
-	'floatint64si' : 'int64',
-	'floatint32si' : 'int32',
 	'float64i'     : 'float64',
 	'float32i'     : 'float32',
 	'datetimei'    : 'datetime',

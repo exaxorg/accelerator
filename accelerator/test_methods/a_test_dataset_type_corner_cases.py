@@ -156,17 +156,6 @@ def test_numbers():
 	verify('strbool', ['strbool'], [b'', b'0', b'FALSE', b'f', b'FaLSe', b'no', b'off', b'NIL', b'NULL', b'y', b'jao', b'well, sure', b' ', b'true'], [False] * 9 + [True] * 5)
 	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b'', b'0.00'], [False, False, True, True, True, True, True, False, False])
 	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y'], [True, False, False, True, True])
-	for typ, smallbig, smallneg, bigbig, bigneg, extra in (
-		('floatint32e', 42, 42, 42, 42, 42,),
-		('floatint32ei', 42, 42, 42, 42, 1,),
-		('floatint32s', 2147483647, -2147483647, 2147483647, -2147483647, 42,),
-		('floatint32si', 2147483647, -2147483647, 2147483647, -2147483647, 1,),
-		('floatint64e', 10000000000, -2147483648, 42, -2200000000, 42,),
-		('floatint64ei', 10000000000, -2147483648, 42, -2200000000, 1,),
-		('floatint64s', 10000000000, -2147483648, 9223372036854775807, -2200000000, 42,),
-		('floatint64si', 10000000000, -2147483648, 9223372036854775807, -2200000000, 1,),
-	):
-		verify(typ, [typ], [b'1.99', b'-3000', b'1e10', b'-2147483648', b'1e100', b'-2.2e9', b'-7.89', b'1.half'], [1, -3000, smallbig, smallneg, bigbig, bigneg, -7, extra], '42')
 	def check_special(got, fromstr):
 		msg = 'Expected [inf, -inf, nan, nan, nan, nan, inf], got %r from %s.' % (got, fromstr,)
 		for ix, v in ((0, float('inf')), (1, float('-inf')), (-1, float('inf'))):
