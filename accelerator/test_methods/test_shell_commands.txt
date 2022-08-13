@@ -1,0 +1,4 @@
+This is just some text, it's used in depend_extra in a_test_shell_commands.py
+to help with testing "ax job --source".
+
+Magic cookie: Delicious!

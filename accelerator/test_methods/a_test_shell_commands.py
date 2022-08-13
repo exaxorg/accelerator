@@ -31,6 +31,9 @@ options = dict(
 import os
 from subprocess import check_output
 
+# this is for job --source to have a second file
+depend_extra = ('test_shell_commands.txt',)
+
 def ax(cmd):
 	cmd = options.command_prefix + cmd
 	print(cmd)
@@ -40,21 +43,29 @@ def ax(cmd):
 
 all_checked = set()
 
-def chk(cmd, want_in_help=[], want_in_call=[]):
+def chk(cmd, want_in_help=[], want_in_call=[], dont_want_in_call=[]):
 	all_checked.add(cmd[0])
-	for args, want_l in (
-		([cmd[0], '-h'], ['--help'] + want_in_help),
-		(cmd, want_in_call),
+	for args, want_l, dont_want_l in (
+		([cmd[0], '-h'], ['--help'] + want_in_help, []),
+		(cmd, want_in_call, dont_want_in_call),
 	):
-		if not want_l:
+		if not want_l and not dont_want_l:
 			continue
 		output = ax(args)
 		for want in want_l:
 			if want not in output:
 				print("Expected to find %r in %r output:\n\n%s\n\nbut didn't." % (want, args, output,))
 				raise Exception("Failed in command %r" % (cmd[0],))
+		for dont_want in dont_want_l:
+			if dont_want in output:
+				print("Did not expect to find %r in %r output:\n\n%s\n\nbut did." % (dont_want, args, output,))
+				raise Exception("Failed in command %r" % (cmd[0],))
 
 def synthesis(job):
+	print('look for this later')
+	with job.open('filename', 'w') as fh:
+		in_written_file = 'stuff\nin\na\nfile\n' # \n is not literal here - not seen in this file
+		fh.write(in_written_file)
 	dw = job.datasetwriter(columns={'this is a column': 'ascii'})
 	dw.get_split_write()('this is a value')
 	ds = dw.finish()
@@ -70,6 +81,13 @@ def synthesis(job):
 	assert os.path.isdir('projdir/workdirs')
 	chk(['intro'], want_in_call=['ax init --examples', 'ax script'])
 	chk(['job', '--', job], want_in_help=['--just-output', ':urdlist:[entry]'], want_in_call=['"command_prefix":'])
+	chk(['job', '--just-output', '--', job], want_in_call=['look for this later'], dont_want_in_call=['most other things'])
+	in_this_file = 'this string is only here, and will be found here'
+	in_extra = 'Magic cookie: ' + 'Delicious!' # different formatting here - not seen in this file
+	extra_hdr = 'test_shell_commands.txt\n==============' # \n is not literal here - not seen in this file
+	chk(['job', '--source', '--', job], want_in_call=[in_this_file, in_extra, extra_hdr]),
+	chk(['job', '--source-file=*.txt', '--', job], want_in_call=[in_extra], dont_want_in_call=[extra_hdr, in_this_file]),
+	chk(['job', '--file=filename', '--', job], want_in_call=[in_written_file], dont_want_in_call=['===', in_this_file]),
 	chk(['method', 'csvimport'], want_in_help=['lists methods'], want_in_call=['filename'])
 	chk(['run'], want_in_help=['[script]', 'WORKDIR'])
 	chk(['script', 'build_tests'], want_in_help=['describes build scripts'], want_in_call=['Needs at least 3 slices to work.'])
