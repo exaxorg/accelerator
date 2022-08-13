@@ -118,7 +118,11 @@ def show_source(job, pattern='*'):
 	return 0
 
 def show_file(job, pattern):
-	files = job.files(pattern)
+	try:
+		files = job.files(pattern)
+	except FileNotFoundError:
+		# Probably the job didn't finish, let's not explode
+		files = []
 	if not files and pattern and os.path.exists(job.filename(pattern)):
 		# special case so you can name unregistered files
 		files = [pattern]
@@ -130,8 +134,13 @@ def show_file(job, pattern):
 		else:
 			fh = sys.stdout
 			res = 0
+		try:
+			files = job.files()
+		except FileNotFoundError:
+			print(colour('Job did not finish - unable to list files', 'job/warning'), file=sys.stderr)
+			return 1
 		print('Available files:', file=fh)
-		for fn in job.files():
+		for fn in files:
 			print('    ' + fn, file=fh)
 		return res
 	for ix, fn in enumerate(files, 1):
