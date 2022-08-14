@@ -536,13 +536,11 @@ _c_conv_floatbool_template = r'''
 '''
 
 
-MinMaxTuple = namedtuple('MinMaxTuple', 'setup code extra')
+MinMaxTuple = namedtuple('MinMaxTuple', 'typename setup code extra')
 def _c_minmax_simple(typename, min_const, max_const, check_none):
 	d = dict(type=typename, min_const=min_const, max_const=max_const, check_none=check_none)
 	setup = r'''
 		do {
-			%(type)s * const col_min = (%(type)s *)buf_col_min;
-			%(type)s * const col_max = (%(type)s *)buf_col_max;
 			*col_min = %(max_const)s;
 			*col_max = %(min_const)s;
 		} while (0)
@@ -553,18 +551,16 @@ def _c_minmax_simple(typename, min_const, max_const, check_none):
 			if (%(check_none)s) { // Some of these need to ignore None-values
 				/*NAN-handling 1*/
 				minmax_any = 1;
-				%(type)s * const col_min = (%(type)s *)buf_col_min;
-				%(type)s * const col_max = (%(type)s *)buf_col_max;
 				if (cand_value < *col_min) *col_min = cand_value;
 				if (cand_value > *col_max) *col_max = cand_value;
 				/*NAN-handling 2*/
 			}
 		} while (0)
 	''' % d
-	return MinMaxTuple(setup, code, '',)
+	return MinMaxTuple(typename, setup, code, '',)
 
 def _c_minmax_float(typename, check_none):
-	setup, code, _ = _c_minmax_simple(typename, '-INFINITY', 'INFINITY', check_none)
+	_, setup, code, _ = _c_minmax_simple(typename, '-INFINITY', 'INFINITY', check_none)
 	code = code.replace('/*NAN-handling 1*/', r'''
 			if (isnan(cand_value)) {
 				if (!minmax_any) minmax_any = -1;
@@ -574,17 +570,15 @@ def _c_minmax_float(typename, check_none):
 		if (minmax_any == -1) {
 			const %s nan = strtod("nan", 0);
 			err1(!isnan(nan));
-			memcpy(buf_col_min, &nan, sizeof(nan));
-			memcpy(buf_col_max, &nan, sizeof(nan));
+			col_min[0] = col_max[0] = nan;
 		}
 	''' % (typename,)
-	return MinMaxTuple(setup, code, extra)
+	return MinMaxTuple(typename, setup, code, extra)
 
 _c_minmax_datetime = MinMaxTuple(
+	'uint32_t',
 	r'''
 		do {
-			uint32_t * const col_min = (uint32_t *)buf_col_min;
-			uint32_t * const col_max = (uint32_t *)buf_col_max;
 			col_min[0] = 163836919; col_min[1] = 4021288960; // 9999-12-31 23:59:59
 			col_max[0] = 17440;     col_max[1] = 0;          // 0001-01-01 00:00:00
 		} while (0)
@@ -592,8 +586,6 @@ _c_minmax_datetime = MinMaxTuple(
 	r'''
 		do {
 			const uint32_t * const cand_p = (const uint32_t *)ptr;
-			uint32_t * const col_min = (uint32_t *)buf_col_min;
-			uint32_t * const col_max = (uint32_t *)buf_col_max;
 			if (cand_p[0]) { // Ignore None-values
 				minmax_any = 1;
 				if (cand_p[0] < col_min[0] || (cand_p[0] == col_min[0] && cand_p[1] < col_min[1])) {
@@ -838,10 +830,11 @@ convert_template = r'''
 	memset(outfhs, 0, sizeof(outfhs));
 	const char *line;
 	int res = 1;
-	char buf[%(datalen)s];
-	char defbuf[%(datalen)s];
-	char buf_col_min[%(datalen)s];
-	char buf_col_max[%(datalen)s];
+	// these are two long because datetime needs that, everything else uses only the first element
+	%(typename)s buf[2];
+	%(typename)s defbuf[2];
+	%(typename)s col_min[2];
+	%(typename)s col_max[2];
 	int minmax_any = 0;
 	char *badmap = 0;
 	uint16_t *slicemap = 0;
@@ -858,7 +851,7 @@ convert_template = r'''
 	}
 	if (default_value) {
 		err1(default_value_is_None);
-		char *ptr = defbuf;
+		char *ptr = (char *)defbuf;
 		line = default_value;
 		g.linelen = default_len;
 		%(convert)s;
@@ -887,7 +880,7 @@ more_infiles:
 			MAYBE_SAVE_BAD_BLOB;
 			continue;
 		}
-		char *ptr = buf;
+		char *ptr = (char *)buf;
 		if (line == NoneMarker) {
 			memcpy(ptr, &%(noneval_name)s, %(datalen)s);
 		} else {
@@ -903,7 +896,7 @@ more_infiles:
 				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.filename, (long long)i - first_line + 1);
 				goto err;
 			}
-			ptr = defbuf;
+			ptr = (char *)defbuf;
 			default_count[chosen_slice] += 1;
 		}
 		if (!outfhs[chosen_slice]) {
@@ -923,8 +916,8 @@ more_infiles:
 		gzFile minmaxfh = gzopen(minmax_fn, gzip_mode);
 		err1(!minmaxfh);
 		res = g.error;
-		if (gzwrite(minmaxfh, buf_col_min, %(datalen)s) != %(datalen)s) res = 1;
-		if (gzwrite(minmaxfh, buf_col_max, %(datalen)s) != %(datalen)s) res = 1;
+		if (gzwrite(minmaxfh, col_min, %(datalen)s) != %(datalen)s) res = 1;
+		if (gzwrite(minmaxfh, col_max, %(datalen)s) != %(datalen)s) res = 1;
 		if (gzclose(minmaxfh)) res = 1;
 	} else {
 		res = g.error;
@@ -1577,7 +1570,7 @@ for name, ct in sorted(list(convfuncs.items()) + list(hidden_convfuncs.items()))
 		destname = typerename.get(shortname, shortname)
 		mm = minmaxfuncs[destname]
 		noneval_name = 'noneval_' + destname
-		code = convert_template % dict(proto=proto, datalen=ct.size, convert=ct.conv_code_str, minmax_setup=mm.setup, minmax_code=mm.code, minmax_extra=mm.extra, noneval_name=noneval_name)
+		code = convert_template % dict(proto=proto, datalen=ct.size, convert=ct.conv_code_str, minmax_setup=mm.setup, minmax_code=mm.code, minmax_extra=mm.extra, noneval_name=noneval_name, typename=mm.typename)
 	else:
 		proto = proto_template % (name.replace(':*', '').replace(':', '_'),)
 		args = dict(proto=proto, convert=ct.conv_code_str, setup='', cleanup='')
