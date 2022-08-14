@@ -61,7 +61,7 @@ def _resolve_datetime(coltype):
 	if '%J' in fmt_a:
 		fmt_a, fmt_b = split('%J')
 		if any(v[0] == '%' and v != '%%' for v in fmt_a + fmt_b):
-			raise Exception('Can only parse %J as the only format specifier. (%r)' % (fmt,))
+			raise Exception('Can only parse %%J as the only format specifier. (%r)' % (fmt,))
 		assert cfunc.startswith('datetime'), 'Only datetime can use %J'
 		cfunc = 'java' + cfunc
 		fmt_b = ''.join(fmt_b)
