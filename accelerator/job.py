@@ -24,7 +24,7 @@ import re
 from collections import namedtuple
 from functools import wraps
 
-from accelerator.compat import unicode, PY2, PY3, open, iteritems
+from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError
 
 
@@ -48,6 +48,7 @@ def _cachedprop(meth):
 	return wrapper
 
 _cache = {}
+_nodefault = object()
 
 class Job(unicode):
 	"""
@@ -145,14 +146,24 @@ class Job(unicode):
 		from accelerator.extras import job_post
 		return job_post(self)
 
-	def load(self, filename='result.pickle', sliceno=None, encoding='bytes'):
+	def load(self, filename='result.pickle', sliceno=None, encoding='bytes', default=_nodefault):
 		"""blob.load from this job"""
 		from accelerator.extras import pickle_load
-		return pickle_load(self.filename(filename, sliceno), encoding=encoding)
+		try:
+			return pickle_load(self.filename(filename, sliceno), encoding=encoding)
+		except FileNotFoundError:
+			if default is _nodefault:
+				raise
+			return default
 
-	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=PY2):
+	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
 		from accelerator.extras import json_load
-		return json_load(self.filename(filename, sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+		try:
+			return json_load(self.filename(filename, sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+		except FileNotFoundError:
+			if default is _nodefault:
+				raise
+			return default
 
 	def dataset(self, name='default'):
 		from accelerator.dataset import Dataset
@@ -323,13 +334,15 @@ class NoJob(Job):
 	def files(self, pattern='*'):
 		return set()
 
-	def load(self, filename=None, sliceno=None, encoding='bytes'):
+	def load(self, filename=None, sliceno=None, encoding='bytes', default=_nodefault):
+		if default is not _nodefault:
+			return default
 		if filename is not None or sliceno is not None:
 			raise NoSuchJobError('Can not load named / sliced file on <NoJob>')
 		return None
 
-	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2):
-		return self.load(filename, sliceno)
+	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+		return self.load(filename, sliceno, default=default)
 
 NoJob = NoJob()
 
@@ -348,14 +361,24 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 			assert self.sliced, "An unsliced file can not have a sliceno"
 		return self.job.filename(self.name, sliceno)
 
-	def load(self, sliceno=None, encoding='bytes'):
+	def load(self, sliceno=None, encoding='bytes', default=_nodefault):
 		"""blob.load this file"""
 		from accelerator.extras import pickle_load
-		return pickle_load(self.filename(sliceno), encoding=encoding)
+		try:
+			return pickle_load(self.filename(sliceno), encoding=encoding)
+		except FileNotFoundError:
+			if default is _nodefault:
+				raise
+			return default
 
-	def json_load(self, sliceno=None, unicode_as_utf8bytes=PY2):
+	def json_load(self, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
 		from accelerator.extras import json_load
-		return json_load(self.filename(sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+		try:
+			return json_load(self.filename(sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+		except FileNotFoundError:
+			if default is _nodefault:
+				raise
+			return default
 
 	def open(self, mode='r', sliceno=None, encoding=None, errors=None):
 		return self.job.open(self.name, mode, sliceno, encoding, errors)
