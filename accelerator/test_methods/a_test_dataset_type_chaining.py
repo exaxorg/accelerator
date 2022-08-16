@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -24,7 +24,7 @@ description = r'''
 Verify the various dataset_type chaining options:
 Building a chain with and without extra datasets in the source.
 Using the length option to get only some of the extra datasets.
-Using the as_chain option to get one dataset per slice.
+Using the chain_slices option to get one dataset per slice.
 '''
 
 from accelerator.dataset import Dataset
@@ -63,7 +63,7 @@ def synthesis(job, slices):
 	untyped_E = write('E', untyped_D, 10000, 10100)
 
 	# All four different classes of converters
-	opts = DotDict(column2type=dict(a='int32_10', b='number', c='ascii', d='json'), as_chain=False)
+	opts = DotDict(column2type=dict(a='int32_10', b='number', c='ascii', d='json'), chain_slices=False)
 	src_chain = []
 	simple_chain = []
 	previous = None
@@ -89,8 +89,8 @@ def synthesis(job, slices):
 	del opts.length
 	verify((untyped_A, untyped_B, untyped_D, untyped_E), Dataset(typed_DE_noC).chain())
 
-	# with as_chain (and a hashlabel so as_chain happens)
-	opts.as_chain = True
+	# with chain_slices (and a hashlabel so chain_slices happens)
+	opts.chain_slices = True
 	opts.hashlabel = 'a'
 	previous = None
 	used_slices = []
@@ -102,7 +102,7 @@ def synthesis(job, slices):
 		verify_sorted([src], ds.chain(length=used_slices[-1]))
 		verify_sorted(src_chain[:ix], ds.chain())
 
-	# And one with as_chain just on the last job, discarding half the rows from bad typing.
+	# And one with chain_slices just on the last job, discarding half the rows from bad typing.
 	opts.column2type['b'] = 'ascii'
 	opts.column2type['c'] = 'number:int'
 	opts.filter_bad = True

@@ -33,7 +33,7 @@ options = {
 	'hashlabel'                 : OptionString,
 	'caption'                   : '"%(caption)s" hashed on %(hashlabel)s',
 	'length'                    : -1, # Go back at most this many datasets. You almost always want -1 (which goes until previous.source)
-	'as_chain'                  : False, # one dataset per slice (avoids rewriting at the end)
+	'chain_slices'              : False, # one dataset per slice (avoids rewriting at the end)
 }
 
 datasets = ('source', 'previous',)
@@ -48,7 +48,7 @@ def prepare(job, slices):
 		filename = None
 	dws = []
 	previous = datasets.previous
-	if options.as_chain:
+	if options.chain_slices:
 		# The last slice that actually has data in it becomes 'default'.
 		# Or slice 0 if the whole source is empty (we must produce a ds).
 		default_sliceno = 0
@@ -105,7 +105,7 @@ def analysis(sliceno, prepare_res):
 		write(values)
 
 def synthesis(prepare_res, job, slices):
-	if not options.as_chain:
+	if not options.chain_slices:
 		# If we don't want a chain we abuse our knowledge of dataset internals
 		# to avoid recompressing. Don't do this stuff yourself.
 		dws, names, caption, filename, cols = prepare_res

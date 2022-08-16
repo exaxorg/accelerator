@@ -112,25 +112,25 @@ def synthesis(params):
 	# just the bonus ds
 	verify(params.slices, bonus_data, bonus_ds, hashlabel="date", length=1)
 	# built as a chain
-	verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", as_chain=True)
+	verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", chain_slices=True)
 	# normal chaining
 	a = verify(params.slices, data, ds, hashlabel="date")
 	b = verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", previous=a)
 	assert b.chain() == [a, b], "chain of %s is not [%s, %s] as expected" % (b, a, b)
-	# as_chain sparseness
+	# chain_slices sparseness
 	empty = write([], name="empty")
 	verify_empty(empty, hashlabel="date")
-	verify_empty(empty, hashlabel="date", as_chain=True)
-	ds = verify(params.slices, [], empty, hashlabel="date", as_chain=True)
+	verify_empty(empty, hashlabel="date", chain_slices=True)
+	ds = verify(params.slices, [], empty, hashlabel="date", chain_slices=True)
 	# chaining with the same source as previous should also produce an empty dataset
 	verify_empty(bonus_ds, hashlabel="date", previous=b)
-	verify_empty(bonus_ds, hashlabel="date", previous=b, as_chain=True)
+	verify_empty(bonus_ds, hashlabel="date", previous=b, chain_slices=True)
 	# two populated slices with the same data, should end up in two datasets.
 	dw = DatasetWriter(columns=columns, name="0 and 2", allow_missing_slices=True)
 	dw.set_slice(0)
 	dw.write_dict(data[0])
 	dw.set_slice(2)
 	dw.write_dict(data[0])
-	ds = verify(params.slices, [data[0]], dw.finish(), hashlabel="date", as_chain=True)
+	ds = verify(params.slices, [data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
-	assert got_slices == 2, "%s (built with as_chain=True) has %d datasets in chain, expected 2." % (ds, got_slices,)
+	assert got_slices == 2, "%s (built with chain_slices=True) has %d datasets in chain, expected 2." % (ds, got_slices,)

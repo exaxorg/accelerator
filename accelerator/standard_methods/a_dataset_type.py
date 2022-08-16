@@ -80,7 +80,7 @@ options = {
 	'filter_bad'                : False, # Discard lines where any column fails typing, saving them in a dataset named "bad"
 	'numeric_comma'             : False, # floats as "3,14"
 	'length'                    : -1, # Go back at most this many datasets. You almost always want -1 (which goes until previous.source)
-	'as_chain'                  : False, # one dataset per slice if rehashing (avoids rewriting at the end)
+	'chain_slices'              : False, # one dataset per slice if rehashing (avoids rewriting at the end)
 	'compression'               : 6,     # gzip level
 }
 
@@ -193,7 +193,7 @@ def prepare(job, slices):
 	dws = []
 	if rehashing:
 		previous = datasets.previous
-		if options.as_chain:
+		if options.chain_slices:
 			# The last slice that actually has data in it becomes 'default'.
 			# Or slice 0 if the whole source is empty (we must produce a ds).
 			default_sliceno = 0
@@ -223,7 +223,7 @@ def prepare(job, slices):
 			else:
 				dw = None
 			dws.append(dw)
-	if rehashing and options.as_chain:
+	if rehashing and options.chain_slices:
 		dw = None
 	else:
 		if parent:
