@@ -30,7 +30,7 @@ from collections import namedtuple, Counter
 from itertools import compress, islice
 from functools import partial
 from contextlib import contextmanager
-from operator import itemgetter
+from operator import itemgetter, not_
 from math import isnan
 import datetime
 
@@ -482,13 +482,10 @@ class Dataset(unicode):
 				sliceno = '%s'
 			return jid.filename(name % (sliceno,))
 
-	def chain(self, length=-1, reverse=False, stop_ds=None):
-		if stop_ds:
-			# resolve all formats to the same format
-			stop_ds = Dataset(stop_ds)
+	def _chain(self, length, reverse, stop):
 		chain = DatasetChain()
 		current = self
-		while length != len(chain) and current != stop_ds:
+		while length != len(chain) and not stop(current):
 			chain.append(current)
 			if not current.previous:
 				break
@@ -496,6 +493,19 @@ class Dataset(unicode):
 		if not reverse:
 			chain.reverse()
 		return chain
+
+	def chain(self, length=-1, reverse=False, stop_ds=None):
+		if stop_ds:
+			# resolve all formats to the same format
+			stop = Dataset(stop_ds).__eq__
+		else:
+			stop = not_
+		return self._chain(length, reverse, stop)
+
+	def chain_within_job(self, length=-1, reverse=False):
+		def stop(ds):
+			return ds.job != self.job
+		return self._chain(length, reverse, stop)
 
 	def iterate_chain(self, sliceno, columns=None, length=-1, range=None, sloppy_range=False, reverse=False, hashlabel=None, stop_ds=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate a list of datasets. See .chain and .iterate_list for details."""
