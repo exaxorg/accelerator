@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2020 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -29,15 +29,21 @@ including callbacks with SkipDataset.
 from accelerator.dataset import DatasetWriter, SkipDataset
 from accelerator.extras import DotDict
 
+datasets = ('previous',)
+
 def prepare(params):
 	dws = {}
 	prev = None
-	for name in "abcdefgh":
+	jlt_prev = datasets.previous
+	def mk(name, prev):
 		dw = DatasetWriter(name=name, previous=prev)
 		dw.add("ds", "ascii")
 		dw.add("num", "number")
 		dws[name] = dw
-		prev = dw
+		return dw
+	for name in "abcdefgh":
+		prev = mk(name, prev)
+		jlt_prev = mk("job local test " + name, jlt_prev)
 	return dws
 
 def analysis(sliceno, prepare_res):
@@ -56,12 +62,19 @@ def synthesis(prepare_res, params):
 	ds = DotDict()
 	# Must be finished in order (.previous must be finished when .finish is called.)
 	for name, dw in sorted(prepare_res.items()):
-		ds[name] = dw.finish()
+		if len(name) == 1:
+			ds[name] = dw.finish()
+		else:
+			jlt_last = dw.finish()
 	last = ds.h
 	assert last.chain() == sorted(ds.values())
+	assert last.chain() == last.chain_within_job()
 	ds.last = last
 	test_partial_chains(ds)
 	test_filters(ds)
+	local_chain = jlt_last.chain_within_job()
+	assert len(local_chain) < len(jlt_last.chain())
+	assert [ds.name[-1] for ds in local_chain] == [ds.name for ds in last.chain()]
 
 def test_partial_chains(ds):
 	alles = list(ds.last.iterate_chain(None))

@@ -251,7 +251,7 @@ def main(urd):
 
 	print()
 	print("Testing dataset chaining, filtering, callbacks and rechaining")
-	selfchain = urd.build("test_selfchain")
+	selfchain = urd.build("test_selfchain", previous=source)
 	urd.build("test_rechain", jobs=dict(selfchain=selfchain))
 	urd.build("test_dataset_callbacks")
 	urd.build("test_dataset_range")
