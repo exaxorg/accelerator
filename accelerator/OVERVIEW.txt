@@ -10,12 +10,14 @@ main server
 	python version specific runner (runner.py)
 		when running a job this forks to create the actual job processes
 	maybe more runners (one per py\d line in the conf)
+	urd-server
+	board-server
 	short lived worker pools when loading metadata about jobs.
-runner (asks the server to run jobs)
+build-script (asks the server to run jobs)
 
-Communication between the runner and the server is over http (by default
-over a unix socket). You can find the code in automata_common.py and
-server.py.
+Communication between the build-script and the server is over http (by
+default over a unix socket). You can find the interesting parts of the
+code in build.py and server.py.
 
 Communication between the server and the runners is over anonymous sockets
 (from socketpair()), each packet is a length prefix followed by pickled
@@ -27,7 +29,9 @@ in the job dir and partly inherited from the parent process (normal fork
 behaviour).
 
 Communication between the main job process and the analysis processes (the
-parallell part) is over a multiprocessing.Queue object.
+parallell part) is over a mp.LockFreeQueue object (provides similar
+functionality to multiprocessing.Queue, but without locks that can give you
+problems when killing processes).
 
 Yes, this has more variation than there is any reason for. Rewriting it is
 probably not useful though, all the communication methods work.
@@ -71,27 +75,34 @@ Datasets are our main data storage system, suitable for data you stream
 through. (Other data is normally stored in pickles.) Each column is stored
 separately in one file per slice (except for small columns, where all
 slices are in one file). Each column has a single type, one of the types in
-sourcedata.type2iter (which is a few more than you see at the top of the
-file). Most of these types are handled through gzutil, a C extension.
+dsutil._type2iter (which is a few more than you see at the top of the
+file). Most of these types are handled through _dsutil, a C extension.
 
 Each job can contain any number of datasets. On disk each dataset is a
-directory containing a pickle with metainfo and all the column files.
+pickle with metainfo and usually a directory with all the column files
+(unless the dataset has inherited all columns from other datasets, or
+the files were small enough to be merged into a single file replacing the
+directory).
 
-Look in dataset.py more details.
+Look in dataset.py for more details.
 
 
 List of files
 =============
 
-Runnable files
+Under shell/, for the "ax" command
+	__init__.py
+		entry point for the "ax" command, some of the simpler commands
+	parser.py
+		command line parsing, job resolution (":urdlist:", "method", ...)
+	*.py
+		individual command implementations
+
+Other things that also get started by the "ax" command
+	board.py
+	build.py ("ax run")
 	server.py
-		Main server
-	automatarunner.py
-		Runs your automata scripts
-	dsgrep.py
-		Grep one or more datasets
-	dsinfo.py
-		Print some info about a dataset
+	urd.py
 
 Bookeeping around jobs
 	control.py
@@ -102,18 +113,16 @@ Bookeeping around jobs
 	workspace.py
 
 Datasets and ds/jobchaining
-	chaining.py
 	dataset.py
-	sourcedata.py
+	dsutil.py
 
 Launching of jobs, forking magic
 	dispatch.py
 	launch.py
+	mp.py
 	runner.py
 
 Other
-	automata_common.py
-		support functions for automatarunner/subjobs
 	extras.py
 		dumping ground for a lot of useful utility functions
 	job.py
@@ -128,18 +137,23 @@ Other
 Not so interesting files
 	autoflush.py
 	blob.py
+	colourwrapper.py
+		handling for colouring (or not) command output (usable in methods too)
 	compat.py
 		py2/py3 compat
 	configfile.py
-	dscmdhelper.py
 	error.py
 	g.py
-	gzwrite.py
-	init.py
 	setupfile.py
 	unixhttp.py
 	web.py
 	workarounds.py
+
+board
+	Directory with HTML templates for board.
+
+examples
+	Directory with the files for "ax init --examples"
 
 standard_methods
 	Directory with the bundled standard methods.
