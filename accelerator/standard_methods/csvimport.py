@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2020 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -364,7 +364,7 @@ static int import_slice(const int fd, const int sliceno, const int slices, int f
 	gzFile outfh[full_field_count];
 	char *field_ptrs[real_field_count];
 	int32_t field_lens[real_field_count];
-	const int save_lineno = !!out_fns[real_field_count + 4];
+	const int save_lineno = (parsing_labels ? 0 : !!out_fns[real_field_count + 4]);
 	for (int i = 0; i < full_field_count; i++) {
 		outfh[i] = 0;
 	}
