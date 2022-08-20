@@ -86,6 +86,7 @@ def collect_escseq(it, line_fg, line_bg):
 
 
 def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
+	colour._lined = True
 	pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
 	pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
 	if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '':

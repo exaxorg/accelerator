@@ -108,6 +108,7 @@ class Colour:
 			self._off = dict.fromkeys(self._on, '')
 		self.enable()
 		self.__all__ = [k for k in dir(self) if not k.startswith('_')]
+		self._lined = False
 
 	def configure_from_environ(self, environ=None, stdout=None):
 		# trying to support both https://no-color.org/ and https://bixense.com/clicolors/
@@ -138,8 +139,17 @@ class Colour:
 	def _expand_names(self, things):
 		for thing in things:
 			orig_thing = thing
+			if self._lined:
+				thing = 'lined/' + thing
 			if thing not in self._names and '/' in thing:
-				thing = thing.split('/', 1)[1]
+				# allow up to three elements ("a/b/c"), try both "b/c" and "a/c"
+				# (so cmd/blah wins over lined/blah if defined.)
+				prefix, thing = thing.split('/', 1)
+				if thing not in self._names and '/' in thing:
+					middle, thing = thing.split('/', 1)
+					a_c = prefix + '/' + thing
+					if a_c in self._names:
+						thing = a_c
 			if thing in self._names:
 				for a in self._names[thing]:
 					yield orig_thing, a
