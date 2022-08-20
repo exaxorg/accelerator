@@ -28,10 +28,9 @@ from accelerator import mp
 
 
 def split_colour(spec):
-	seq = colour('/', spec)
-	if seq == '/':
+	seq, _ = colour.pre_post(spec)
+	if seq == '':
 		return '', ''
-	seq = seq.split('/', 1)[0] # we only want the setting, not the unsetting
 	assert seq.startswith('\x1b[')
 	assert seq.endswith('m')
 	seq = seq[2:-1]

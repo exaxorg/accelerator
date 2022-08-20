@@ -160,7 +160,7 @@ class Colour:
 			yield '\x1b[' + ';'.join(have) + 'm'
 
 	# When we drop python 2 we can change this to use normal keywords
-	def __call__(self, value, *attrs, **kw):
+	def pre_post(self, *attrs, **kw):
 		bad_kw = set(kw) - {'force', 'reset'}
 		if bad_kw:
 			raise TypeError('Unknown keywords %r' % (bad_kw,))
@@ -234,6 +234,11 @@ class Colour:
 				post = literal_post
 		else:
 			pre = post = ''
+		return pre, post
+
+	# When we drop python 2 we can change this to use normal keywords
+	def __call__(self, value, *attrs, **kw):
+		pre, post = self.pre_post(*attrs, **kw)
 		if isinstance(value, bytes):
 			return b'%s%s%s' % (pre.encode('utf-8'), value, post.encode('utf-8'),)
 		return '%s%s%s' % (pre, value, post,)
