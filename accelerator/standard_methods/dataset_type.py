@@ -843,10 +843,12 @@ convert_template = r'''
 	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
+		if (badmap == MAP_FAILED) badmap = 0;
 		err1(!badmap);
 	}
 	if (slicemap_fd != -1) {
 		slicemap = mmap(0, slicemap_size, PROT_READ, MAP_NOSYNC | MAP_SHARED, slicemap_fd, 0);
+		if (slicemap == MAP_FAILED) slicemap = 0;
 		err1(!slicemap);
 	}
 	if (default_value) {
@@ -1093,10 +1095,12 @@ err:
 	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
+		if (badmap == MAP_FAILED) badmap = 0;
 		err1(!badmap);
 	}
 	if (slicemap_fd != -1) {
 		slicemap = mmap(0, slicemap_size, PROT_READ, MAP_NOSYNC | MAP_SHARED, slicemap_fd, 0);
+		if (slicemap == MAP_FAILED) slicemap = 0;
 		err1(!slicemap);
 	}
 	if (default_value) {
@@ -1292,10 +1296,12 @@ convert_blob_template = r'''
 	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
+		if (badmap == MAP_FAILED) badmap = 0;
 		err1(!badmap);
 	}
 	if (slicemap_fd != -1) {
 		slicemap = mmap(0, slicemap_size, PROT_READ, MAP_NOSYNC | MAP_SHARED, slicemap_fd, 0);
+		if (slicemap == MAP_FAILED) slicemap = 0;
 		err1(!slicemap);
 	}
 %(setup)s
@@ -1421,10 +1427,12 @@ null_number_template = r'''
 	err1(save_bad);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
+		if (badmap == MAP_FAILED) badmap = 0;
 		err1(!badmap);
 	}
 	if (slicemap_fd != -1) {
 		slicemap = mmap(0, slicemap_size, PROT_READ, MAP_NOSYNC | MAP_SHARED, slicemap_fd, 0);
+		if (slicemap == MAP_FAILED) slicemap = 0;
 		err1(!slicemap);
 	}
 	int64_t i = 0;
@@ -1499,10 +1507,12 @@ null_template = r'''
 	err1(save_bad);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
+		if (badmap == MAP_FAILED) badmap = 0;
 		err1(!badmap);
 	}
 	if (slicemap_fd != -1) {
 		slicemap = mmap(0, slicemap_size, PROT_READ, MAP_NOSYNC | MAP_SHARED, slicemap_fd, 0);
+		if (slicemap == MAP_FAILED) slicemap = 0;
 		err1(!slicemap);
 	}
 	int64_t i = 0;
