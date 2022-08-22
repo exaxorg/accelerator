@@ -295,7 +295,7 @@ class MpSet:
 
 	def _process(self):
 		fd_keep = {self._q_r.r, self._q_r.w, self._q_w.r, self._q_w.w}
-		fd = 3
+		fd = 0
 		fd_end = fd + 20
 		while fd < fd_end:
 			if fd not in fd_keep:
