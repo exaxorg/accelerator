@@ -107,11 +107,25 @@ def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 		else:
 			in_fh = sys.stdin.buffer.raw
 			errors = 'surrogateescape'
+
+		if decode_lines:
+				# this has an extra indent to make a later commit smaller
+				def decode_part(part):
+					res = []
+					for part in part.split('\\n'):
+						part = part.strip('\r')
+						res.append(part)
+						if line_bg and '\r' not in part:
+							res.append('\x1b[K')
+						res.append('\n')
+					return ''.join(res[:-1]) # final \n is added in the main loop
+
 		for line in in_fh:
 			line_fg, line_bg = next(colours)
-			line = line.rstrip(b'\n').decode('utf-8', errors)
+			line = line.strip(b'\r\n').decode('utf-8', errors)
+			has_cr = ('\r' in line)
 			if decode_lines:
-				line = '\\'.join(part.replace('\\n', '\x1b[K\n' if line_bg else '\n') for part in line.split('\\\\'))
+				line = '\\'.join(decode_part(part) for part in line.split('\\\\'))
 			todo = iter(line)
 			data = []
 			if line_fg and line_bg:
@@ -125,7 +139,7 @@ def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 					data.extend(collect_escseq(todo, line_fg, line_bg))
 				else:
 					data.append(c)
-			if line_bg:
+			if line_bg and not has_cr and not decode_lines:
 				data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
 			data.append('\x1b[m\n')
 			data = ''.join(data).encode('utf-8', errors)
