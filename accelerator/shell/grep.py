@@ -344,9 +344,9 @@ def main(argv, cfg):
 	if args.format == 'csv':
 		def escape_item(item):
 			if item and (separator in item or item[0] in '\'"' or item[-1] in '\'"'):
-				return '"' + item.replace('\n', '\\n').replace('"', '""') + '"'
+				return '"' + item.replace('\n', '\\n').replace('\r', '\\r').replace('"', '""') + '"'
 			else:
-				return item.replace('\n', '\\n')
+				return item.replace('\n', '\\n').replace('\r', '\\r')
 		errors = 'surrogatepass'
 	else:
 		if args.format == 'raw' and args.lined:

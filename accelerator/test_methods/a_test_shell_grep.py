@@ -299,7 +299,7 @@ def synthesis(job, slices):
 	grep_text(
 		['', allbytes],
 		[
-			[b'control chars', b'"' + mk_bytes(0, 10) + b'\\n' + mk_bytes(11, 32) + b'"'],
+			[b'control chars', b'"' + mk_bytes(0, 10) + b'\\n\x0b\x0c\\r' + mk_bytes(14, 32) + b'"'],
 			[b'printable', mk_bytes(32, 128)],
 			[b'not ascii', not_ascii],
 		],
