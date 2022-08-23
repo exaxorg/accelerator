@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2020 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -77,22 +77,34 @@ def verify_ds(options, d, d_bad, d_skipped, filename):
 		del d[ix]
 	assert not d, "Not all lines returned from %r (%s), %r missing" % (filename, jid, set(d.keys()),)
 	if options.get("allow_bad"):
-		for ix, data in Dataset(jid, "bad").iterate(None, ["lineno", "data"]):
+		bad_ds = Dataset(jid, "bad")
+		for ix, data in bad_ds.iterate(None, ["lineno", "data"]):
 			assert ix in d_bad, "Bad bad_lineno %d in %r (%s/bad) %r" % (ix, filename, jid, data,)
 			assert data == d_bad[ix], "Wrong saved bad line %d in %r (%s/bad).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_bad[ix], data,)
 			del d_bad[ix]
+		verify_minmax(bad_ds, "lineno")
 	assert not d_bad, "Not all bad lines returned from %r (%s), %r missing" % (filename, jid, set(d_bad.keys()),)
 
 	if options.get("comment") or options.get("skip_lines"):
-		for ix, data in Dataset(jid, "skipped").iterate(None, ["lineno", "data"]):
+		skipped_ds = Dataset(jid, "skipped")
+		for ix, data in skipped_ds.iterate(None, ["lineno", "data"]):
 			assert ix in d_skipped, "Bad skipped_lineno %d in %r (%s/skipped) %r" % (ix, filename, jid, data,)
 			assert data == d_skipped[ix], "Wrong saved skipped line %d in %r (%s/skipped).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_skipped[ix], data,)
 			del d_skipped[ix]
+		verify_minmax(skipped_ds, "lineno")
 	assert not d_skipped, "Not all bad lines returned from %r (%s), %r missing" % (filename, jid, set(d_skipped.keys()),)
 
 	if options.get("lineno_label"):
 		lineno_got = dict(ds.iterate(None, ["ix", options.get("lineno_label")]))
 		assert lineno_got == lineno_want, "%r != %r" % (lineno_got, lineno_want,)
+		verify_minmax(ds, options["lineno_label"])
+
+def verify_minmax(ds, colname):
+	data = list(ds.iterate(None, colname))
+	minmax_want = (min(data) , max(data),) if data else (None, None,)
+	col = ds.columns[colname]
+	minmax_got = (col.min, col.max,)
+	assert minmax_got == minmax_want, "%s: %r != %r" % (ds, minmax_got, minmax_want,)
 
 def require_failure(name, options):
 	try:
@@ -184,6 +196,7 @@ def synthesis(job):
 	check_good_file(job, "override labels", b"""a,b,c\n0,foo,foo""", {0: b"foo"}, labels=["ix", "0", "1"])
 	check_good_file(job, "only labels", b"""ix,0,1""", {})
 	check_good_file(job, "empty file", b"", {}, labels=["ix", "0", "1"])
+	check_good_file(job, "empty file with lineno+skip+bad", b"", {}, labels=["ix", "0", "1"], lineno_label="num", comment="#", allow_bad=True)
 	check_good_file(job, "lineno with bad lines", b"ix,0,1\n2,a,a\n3,b\nc\n5,d,d\n6,e,e\n7\n8,g,g\n\n", {2: b"a", 5: b"d", 6: b"e", 8: b"g"}, d_bad={3: b"3,b", 4: b"c", 7: b"7", 9: b""}, allow_bad=True, lineno_label="num")
 	check_good_file(job, "lineno with skipped lines", b"a\nb\n3,c,c\n4,d,d", {3: b"c", 4: b"d"}, lineno_label="l", labels=["ix", "0", "1"], labelsonfirstline=False, skip_lines=2, d_skipped={1: b"a", 2: b"b"})
 	check_good_file(job, "lineno with comment lines", b"ix,0,1\n2,a,a\n3,b,b\n#4,c,c\n5,d,d", {2: b"a", 3: b"b", 5: b"d"}, lineno_label="another name", comment="#", d_skipped={4: b"#4,c,c"})
