@@ -350,6 +350,11 @@ static inline int bufread(const int fd, readbuf *buf, const uint32_t len, int *r
 	return 0;
 }
 
+#define minmax_lineno(offset) do { \
+	r_num[(offset) + 1] = lineno; \
+	if (r_num[offset] == 0) r_num[offset] = lineno; \
+} while (0)
+
 static int import_slice(const int fd, const int sliceno, const int slices, int field_count, const char *out_fns[], const char *gzip_mode, const int separator, uint64_t *r_num, const int quote_char, const int lf_char, const int allow_bad, const int allow_extra_empty)
 {
 	FILE * const badline_report_fh = (allow_bad ? stdout : stderr);
@@ -415,6 +420,7 @@ buf_prefilled:
 		}
 		err1(bufread(fd, buf, len, &eof, &bufptr));
 		if (skip_line) {
+			minmax_lineno(7);
 			err1(gzwrite(outfh[real_field_count + 2], &lineno, 8) != 8);
 			err1(field_write(outfh[real_field_count + 3], bufptr, len));
 			r_num[2]++;
@@ -533,6 +539,7 @@ buf_prefilled:
 				}
 			}
 			if (save_lineno) {
+				minmax_lineno(3);
 				err1(gzwrite(outfh[real_field_count + 4], &lineno, 8) != 8);
 			}
 		}
@@ -562,6 +569,7 @@ bad_line:
 	r_num[1]++;
 	if (allow_bad) {
 		if (outfh[real_field_count]) {
+			minmax_lineno(5);
 			err1(gzwrite(outfh[real_field_count], &lineno, 8) != 8);
 			err1(field_write(outfh[real_field_count + 1], bufptr, len));
 		}
@@ -639,7 +647,7 @@ static PyObject *py_import_slice(PyObject *self, PyObject *args)
 	const char *gzip_mode;
 	int separator;
 	PyObject *o_r_num;
-	uint64_t r_num[3] = {0, 0, 0};
+	uint64_t r_num[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 	int quote_char;
 	int lf_char;
 	int allow_bad;
@@ -662,7 +670,7 @@ static PyObject *py_import_slice(PyObject *self, PyObject *args)
 	}
 	err1(!PyList_Check(o_out_fns));
 	err1(!PyList_Check(o_r_num));
-	err1(PyList_Size(o_r_num) != 3);
+	err1(PyList_Size(o_r_num) != 9);
 	Py_ssize_t cnt = PyList_Size(o_out_fns);
 	out_fns = malloc(sizeof(char *) * cnt);
 	err1(!out_fns);
@@ -674,7 +682,7 @@ static PyObject *py_import_slice(PyObject *self, PyObject *args)
 		}
 	}
 	err1(import_slice(fd, sliceno, slices, field_count, out_fns, gzip_mode, separator, r_num, quote_char, lf_char, allow_bad, allow_extra_empty));
-	for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 9; i++) {
 		err1(PyList_SetItem(o_r_num, i, PyLong_FromUnsignedLongLong(r_num[i])));
 	}
 	fail = 0;

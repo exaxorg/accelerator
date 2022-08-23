@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -190,7 +190,7 @@ def prepare(job, slices):
 		os.close(labels_wfd)
 		# re-use import logic
 		out_fns = ["labels"]
-		r_num = cstuff.mk_uint64(3)
+		r_num = cstuff.mk_uint64(9)
 		try:
 			import_slice("c backend failed in label parsing", labels_rfd, -1, -1, -1, out_fns, b"wb1", separator, r_num, quote_char, lf_char, 0, 0)
 		finally:
@@ -293,7 +293,7 @@ def analysis(sliceno, slices, prepare_res, update_top_status):
 		out_fns.append(dw.column_filename(options.lineno_label))
 	else:
 		out_fns.append(cstuff.NULL)
-	r_num = cstuff.mk_uint64(3) # [good_count, bad_count, comment_count]
+	r_num = cstuff.mk_uint64(9) # [good_count, bad_count, comment_count, good_min,max, bad_min,max, comment_min,max]
 	gzip_mode = b"wb%d" % (options.compression,)
 	try:
 		import_slice("c backend failed in slice %d" % (sliceno,), fds[sliceno], sliceno, slices, len(labels), out_fns, gzip_mode, separator, r_num, quote_char, lf_char, options.allow_bad, options.allow_extra_empty)
@@ -320,12 +320,20 @@ def synthesis(prepare_res, analysis_res):
 	good_counts = []
 	bad_counts = []
 	skipped_counts = []
-	for sliceno, (good_count, bad_count, skipped_count) in enumerate(analysis_res):
+	for sliceno, r_num in enumerate(analysis_res):
+		(good_count, bad_count, skipped_count) = r_num[:3]
 		dw.set_lines(sliceno, good_count)
+		if options.lineno_label:
+			if r_num[3]:
+				dw.set_minmax(sliceno, {options.lineno_label: r_num[3:5]})
 		if bad_dw:
 			bad_dw.set_lines(sliceno, bad_count)
+			if r_num[5]:
+				bad_dw.set_minmax(sliceno, {'lineno': r_num[5:7]})
 		if skipped_dw:
 			skipped_dw.set_lines(sliceno, skipped_count)
+			if r_num[7]:
+				skipped_dw.set_minmax(sliceno, {'lineno': r_num[7:9]})
 		good_counts.append(good_count)
 		bad_counts.append(bad_count)
 		skipped_counts.append(skipped_count)
