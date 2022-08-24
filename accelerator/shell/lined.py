@@ -96,7 +96,7 @@ class Liner:
 			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
 
 
-def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
+def enable_lines(colour_prefix, decode_lines=False):
 	colour._lined = True
 	pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
 	pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
@@ -105,7 +105,6 @@ def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 
 	def lineme():
 		os.close(liner_w)
-		process_setup()
 
 		colours = cycle([
 			(pre_fg0, pre_bg0),
