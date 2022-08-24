@@ -333,6 +333,14 @@ def main(argv, cfg):
 		def separate(items, lens):
 			return separator_coloured.join(items)
 
+	if args.lined:
+		from .lined import enable_lines
+		liner = enable_lines('grep', decode_lines=(args.format == 'raw'))
+		if not liner:
+			args.lined = False
+	else:
+		liner = False
+
 	def json_default(obj):
 		if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
 			return str(obj)
@@ -939,16 +947,6 @@ def main(argv, cfg):
 		headers_prefix.append('[SLICE]')
 	if args.show_lineno:
 		headers_prefix.append('[LINE]')
-
-	if args.lined:
-		from .lined import enable_lines
-		liner = enable_lines('grep', q_status.close, args.format == 'raw')
-		if not liner:
-			args.lined = False
-			if args.format == 'raw':
-				escape_item = None
-	else:
-		liner = False
 
 	# [headers] for each ds where headers change (not including the first).
 	# this is every ds where sync between slices has to happen when not --ordered.
