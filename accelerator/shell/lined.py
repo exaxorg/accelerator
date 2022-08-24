@@ -98,12 +98,15 @@ class Liner:
 			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
 
 
-def enable_lines(colour_prefix, decode_lines=False):
-	colour._lined = True
-	pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
-	pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
-	if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '':
-		return
+def enable_lines(colour_prefix, lined=True, decode_lines=False):
+	if lined:
+		colour._lined = True
+		pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
+		pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
+		if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '':
+			return
+	else:
+		pre_fg0 = pre_bg0 = pre_fg1 = pre_bg1 = ''
 
 	def lineme():
 		os.close(liner_w)
@@ -138,23 +141,26 @@ def enable_lines(colour_prefix, decode_lines=False):
 			has_cr = ('\r' in line)
 			if decode_lines:
 				line = '\\'.join(decode_part(part) for part in line.split('\\\\'))
-			todo = iter(line)
-			data = []
-			if line_fg and line_bg:
-				data.append('\x1b[%s;%sm' % (line_fg, line_bg,))
-			elif line_bg:
-				data.append('\x1b[%sm' % (line_bg,))
-			elif line_fg:
-				data.append('\x1b[%sm' % (line_fg,))
-			for c in todo:
-				if c == '\x1b':
-					data.extend(collect_escseq(todo, line_fg, line_bg))
-				else:
-					data.append(c)
-			if line_bg and not has_cr and not decode_lines:
-				data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
-			data.append('\x1b[m\n')
-			data = ''.join(data).encode('utf-8', errors)
+			if lined:
+				todo = iter(line)
+				data = []
+				if line_fg and line_bg:
+					data.append('\x1b[%s;%sm' % (line_fg, line_bg,))
+				elif line_bg:
+					data.append('\x1b[%sm' % (line_bg,))
+				elif line_fg:
+					data.append('\x1b[%sm' % (line_fg,))
+				for c in todo:
+					if c == '\x1b':
+						data.extend(collect_escseq(todo, line_fg, line_bg))
+					else:
+						data.append(c)
+				if line_bg and not has_cr and not decode_lines:
+					data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
+				data.append('\x1b[m\n')
+				data = ''.join(data).encode('utf-8', errors)
+			else:
+				data = line.encode('utf-8', errors) + b'\n'
 			while data:
 				data = data[os.write(1, data):]
 	liner_r, liner_w = os.pipe()
