@@ -86,11 +86,13 @@ def collect_escseq(it, line_fg, line_bg):
 
 
 class Liner:
-	def __init__(self, process):
+	def __init__(self, process, saved_stdout):
 		self.process = process
+		self.saved_stdout = saved_stdout
 
 	def close(self):
-		os.close(1) # EOF for the liner process (after all children have also exited)
+		os.dup2(self.saved_stdout, 1) # EOF for the liner process (after all children have also exited)
+		os.close(self.saved_stdout)
 		self.process.join()
 		if self.process.exitcode:
 			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
@@ -162,6 +164,7 @@ def enable_lines(colour_prefix, decode_lines=False):
 		name=colour_prefix + '-liner',
 	)
 	os.close(liner_r)
+	saved_stdout = os.dup(1)
 	os.dup2(liner_w, 1) # this is stdout for the parent process now
 	os.close(liner_w)
-	return Liner(liner_process)
+	return Liner(liner_process, saved_stdout)
