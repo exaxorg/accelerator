@@ -85,6 +85,17 @@ def collect_escseq(it, line_fg, line_bg):
 	return chars
 
 
+class Liner:
+	def __init__(self, process):
+		self.process = process
+
+	def close(self):
+		os.close(1) # EOF for the liner process (after all children have also exited)
+		self.process.join()
+		if self.process.exitcode:
+			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
+
+
 def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 	colour._lined = True
 	pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
@@ -154,4 +165,4 @@ def enable_lines(colour_prefix, process_setup=lambda: None, decode_lines=False):
 	os.close(liner_r)
 	os.dup2(liner_w, 1) # this is stdout for the parent process now
 	os.close(liner_w)
-	return liner_process
+	return Liner(liner_process)

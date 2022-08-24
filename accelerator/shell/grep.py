@@ -942,13 +942,13 @@ def main(argv, cfg):
 
 	if args.lined:
 		from .lined import enable_lines
-		liner_process = enable_lines('grep', q_status.close, args.format == 'raw')
-		if liner_process:
-			children.append(liner_process)
-		else:
+		liner = enable_lines('grep', q_status.close, args.format == 'raw')
+		if not liner:
 			args.lined = False
 			if args.format == 'raw':
 				escape_item = None
+	else:
+		liner = False
 
 	# [headers] for each ds where headers change (not including the first).
 	# this is every ds where sync between slices has to happen when not --ordered.
@@ -1085,7 +1085,12 @@ def main(argv, cfg):
 		return 1
 
 	q_status.close()
-	os.close(1) # so the liner process will see EOF before we actually exit
+	if liner:
+		try:
+			liner.close() # wait for liner to finish before exiting
+		except Exception as e:
+			print(e, file=sys.stderr)
+			return 1
 	for c in children:
 		c.join()
 		if c.exitcode:
