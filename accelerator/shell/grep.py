@@ -122,6 +122,7 @@ def main(argv, cfg):
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
 	parser.add_argument('-l', '--list-matching',action='store_true', negation='dont', help="only print matching datasets (or slices with -S)\nwhen used with -o, only print matching columns", )
+	parser.add_argument('-m', '--max-count', metavar='NUM', type=int, help="stop after NUM matching lines")
 	parser.add_argument('-H', '--headers',      action='store_true', negation='no',   help="print column names before output (and on each change)", )
 	parser.add_argument('-O', '--ordered',      action='store_true', negation='not',  help="output in order (one slice at a time)", )
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', negation='dont', help="datasets are allowed to not have (some) columns", )
@@ -213,6 +214,13 @@ def main(argv, cfg):
 	else:
 		want_slices = list(range(g.slices))
 
+	if args.max_count is not None:
+		if args.max_count < 1:
+			return
+		mark_matching_lines = True
+	else:
+		mark_matching_lines = False
+
 	if len(want_slices) == 1:
 		# it will be automatically ordered, so let's not work for it.
 		args.ordered = False
@@ -298,6 +306,8 @@ def main(argv, cfg):
 	# Don't highlight anything with -l
 	if args.list_matching:
 		highlight_matches = False
+		# Turn off context, so -m works correctly with -l
+		args.after_context = args.before_context = 0
 
 	if args.format == 'json':
 		# headers was just a mistake, ignore it
@@ -333,10 +343,11 @@ def main(argv, cfg):
 		def separate(items, lens):
 			return separator_coloured.join(items)
 
-	if args.lined:
+	if args.lined or args.max_count:
 		from .lined import enable_lines
-		liner = enable_lines('grep', decode_lines=(args.format == 'raw'))
+		liner = enable_lines('grep', lined=args.lined, decode_lines=(args.format == 'raw'), max_count=args.max_count, after=args.after_context)
 		if not liner:
+			assert not args.max_count
 			args.lined = False
 	else:
 		liner = False
@@ -357,7 +368,7 @@ def main(argv, cfg):
 				return item.replace('\n', '\\n').replace('\r', '\\r')
 		errors = 'surrogatepass'
 	else:
-		if args.format == 'raw' and args.lined:
+		if args.format == 'raw' and (args.lined or args.max_count):
 			# this will be reversed inside the liner process
 			def escape_item(item):
 				return item.replace('\\', '\\\\').replace('\n', '\\n')
@@ -515,7 +526,10 @@ def main(argv, cfg):
 			self.buffer = []
 			self.merge_buffer = b''
 
-		def put(self, data):
+		def put(self, data, was_match=False):
+			if mark_matching_lines:
+				marker = b'M' if was_match else b'C'
+				data = marker + data
 			self.merge_buffer += data
 			if len(self.merge_buffer) >= 1024:
 				self.move_merge()
@@ -530,6 +544,8 @@ def main(argv, cfg):
 			pass
 
 		def end(self, ds):
+			if mark_matching_lines:
+				self.merge_buffer += b'\n' # empty line == end marker
 			self.move_merge()
 
 		def finish(self):
@@ -682,7 +698,7 @@ def main(argv, cfg):
 			self.pump()
 
 		def end(self, ds):
-			self.move_merge()
+			Outputter.end(self, ds)
 			if not self.buffer:
 				# We are done with this ds, so let next slice continue
 				self.q_out.put(None)
@@ -905,13 +921,20 @@ def main(argv, cfg):
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if maybe_invert(any(chk(unicode(item)) for item in grep_items or items)):
 				if q_list:
-					q_list.put((ds, sliceno))
+					try:
+						q_list.put((ds, sliceno))
+					except mp.QueueClosedError:
+						# the main process died, getting a traceback here is not useful
+						# (it's probably dead because of -m of | head or something like that)
+						pass
 					return
 				while before:
 					out.put(show(*before.popleft()))
 				to_show = 1 + args.after_context
+				was_match = True
 			if to_show:
-				out.put(show(lineno, items))
+				out.put(show(lineno, items), was_match)
+				was_match = False
 				to_show -= 1
 			elif before is not None:
 				before.append((lineno, items))
@@ -938,7 +961,9 @@ def main(argv, cfg):
 			out.finish()
 		except QueueEmpty:
 			# some other process died, no need to print an error here
-			sys.exit(1)
+			# and in fact no need to return an error (either the other
+			# process did or we should follow their lead and be happy.)
+			sys.exit(0)
 
 	headers_prefix = []
 	if args.show_dataset:
@@ -971,6 +996,8 @@ def main(argv, cfg):
 				show_items = list(map(escape_item, show_items))
 			coloured = (colour(item, 'grep/header') for item in show_items)
 			txt = separate(coloured, map(len, show_items))
+			if mark_matching_lines:
+				txt = 'I' + txt
 			return txt.encode('utf-8', 'surrogatepass') + b'\n'
 		# remove the starting ds, so no header changes means no special handling.
 		current_headers = headers.pop(0)
@@ -1001,6 +1028,7 @@ def main(argv, cfg):
 			target=one_slice,
 			args=(sliceno, q_in, q_out, q_to_close,),
 			name='slice-%d' % (sliceno,),
+			ignore_EPIPE=bool(liner),
 		)
 		children.append(p)
 		if q_in and q_in is not first_q_out:
@@ -1047,6 +1075,8 @@ def main(argv, cfg):
 					items = [ds]
 				else:
 					items = [ds, sliceno]
+				if mark_matching_lines:
+					write(1, b'M')
 				write(1, inner_show(None, items))
 			while True:
 				try:

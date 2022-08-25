@@ -98,17 +98,17 @@ class Liner:
 			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
 
 
-def enable_lines(colour_prefix, lined=True, decode_lines=False):
+def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, after=0):
 	if lined:
 		colour._lined = True
 		pre_fg0, pre_bg0 = split_colour(colour_prefix + '/oddlines')
 		pre_fg1, pre_bg1 = split_colour(colour_prefix + '/evenlines')
-		if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '':
+		if pre_fg0 == pre_bg0 == pre_fg1 == pre_bg1 == '' and max_count is None:
 			return
 	else:
 		pre_fg0 = pre_bg0 = pre_fg1 = pre_bg1 = ''
 
-	def lineme():
+	def lineme(lined, max_count, after):
 		os.close(liner_w)
 
 		colours = cycle([
@@ -124,7 +124,7 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False):
 			errors = 'surrogateescape'
 
 		if decode_lines:
-				# this has an extra indent to make a later commit smaller
+			if lined:
 				def decode_part(part):
 					res = []
 					for part in part.split('\\n'):
@@ -136,11 +136,28 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False):
 							res.append('\x1b[K')
 						res.append('\n')
 					return ''.join(res[:-1]) # final \n is added in the main loop
+			else:
+				# When not lined the transform should be completely transparent
+				def decode_part(part):
+					return part.replace('\\n', '\n')
 
 		for line in in_fh:
 			line_fg, line_bg = next(colours)
 			line = line.strip(b'\r\n').decode('utf-8', errors)
 			has_cr = ('\r' in line)
+			if max_count is not None:
+				if line == '':
+					# Empty lines mark the end of output sections, so if we
+					# see one when showing the final context we stop.
+					if max_count == 0:
+						break
+					continue
+				if line[0] in 'MC': # don't count "I"nfo lines, only "M"atches and "C"ontext
+					if line[0] == 'M' and max_count:
+						max_count -= 1
+					elif max_count == 0 and after > 0:
+						after -= 1
+				line = line[1:]
 			if decode_lines:
 				line = '\\'.join(decode_part(part) for part in line.split('\\\\'))
 			if lined:
@@ -169,9 +186,12 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False):
 				data = line.encode('utf-8', errors) + b'\n'
 			while data:
 				data = data[os.write(1, data):]
+			if max_count is not None and max_count == after == 0:
+				break
 	liner_r, liner_w = os.pipe()
 	liner_process = mp.SimplifiedProcess(
 		target=lineme,
+		args=(lined, max_count, after,),
 		stdin=liner_r,
 		name=colour_prefix + '-liner',
 	)

@@ -227,7 +227,7 @@ class LockFreeQueue:
 class SimplifiedProcess:
 	__slots__ = ('pid', 'name', '_alive', 'exitcode')
 
-	def __init__(self, target, args=(), kwargs={}, name=None, stdin=None):
+	def __init__(self, target, args=(), kwargs={}, name=None, stdin=None, ignore_EPIPE=False):
 		sys.stdout.flush()
 		sys.stderr.flush()
 		self.pid = os.fork()
@@ -249,6 +249,8 @@ class SimplifiedProcess:
 			if not isinstance(e, OSError) or e.errno != errno.EPIPE:
 				print("Exception in %d %r:" % (os.getpid(), name), file=sys.stderr)
 				print_exc(file=sys.stderr)
+			elif ignore_EPIPE:
+				rc = 0
 		except SystemExit as e:
 			if e.code is None:
 				rc = 0
