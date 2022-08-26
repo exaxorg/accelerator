@@ -24,12 +24,12 @@ from __future__ import print_function
 from resource import getpagesize
 from os import unlink
 from os.path import exists
-from mmap import mmap, PROT_READ
+from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
 import itertools
 
-from accelerator.compat import NoneType, unicode, imap, itervalues, PY2
+from accelerator.compat import NoneType, unicode, itervalues, PY2
 
 from accelerator.extras import OptionEnum, DotDict
 from accelerator.dsutil import typed_writer, typed_reader
@@ -602,29 +602,6 @@ def synthesis(slices, analysis_res, prepare_res):
 		lines = [num - b for num, b in zip(lines, bad_line_count_per_slice)]
 		bad_line_count_total = sum(bad_line_count_per_slice)
 		if bad_line_count_total:
-			print('Slice   Bad line count')
-			for sliceno, cnt in enumerate(bad_line_count_per_slice):
-				print('%5d   %d' % (sliceno, cnt,))
-			print('total   %d' % (bad_line_count_total,))
-			print()
-			print('Slice   Bad line number')
-			reported_count = 0
-			for sliceno, data in enumerate(analysis_res):
-				if sum(data[1]) and reported_count < 32:
-					with open('badmap%d' % (sliceno,), 'rb') as fh:
-						badmap = mmap(fh.fileno(), 0, prot=PROT_READ)
-						for ix, v in enumerate(imap(ord, badmap)):
-							if v:
-								for jx in range(8):
-									if v & (1 << jx):
-										print('%5d   %d' % (sliceno, ix * 8 + jx,))
-										reported_count += 1
-										if reported_count >= 32: break
-								if reported_count >= 32: break
-						badmap.close()
-			if reported_count >= 32:
-				print('...')
-			print()
 			print('Bad line count   Column')
 			for colname in columns:
 				cnt = sum(sum(data[0].get(colname, ())) for data in analysis_res)
