@@ -129,6 +129,8 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False):
 					res = []
 					for part in part.split('\\n'):
 						part = part.strip('\r')
+						if line_bg:
+							res.append('\x1b[K')
 						res.append(part)
 						if line_bg and '\r' not in part:
 							res.append('\x1b[K')
@@ -150,13 +152,17 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False):
 					data.append('\x1b[%sm' % (line_bg,))
 				elif line_fg:
 					data.append('\x1b[%sm' % (line_fg,))
+				if line_bg and not decode_lines:
+					data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
 				for c in todo:
 					if c == '\x1b':
 						data.extend(collect_escseq(todo, line_fg, line_bg))
 					else:
 						data.append(c)
 				if line_bg and not has_cr and not decode_lines:
-					data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
+					# the line might have been long, so if safe and needed try
+					# again to fill the line with bg (if terminal does BCE)
+					data.append('\x1b[K')
 				data.append('\x1b[m\n')
 				data = ''.join(data).encode('utf-8', errors)
 			else:

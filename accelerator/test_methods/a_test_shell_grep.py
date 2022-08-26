@@ -737,8 +737,8 @@ def synthesis(job, slices):
 	# align with field boundaries.
 	# all lines in -c lined_b is three lines in one ds in slice 0, then another
 	# in slice 0 from the next ds, and then one in slice 1.
-	ODDLINE = '\x1b[30;107m'
-	EVENLINE = '\x1b[30;47m'
+	ODDLINE = '\x1b[30;107m\x1b[K'
+	EVENLINE = '\x1b[30;47m\x1b[K'
 	TRAILER = '\x1b[K\x1b[m'
 	SEP = SEP_HI + '\t\x1b[24;30m'
 	grep_text(['--lined', '--colour=always', '-S', '-L', '-c', '-i', 'a', lined_b], [
@@ -771,7 +771,7 @@ def synthesis(job, slices):
 	SEP_EVEN = TAB_HI
 	grep_text(['--lined', '--colour=always', '-S', '-L', '-i', 'a', lined_b], [
 		SEP_ODD.join(['\x1b[32m0', '0', 'B\x1b[47;31mAAA\x1b[32;49m', 'B\x1b[47;31mAA\x1b[32;49mB\x1b[m']),
-		SEP_EVEN.join(['\x1b[42m1', '0', 'B\x1b[47;31mA\x1b[39;42mBB', 'BBBB' + TRAILER]),
+		SEP_EVEN.join(['\x1b[42m\x1b[K1', '0', 'B\x1b[47;31mA\x1b[39;42mBB', 'BBBB' + TRAILER]),
 	], sep='')
 	# make sure newlines and such are ok, and a colour set in the value
 	# (all of this will normally be escaped, but we test with --format=raw)
@@ -781,9 +781,9 @@ def synthesis(job, slices):
 		'\x1b[32m\x1b[43m[DATASET]\x1b[49m' + SEP_ODD + '\x1b[43m',
 		'\x1b[49m' + SEP_ODD + '\x1b[43m\r\x1b[49m\x1b[m',
 		# line 2 (abc...) starts here
-		'\x1b[42m' + job + '/lined\x1b[K',
-		'silly' + SEP_EVEN + 'abc\x1b[K',
-		'def' + SEP_EVEN + 'gh\x1b[47;31mi\x1b[39;42m' + TRAILER,
+		'\x1b[42m\x1b[K' + job + '/lined\x1b[K',
+		'\x1b[Ksilly' + SEP_EVEN + 'abc\x1b[K',
+		'\x1b[Kdef' + SEP_EVEN + 'gh\x1b[47;31mi\x1b[39;42m' + TRAILER,
 		# line 3 (jkl...) starts here
 		'\x1b[32m' + job + '/lined',
 		'silly' + SEP_ODD + '\x1b[47;31mj\x1b[32;49mkl' + SEP_ODD + 'm\x1b[35mno',
