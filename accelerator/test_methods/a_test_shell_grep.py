@@ -775,7 +775,16 @@ def synthesis(job, slices):
 	], sep='')
 	# make sure newlines and such are ok, and a colour set in the value
 	# (all of this will normally be escaped, but we test with --format=raw)
-	lined_silly = mk_lined_ds('lined\nsilly', [('abc\ndef', 'ghi'), ('jkl', 'm\x1b[35mno\n\npq\x1b[mr')], columns={'\n': 'ascii', '\r': 'ascii'})
+	lined_silly = mk_lined_ds(
+		'lined\nsilly',
+		[
+			('abc\ndef', 'ghi'),
+			('jkl', 'm\x1b[35mno\n\npq\x1b[mr'),
+			('foo\nfoo\rbar\nbaz', 'aaa'),
+			('foo\nfoo\rbar\nbaz', 'aaa'),
+		],
+		columns={'\n': 'ascii', '\r': 'ascii'},
+	)
 	grep_text(['--lined', '--colour=always', '-D', '-H', '--format=raw', '[ij]', lined_silly], [
 		# line 1 (the header) starts here
 		'\x1b[32m\x1b[43m[DATASET]\x1b[49m' + SEP_ODD + '\x1b[43m',
@@ -804,4 +813,18 @@ def synthesis(job, slices):
 		'silly\tjkl\tm\x1b[35mno', # the colour in the value stays
 		'',
 		'pq\x1b[mr',
+	], sep='')
+	# and finally test that \r is handled correctly on an internal line in
+	# a value (i.e. that that line does not end with \e[K, and that \e[K is
+	# only used when bg is set.)
+	# both these lines contain ('foo\nfoo\rbar\nbaz', 'aaa').
+	grep_text(['--lined', '--colour=always', '--format=raw', 'z', lined_silly], [
+		# this is the first line, which does not set bg
+		'\x1b[32mfoo',
+		'foo\rbar',
+		'ba\x1b[47;31mz\x1b[32;49m' + SEP_ODD + 'aaa\x1b[m',
+		# this is the second line, which does set bg
+		'\x1b[42m\x1b[Kfoo\x1b[K',
+		'\x1b[Kfoo\rbar', # no \e[K at end because of \r
+		'\x1b[Kba\x1b[47;31mz\x1b[39;42m' + SEP_EVEN + 'aaa\x1b[K\x1b[m',
 	], sep='')
