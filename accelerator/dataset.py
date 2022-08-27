@@ -106,8 +106,7 @@ def _dsid(t):
 			return None
 		t = '%s/%s' % (jid.split('/')[0], uni(name) or 'default')
 	elif isinstance(t, DatasetWriter):
-		from accelerator.g import job
-		t = '%s/%s' % (job, t.name)
+		t = t.ds_name
 	if '/' not in t:
 		t += '/default'
 	return uni(t)
@@ -1216,7 +1215,7 @@ class DatasetWriter(object):
 		"""columns can be {'name': 'type'} or {'name': ('type', none_support)}.
 		It can also be {'name': DatasetColumn} to simplify basing your dataset on another."""
 		name = _namechk(name)
-		from accelerator.g import running
+		from accelerator.g import running, job
 		if running == 'analysis':
 			if name not in _datasetwriters:
 				raise DatasetUsageError('Dataset with name "%s" not created' % (name,))
@@ -1238,6 +1237,8 @@ class DatasetWriter(object):
 			obj.caption = uni(caption)
 			obj.previous = _dsid(previous)
 			obj.name = name
+			obj.ds_name = '%s/%s' % (job, name,)
+			obj.quoted_ds_name = quote(obj.ds_name)
 			obj.fs_name = fs_name
 			obj.columns = {}
 			obj.meta_only = meta_only
@@ -1357,12 +1358,11 @@ class DatasetWriter(object):
 		if self.meta_only:
 			return
 		writers = {}
-		from accelerator.g import job
 		for colname, (coltype, default, none_support) in self.columns.items():
 			if self._copy_mode:
 				coltype = _copy_mode_overrides.get(coltype, coltype)
 			wt = typed_writer(coltype)
-			error_extra = ' (column %s (type %s) in %s)' % (quote(colname), coltype, quote('%s/%s' % (job, self.name,)),)
+			error_extra = ' (column %s (type %s) in %s)' % (quote(colname), coltype, self.quoted_ds_name,)
 			kw = {'none_support': none_support, 'error_extra': error_extra, 'compression': 'gzip'}
 			if default is not _nodefault:
 				kw['default'] = default
