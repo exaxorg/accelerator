@@ -382,6 +382,7 @@ def analysis_lap(vars):
 			assert vars.res_bad_count[dest_colname] == [0] # implicitly has a default
 			vars.slicemap_fd = map_init(vars, 'slicemap%d' % (vars.sliceno,), 'slicemap_size')
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
+			vars.map_fhs.append(slicemap)
 			slicemap = Int16BytesWrapper(slicemap)
 			hash = typed_writer(real_coltype).hash
 			slices = vars.slices
@@ -520,10 +521,12 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			default_value = nodefault
 		if options.filter_bad:
 			badmap = mmap(vars.badmap_fd, vars.badmap_size)
+			vars.map_fhs.append(badmap)
 			if PY2:
 				badmap = IntegerBytesWrapper(badmap)
 		if vars.rehashing:
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
+			vars.map_fhs.append(slicemap)
 			slicemap = Int16BytesWrapper(slicemap)
 			bad_count = [0] * vars.slices
 		else:
