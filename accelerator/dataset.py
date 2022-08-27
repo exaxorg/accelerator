@@ -940,7 +940,8 @@ class Dataset(unicode):
 		elif hashlabel is not None and self.hashlabel != hashlabel:
 			raise DatasetUsageError("Hashlabel mismatch %r != %r" % (self.hashlabel, hashlabel,))
 		if self._linefixup(lines) != self.lines:
-			raise DatasetUsageError("New columns don't have the same number of lines as parent columns")
+			from accelerator.g import job
+			raise DatasetUsageError("New columns don't have the same number of lines as parent columns (trying to append %s to %s, expected %r but got %r)" % (quote('%s/%s' % (job, name,)), self.quoted, self.lines, self._linefixup(lines),))
 		columns = {uni(k): (uni(v[0]), bool(v[1])) if isinstance(v, tuple) else (uni(v), False) for k, v in columns.items()}
 		self._append(columns, filenames, compressions, minmax, filename, caption, previous, column_filter, name)
 
