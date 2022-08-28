@@ -193,35 +193,22 @@ def prepare(job, slices):
 	dws = []
 	if rehashing:
 		previous = datasets.previous
-		if options.chain_slices:
-			# The last slice that actually has data in it becomes 'default'.
-			# Or slice 0 if the whole source is empty (we must produce a ds).
-			default_sliceno = 0
-			for sliceno in range(slices - 1, -1, -1):
-				if chain.lines(sliceno):
-					default_sliceno = sliceno
-					break
-		else:
-			default_sliceno = None
 		for sliceno in range(slices):
-			if sliceno == default_sliceno or chain.lines(sliceno):
-				if sliceno == default_sliceno:
-					name = 'default'
-				else:
-					name = str(sliceno)
-				dw = job.datasetwriter(
-					columns=columns,
-					caption='%s (from slice %d)' % (options.caption, sliceno,),
-					hashlabel=hashlabel,
-					filename=filename,
-					previous=previous,
-					meta_only=True,
-					name=name,
-					for_single_slice=sliceno,
-				)
-				previous = dw
+			if sliceno == slices - 1 and options.chain_slices:
+				name = 'default'
 			else:
-				dw = None
+				name = str(sliceno)
+			dw = job.datasetwriter(
+				columns=columns,
+				caption='%s (from slice %d)' % (options.caption, sliceno,),
+				hashlabel=hashlabel,
+				filename=filename,
+				previous=previous,
+				meta_only=True,
+				name=name,
+				for_single_slice=sliceno,
+			)
+			previous = dw
 			dws.append(dw)
 	if rehashing and options.chain_slices:
 		dw = None
