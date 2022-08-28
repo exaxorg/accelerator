@@ -295,11 +295,11 @@ def analysis(sliceno, slices, prepare_res):
 			raise Exception("Failed to enable numeric_comma, please install at least one of the following locales: " + " ".join(try_locales))
 		dataset_type.numeric_comma = True
 	dw, dw_bad, dws, lines, chain, column2type, _, rev_rename = prepare_res
+	if chain.lines(sliceno) == 0:
+		dummy = [0] * slices
+		return {}, dummy, {}, {}, dummy
 	if dws:
 		dw = dws[sliceno]
-		if not dw:
-			dummy = [0] * slices
-			return {}, dummy, {}, {}, dummy
 		rehashing = True
 	else:
 		rehashing = False
