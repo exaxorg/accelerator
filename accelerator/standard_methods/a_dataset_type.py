@@ -595,22 +595,36 @@ def synthesis(slices, analysis_res, prepare_res):
 def synthesis_one(slices, prepare_res, analysis_res):
 	dw, dw_bad, dws, source, column2type, columns, rev_rename = prepare_res
 	analysis_res = list(analysis_res)
+	header_printed = [False]
+	def print(msg=''):
+		from accelerator.compat import builtins
+		if not header_printed[0]:
+			if dw:
+				ds_name = dw.quoted_ds_name
+			else:
+				from accelerator.extras import quote
+				ds_name = quote(dws[0].ds_name[:-1] + '<sliceno>')
+			header = '%s -> %s' % (source.quoted, ds_name)
+			builtins.print('%s\n%s' % (header, '=' * len(header)))
+			header_printed[0] = True
+		builtins.print(msg)
 	lines = source.lines
 	if options.filter_bad:
 		bad_line_count_per_slice = [sum(data[1]) for data in analysis_res]
 		lines = [num - b for num, b in zip(lines, bad_line_count_per_slice)]
 		bad_line_count_total = sum(bad_line_count_per_slice)
 		if bad_line_count_total:
+			print()
 			print('Bad line count   Column')
 			for colname in columns:
 				cnt = sum(sum(data[0].get(colname, ())) for data in analysis_res)
 				if cnt:
 					print('%14d   %s' % (cnt, colname,))
-			print()
 		for s, cnt in enumerate(bad_line_count_per_slice):
 			dw_bad.set_lines(s, cnt)
 		dw_bad.set_compressions('gzip')
 	if options.defaults and sum(sum(data[2].values()) for data in analysis_res):
+		print()
 		print('Defaulted values')
 		for colname in sorted(options.defaults):
 			defaulted = [data[2].get(colname, 0) for data in analysis_res]
@@ -662,7 +676,10 @@ def synthesis_one(slices, prepare_res, analysis_res):
 	used = {rev_rename.get(colname, colname) for colname in column2type}
 	discarded = set(source.columns) - used
 	if discarded:
+		print()
 		print('Discarded columns:')
 		template = '    %%-%ds  %%s' % (max(len(colname) for colname in discarded),)
 		for colname in discarded:
 			print(template % (colname, source.columns[colname].type,))
+	if header_printed[0]:
+		print()
