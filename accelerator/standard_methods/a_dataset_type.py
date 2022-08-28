@@ -27,19 +27,22 @@ from os.path import exists
 from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
-import itertools
 
 from accelerator.compat import NoneType, unicode, itervalues, PY2
 
 from accelerator.extras import OptionEnum, DotDict
 from accelerator.dsutil import typed_writer, typed_reader
-from accelerator.error import NoSuchDatasetError, AcceleratorError
+from accelerator.error import NoSuchDatasetError
 from . import dataset_type
 
 depend_extra = (dataset_type,)
 
 description = r'''
-Convert one or more columns in a dataset from bytes/ascii/unicode to any type.
+Convert one or more columns in a dataset chain from bytes/ascii/unicode to
+any type. Produces one dataset per source dataset if chain_slices=False,
+one per slice per source dataset if chain_slices=True (which is slightly
+faster to write, slightly slower to read).
+
 Also rehashes if you type the hashlabel, or specify a new hashlabel.
 You can also set hashlabel="" to not rehash (and get hashlabel=None).
 
@@ -47,15 +50,14 @@ Without filter_bad the method fails when a value fails to convert and
 doesn't have a default. With filter_bad the value is filtered out
 together with all other values on the same line.
 
-With filter_bad, when rehashing or when typing a chain a new dataset is
-produced. Any columns that do not have the same type over all the typed
-datasets will be discarded in this case. You can set discard_untyped to
-discard all untyped columns, or set it to False to get an error if any
-columns were not preservable (except columns renamed over).
+By default new datasets inherit untouched columns from their parent, but
+with filter_bad or when rehashing new independant datasets are produced.
+You can set discard_untyped to not copy untouched columns to the new datasets
+(and force creating new datasets).
 
-With filter_bad any discarded lines will be saved in a separate dataset
-named "bad", but only the columns actually typed, using the "best possible"
-type (unicode, ascii or bytes) for the source types.
+With filter_bad any discarded lines (but only the columns actually typed)
+will be saved in separate datasets with ".bad" appended to the name, or
+just "bad" for the final one (i.e. not "default.bad").
 '''
 
 TYPENAME = OptionEnum(dataset_type.convfuncs.keys())
@@ -100,36 +102,44 @@ def prepare(job, slices):
 		cstuff.backend.init(cstuff.NULL)
 	d = datasets.source
 	chain = d.chain(stop_ds={datasets.previous: 'source'}, length=options.length)
-	if len(chain) == 1:
-		filename = d.filename
+	res = []
+	previous = None
+	for ix, ds in enumerate(chain):
+		previous = prepare_one(ix, ds, chain, job, slices, previous)
+		res.append(previous)
+	return res
+
+def prepare_one(ix, source, chain, job, slices, previous_res):
+	if ix == len(chain) - 1:
+		ds_name = 'default'
 	else:
-		filename = None
-	lines = [sum(ds.lines[sliceno] for ds in chain) for sliceno in range(slices)]
+		ds_name = str(ix)
+	filename = source.filename
 	columns = {}
 	column2type = dict(options.column2type)
 	rev_rename = {}
 	for k, v in options.rename.items():
-		if k in d.columns and (v in column2type or options.discard_untyped is not True):
+		if k in source.columns and (v in column2type or options.discard_untyped is not True):
 			if v in rev_rename:
 				raise Exception('Both column %r and column %r rename to %r' % (rev_rename[v], k, v,))
 			rev_rename[v] = k
 	none_support = set()
 	for colname, coltype in column2type.items():
 		orig_colname = rev_rename.get(colname, colname)
-		for ds in chain:
-			if orig_colname not in ds.columns:
-				raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (ds, orig_colname, set(ds.columns),))
-			if ds.columns[orig_colname].type not in byteslike_types:
-				raise Exception("Dataset %s column %r is type %s, must be one of %r" % (ds, orig_colname, ds.columns[orig_colname].type, byteslike_types,))
+		if orig_colname not in source.columns:
+			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source.quoted, orig_colname, set(source.columns),))
+		dc = source.columns[orig_colname]
+		if dc.type not in byteslike_types:
+			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source.quoted, orig_colname, dc.type, byteslike_types,))
 		coltype = coltype.split(':', 1)[0]
 		columns[colname] = dataset_type.typerename.get(coltype, coltype)
-		if options.defaults.get(colname, False) is None:
+		if options.defaults.get(colname, False) is None or dc.none_support:
 			none_support.add(colname)
 	if options.hashlabel is None:
 		hashlabel_override = False
-		hashlabel = options.rename.get(d.hashlabel, d.hashlabel)
+		hashlabel = options.rename.get(source.hashlabel, source.hashlabel)
 		if hashlabel in columns:
-			if rev_rename.get(hashlabel, hashlabel) != d.hashlabel:
+			if rev_rename.get(hashlabel, hashlabel) != source.hashlabel:
 				# hashlabel gets overwritten
 				hashlabel = None
 				hashlabel_override = True
@@ -140,67 +150,51 @@ def prepare(job, slices):
 		hashlabel_override = True
 		hashlabel = options.hashlabel or None
 		rehashing = bool(hashlabel)
-	def spill_type(colname):
-		orig_colname = rev_rename.get(colname, colname)
-		types = {ds.columns[orig_colname].type for ds in chain}
-		if 'bytes' in types:
-			types.discard('ascii')
-			types.discard('unicode')
-		if 'unicode' in types:
-			types.discard('ascii')
-		if len(types) == 1:
-			return types.pop()
-		raise AcceleratorError('Incompatible types for column %r: %r' % (colname, types,))
-	if (options.filter_bad or rehashing or len(chain) > 1) and not options.discard_untyped:
-		untyped_columns = set(d.columns)
-		for ds in chain:
-			untyped_columns &= set(ds.columns)
+	if (options.filter_bad or rehashing) and not options.discard_untyped:
+		untyped_columns = set(source.columns)
 		orig_columns = set(rev_rename.get(n, n) for n in columns)
 		untyped_columns -= set(columns) # anything renamed over is irrelevant
 		untyped_columns -= orig_columns
-		if options.discard_untyped is False:
-			missing = set(d.columns) - untyped_columns - set(columns) - orig_columns
-			if missing:
-				raise Exception('discard_untyped is False, but not all columns in %s exist in the whole chain (missing %r)' % (d, missing,))
 		for colname in sorted(untyped_columns):
 			if options.rename.get(colname, 0) is None or colname in columns:
 				continue
-			try:
-				t = spill_type(colname)
-			except AcceleratorError:
-				if options.discard_untyped is False:
-					raise
-				continue
-			columns[colname] = t
-			column2type[colname] = dataset_type.copy_types[t]
-			if chain.none_support(colname):
+			orig_colname = rev_rename.get(colname, colname)
+			dc = source.columns[orig_colname]
+			columns[colname] = dc.type
+			column2type[colname] = dataset_type.copy_types[dc.type]
+			if dc.none_support:
 				none_support.add(colname)
-	if options.filter_bad or rehashing or options.discard_untyped or len(chain) > 1:
+	if options.filter_bad or rehashing or options.discard_untyped:
 		parent = None
 	else:
-		parent = datasets.source
+		parent = source
 	if hashlabel and hashlabel not in columns:
 		if options.hashlabel:
 			raise Exception("Can't rehash on discarded column %r." % (hashlabel,))
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
-	def needs_none_support(typ, colname):
-		return colname in none_support or chain.none_support(rev_rename.get(colname, colname))
 	columns = {
-		colname: (typ, needs_none_support(typ, colname))
+		colname: (typ, colname in none_support)
 		for colname, typ in columns.items()
 	}
 	dws = []
+	if previous_res:
+		# dw or last in dws[] for previous source
+		final_previous = previous_res[0] or previous_res[2][-1]
+	else:
+		final_previous = datasets.previous
 	if rehashing:
-		previous = datasets.previous
+		previous = final_previous
 		for sliceno in range(slices):
-			if sliceno == slices - 1 and options.chain_slices:
-				name = 'default'
+			if options.chain_slices and sliceno == slices - 1:
+				# This ds will remain and be the tip of the chain for this source
+				name = ds_name
 			else:
-				name = str(sliceno)
+				# This ds is either an earlier part of the chain or will be merged into ds_name in synthesis
+				name = '%s.%d' % (ds_name, sliceno,)
 			dw = job.datasetwriter(
 				columns=columns,
-				caption='%s (from slice %d)' % (options.caption, sliceno,),
+				caption='%s (from %s slice %d)' % (options.caption, source.quoted, sliceno,),
 				hashlabel=hashlabel,
 				filename=filename,
 				previous=previous,
@@ -222,41 +216,45 @@ def prepare(job, slices):
 				assert options.hashlabel is None, "Can't hash on discarded column %r" % (options.hashlabel,)
 			columns.update(discard)
 		dw = job.datasetwriter(
+			name=ds_name,
 			columns=columns,
-			caption=options.caption,
+			caption='%s (from %s)' % (options.caption, source.quoted,),
 			hashlabel=hashlabel,
 			hashlabel_override=hashlabel_override,
 			filename=filename,
 			parent=parent,
-			previous=datasets.previous,
+			previous=final_previous,
 			meta_only=True,
 		)
 	if options.filter_bad:
-		try:
-			previous = datasets.previous.job.dataset('bad')
-		except (AttributeError, NoSuchDatasetError,):
-			previous = None
+		if previous_res:
+			previous = previous_res[1]
+		else:
+			try:
+				previous = datasets.previous.job.dataset('bad')
+			except NoSuchDatasetError:
+				previous = None
 		def best_bad_type(colname):
-			typ = spill_type(colname)
-			assert typ in byteslike_types
-			ns = chain.none_support(rev_rename.get(colname, colname))
-			return (typ, ns)
+			orig_colname = rev_rename.get(colname, colname)
+			dc = source.columns[orig_colname]
+			assert dc.type in byteslike_types
+			return (dc.type, dc.none_support)
 		bad_columns = {name: best_bad_type(name) for name in options.column2type}
 		dw_bad = job.datasetwriter(
-			name='bad',
+			name='bad' if ds_name == 'default' else ds_name + '.bad',
 			columns=bad_columns,
 			previous=previous,
 			meta_only=True,
 		)
 	else:
 		dw_bad = None
-	return dw, dw_bad, dws, lines, chain, column2type, sorted(columns), rev_rename
+	return dw, dw_bad, dws, source, column2type, sorted(columns), rev_rename
 
 
 def map_init(vars, name, z='badmap_size'):
 	if not vars.badmap_size:
 		pagesize = getpagesize()
-		line_count = vars.lines[vars.sliceno]
+		line_count = vars.source.lines[vars.sliceno]
 		vars.badmap_size = (line_count // 8 // pagesize + 1) * pagesize
 		vars.slicemap_size = (line_count * 2 // pagesize + 1) * pagesize
 	fh = open(name, 'w+b')
@@ -281,8 +279,16 @@ def analysis(sliceno, slices, prepare_res):
 		else:
 			raise Exception("Failed to enable numeric_comma, please install at least one of the following locales: " + " ".join(try_locales))
 		dataset_type.numeric_comma = True
-	dw, dw_bad, dws, lines, chain, column2type, _, rev_rename = prepare_res
-	if chain.lines(sliceno) == 0:
+	res = [analysis_one(sliceno, slices, p) for p in prepare_res]
+	for fn in ('slicemap', 'badmap',):
+		fn = '%s%d' % (fn, sliceno,)
+		if exists(fn):
+			unlink(fn)
+	return res
+
+def analysis_one(sliceno, slices, prepare_res):
+	dw, dw_bad, dws, source, column2type, _, rev_rename = prepare_res
+	if source.lines[sliceno] == 0:
 		dummy = [0] * slices
 		return {}, dummy, {}, {}, dummy
 	if dws:
@@ -308,8 +314,7 @@ def analysis(sliceno, slices, prepare_res):
 		dw=dw,
 		dw_bad=dw_bad,
 		save_bad=False,
-		chain=chain,
-		lines=lines,
+		source=source,
 		column2type=column2type,
 		rev_rename=rev_rename,
 	)
@@ -328,8 +333,6 @@ def analysis(sliceno, slices, prepare_res):
 		final_bad_count = [0] * slices
 	for fh in vars.map_fhs:
 		fh.close()
-	if rehashing:
-		unlink('slicemap%d' % (sliceno,))
 	return bad_count, final_bad_count, default_count, minmax, vars.hash_lines
 
 
@@ -452,19 +455,17 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	offsets = []
 	max_counts = []
 	dest_colname = options.rename.get(colname, colname)
-	for d in vars.chain:
-		assert colname in d.columns, '%s not in %s' % (colname, d,)
-		if not d.lines[vars.sliceno]:
-			continue
-		if not is_null_converter:
-			assert d.columns[colname].type in byteslike_types, '%s has bad type in %s' % (colname, d,)
-		in_fns.append(d.column_filename(colname, vars.sliceno))
-		if d.columns[colname].offsets:
-			offsets.append(d.columns[colname].offsets[vars.sliceno])
-			max_counts.append(d.lines[vars.sliceno])
-		else:
-			offsets.append(0)
-			max_counts.append(-1)
+	d = vars.source
+	assert colname in d.columns, '%s not in %s' % (colname, d.quoted,)
+	if not is_null_converter:
+		assert d.columns[colname].type in byteslike_types, '%s has bad type in %s' % (colname, d.quoted,)
+	in_fns.append(d.column_filename(colname, vars.sliceno))
+	if d.columns[colname].offsets:
+		offsets.append(d.columns[colname].offsets[vars.sliceno])
+		max_counts.append(d.lines[vars.sliceno])
+	else:
+		offsets.append(0)
+		max_counts.append(-1)
 	if cfunc:
 		default_value = options.defaults.get(dest_colname, cstuff.NULL)
 		if for_hasher and default_value is cstuff.NULL:
@@ -495,11 +496,12 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		vars.res_default_count[dest_colname] = sum(default_count)
 		coltype = coltype.split(':', 1)[0]
 		if is_null_converter:
-			real_coltype = vars.chain[0].columns[colname].type
+			dc = d.columns[colname]
+			real_coltype = dc.type
 			# Some lines may have been filtered out, so these minmax values
 			# could be wrong. There's no easy/cheap way to fix that though,
 			# and they will never be wrong in the bad direction.
-			vars.res_minmax[dest_colname] = [vars.chain.min(colname), vars.chain.max(colname)]
+			vars.res_minmax[dest_colname] = [dc.min, dc.max]
 		else:
 			real_coltype = dataset_type.typerename.get(coltype, coltype)
 			if exists(minmax_fn):
@@ -509,7 +511,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	else:
 		# python func
 		if for_hasher:
-			raise Exception("Can't hash on column of type %s." % (coltype,))
+			raise Exception("Can't hash %s on column of type %s." % (d.quoted, coltype,))
 		nodefault = object()
 		if dest_colname in options.defaults:
 			default_value = options.defaults[dest_colname]
@@ -543,7 +545,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			fhs.append(bad_fh)
 		write = fhs[0].write
 		col_min = col_max = None
-		it = itertools.chain.from_iterable(d._column_iterator(vars.sliceno, colname, _type='bytes') for d in vars.chain)
+		it = d._column_iterator(vars.sliceno, colname, _type='bytes')
 		for ix, v in enumerate(it):
 			if vars.rehashing:
 				chosen_slice = slicemap[ix]
@@ -585,8 +587,15 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	return real_coltype
 
 def synthesis(slices, analysis_res, prepare_res):
-	dw, dw_bad, dws, lines, _, column2type, columns, rev_rename = prepare_res
+	# each slice returns [ds0data, ds1data, ...], but we want one list per ds
+	analysis_res = zip(*analysis_res)
+	for p, a in zip(prepare_res, analysis_res):
+		synthesis_one(slices, p, a)
+
+def synthesis_one(slices, prepare_res, analysis_res):
+	dw, dw_bad, dws, source, column2type, columns, rev_rename = prepare_res
 	analysis_res = list(analysis_res)
+	lines = source.lines
 	if options.filter_bad:
 		bad_line_count_per_slice = [sum(data[1]) for data in analysis_res]
 		lines = [num - b for num, b in zip(lines, bad_line_count_per_slice)]
@@ -598,10 +607,6 @@ def synthesis(slices, analysis_res, prepare_res):
 				if cnt:
 					print('%14d   %s' % (cnt, colname,))
 			print()
-		for sliceno in range(slices):
-			fn = 'badmap%d' % (sliceno,)
-			if exists(fn):
-				unlink(fn)
 		for s, cnt in enumerate(bad_line_count_per_slice):
 			dw_bad.set_lines(s, cnt)
 		dw_bad.set_compressions('gzip')
@@ -655,9 +660,9 @@ def synthesis(slices, analysis_res, prepare_res):
 	if dw:
 		dw.set_compressions('gzip')
 	used = {rev_rename.get(colname, colname) for colname in column2type}
-	discarded = set(datasets.source.columns) - used
+	discarded = set(source.columns) - used
 	if discarded:
 		print('Discarded columns:')
 		template = '    %%-%ds  %%s' % (max(len(colname) for colname in discarded),)
 		for colname in discarded:
-			print(template % (colname, datasets.source.columns[colname].type,))
+			print(template % (colname, source.columns[colname].type,))

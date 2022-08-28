@@ -446,13 +446,17 @@ def test_filter_bad_with_rename_and_chain():
 		source=source_ds,
 	)
 	typed_ds = jid.dataset()
+	assert len(typed_ds.chain()) == 2
 	coltypes = sorted((name, col.type) for name, col in typed_ds.columns.items())
 	assert coltypes == [('a', 'number'), ('b', 'int32'), ('c', 'int64')], coltypes
-	assert list(typed_ds.iterate(0)) == [(2, 0, 1), (5, 3, 4), (8, 6, 7)]
+	assert list(typed_ds.iterate_chain(0)) == [(2, 0, 1), (5, 3, 4), (8, 6, 7)]
 	bad_ds = jid.dataset('bad')
+	assert len(bad_ds.chain()) == 2
 	coltypes = sorted((name, col.type) for name, col in bad_ds.columns.items())
+	assert coltypes == [('a', 'ascii'), ('b', 'ascii'), ('c', 'ascii')], coltypes
+	coltypes = sorted((name, col.type) for name, col in bad_ds.previous.columns.items())
 	assert coltypes == [('a', 'unicode'), ('b', 'ascii'), ('c', 'bytes')], coltypes
-	assert list(bad_ds.iterate(0)) == [('B', '9', b'A'), ('E', 'C', b'D')]
+	assert list(bad_ds.iterate_chain(0)) == [('B', '9', b'A'), ('E', 'C', b'D')]
 
 def test_None():
 	types = {
@@ -500,7 +504,7 @@ def test_None():
 		).dataset()
 		for colname, value in want_values.items():
 			want = [value] + [None] * want_none_count
-			assert list(ds.iterate(0, colname)) == want, colname
+			assert list(ds.iterate_chain(0, colname)) == want, colname
 		return source_ds
 	# One line with good values, one with Nones
 	prev = test('None values', {}, {}, [values, dict.fromkeys(values, None)], 1)

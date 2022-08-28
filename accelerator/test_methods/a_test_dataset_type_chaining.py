@@ -79,9 +79,9 @@ def synthesis(job, slices):
 
 	# No previous -> should contain both A and B
 	typed_AB = subjobs.build('dataset_type', datasets=dict(source=untyped_B), options=opts)
-	verify(src_chain[:2], [typed_AB])
+	verify(src_chain[:2], Dataset(typed_AB).chain_within_job())
 	typed_CDE = subjobs.build('dataset_type', datasets=dict(source=untyped_E, previous=typed_B), options=opts)
-	verify(src_chain[2:], [typed_CDE])
+	verify(src_chain[2:], Dataset(typed_CDE).chain_within_job())
 	verify(src_chain, Dataset(typed_CDE).chain())
 	# A and B through typed_B, but length=2 only gets D and E, not C.
 	opts.length = 2

@@ -58,7 +58,7 @@ def synthesis(job, slices):
 	assert b.hashlabel == None
 	typed_b = subjobs.build('dataset_type', options=dict(hashlabel='a', column2type={'b': 'ascii'}), datasets=dict(source=b)).dataset()
 	assert typed_b.hashlabel == 'a'
-	assert set(typed_b.iterate(None)) == {('a', 'b', b'c'), ('A', None, None), ('A', 'B', b'C')}, typed_b
+	assert set(typed_b.iterate_chain(None)) == {('a', 'b', 'c', 0), ('A', None, None, None), ('A', 'B', b'C', '1')}, typed_b
 
 	# Test renaming over the original hashlabel
 	dw = job.datasetwriter(name='c', columns={'a': 'unicode', 'b': 'ascii', 'c': 'bytes', 'd': 'unicode'}, hashlabel='a')
