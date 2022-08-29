@@ -100,31 +100,31 @@ def synthesis(prepare_res, job, slices):
 			previous = synthesis_one(ix, chain, p, job, slices, previous)
 
 def synthesis_one(ix, chain, prepare_res, job, slices, previous):
-		# If we don't want a chain we abuse our knowledge of dataset internals
-		# to avoid recompressing. Don't do this stuff yourself.
-		dws, names, caption, filename, cols = prepare_res
-		merged_dw = job.datasetwriter(
-			name='default' if ix == len(chain) - 1 else str(ix),
-			caption=caption,
-			hashlabel=options.hashlabel,
-			filename=filename,
-			previous=previous,
-			meta_only=True,
-			columns=cols,
-		)
-		merged_dw.set_compressions(dws[0]._compressions)
-		for sliceno in range(slices):
-			merged_dw.set_lines(sliceno, sum(dw._lens[sliceno] for dw in dws))
-			for dwno, dw in enumerate(dws):
-				merged_dw.set_minmax((sliceno, dwno), dw._minmax[sliceno])
-			for n in names:
-				fn = merged_dw.column_filename(n, sliceno=sliceno)
-				with open(fn, "wb") as out_fh:
-					for dw in dws:
-						fn = dw.column_filename(n, sliceno=sliceno)
-						if exists(fn):
-							with open(fn, "rb") as in_fh:
-								copyfileobj(in_fh, out_fh)
-		for dw in dws:
-			dw.discard()
-		return merged_dw
+	# If we don't want a chain we abuse our knowledge of dataset internals
+	# to avoid recompressing. Don't do this stuff yourself.
+	dws, names, caption, filename, cols = prepare_res
+	merged_dw = job.datasetwriter(
+		name='default' if ix == len(chain) - 1 else str(ix),
+		caption=caption,
+		hashlabel=options.hashlabel,
+		filename=filename,
+		previous=previous,
+		meta_only=True,
+		columns=cols,
+	)
+	merged_dw.set_compressions(dws[0]._compressions)
+	for sliceno in range(slices):
+		merged_dw.set_lines(sliceno, sum(dw._lens[sliceno] for dw in dws))
+		for dwno, dw in enumerate(dws):
+			merged_dw.set_minmax((sliceno, dwno), dw._minmax[sliceno])
+		for n in names:
+			fn = merged_dw.column_filename(n, sliceno=sliceno)
+			with open(fn, "wb") as out_fh:
+				for dw in dws:
+					fn = dw.column_filename(n, sliceno=sliceno)
+					if exists(fn):
+						with open(fn, "rb") as in_fh:
+							copyfileobj(in_fh, out_fh)
+	for dw in dws:
+		dw.discard()
+	return merged_dw
