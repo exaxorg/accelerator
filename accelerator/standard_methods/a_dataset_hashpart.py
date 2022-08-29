@@ -42,6 +42,8 @@ def prepare(job, slices):
 	d = datasets.source
 	caption = options.caption % dict(caption=d.caption, hashlabel=options.hashlabel)
 	chain = d.chain(stop_ds={datasets.previous: 'source'}, length=options.length)
+	if not chain:
+		raise Exception("previous had the same source - this job makes no sense")
 	if len(chain) == 1:
 		filename = d.filename
 	else:

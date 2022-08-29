@@ -126,9 +126,6 @@ def synthesis(params):
 	verify_empty(empty, hashlabel="date")
 	verify_empty(empty, hashlabel="date", chain_slices=True)
 	ds = verify(params.slices, [], empty, hashlabel="date", chain_slices=True)
-	# chaining with the same source as previous should also produce an empty dataset
-	verify_empty(bonus_ds, hashlabel="date", previous=b)
-	verify_empty(bonus_ds, hashlabel="date", previous=b, chain_slices=True)
 	# two populated slices with the same data, should end up in two datasets.
 	dw = DatasetWriter(columns=columns, name="0 and 2", allow_missing_slices=True)
 	dw.set_slice(0)
