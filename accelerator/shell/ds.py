@@ -73,6 +73,21 @@ def format_location(loc):
 		return 'local'
 	return '%s in %s' % (quote(colname), ds.quoted,)
 
+def typed_from(ds, loc):
+	if not loc:
+		return
+	_, ds, colname = loc
+	if ds.job.method != 'dataset_type':
+		return
+	src_ds = ds.job.params.datasets.source
+	colname = unrename_column(ds.job, src_ds, colname)
+	return 'typed from ' + format_location((False, src_ds, colname))
+
+def unrename_column(type_job, ds, colname):
+	rename = type_job.params.options.rename
+	rev_rename = {v: k for k, v in rename.items() if k in ds.columns}
+	return rev_rename.get(colname, colname)
+
 
 def main(argv, cfg):
 	usage = "%(prog)s [options] ds [ds [...]]"
@@ -208,6 +223,14 @@ def main(argv, cfg):
 					minval, maxval = c.min, c.max
 				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
 				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), format_location(locations.get(n)), c.compression).rstrip())
+				if args.location:
+					try:
+						tf = typed_from(ds, locations[n])
+						if tf:
+							print(' ' * (13 + len_n + len_t), tf)
+					except Exception:
+						# source job might be deleted
+						pass
 			print("    {0:n} columns".format(len(ds.columns)))
 		print("    {0:n} lines".format(sum(ds.lines)))
 
