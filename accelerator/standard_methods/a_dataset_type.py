@@ -115,22 +115,23 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	else:
 		ds_name = str(ix)
 	filename = source.filename
+	source_name = source.quoted
 	columns = {}
 	column2type = dict(options.column2type)
 	rev_rename = {}
 	for k, v in options.rename.items():
 		if k in source.columns and (v in column2type or options.discard_untyped is not True):
 			if v in rev_rename:
-				raise Exception('Both column %r and column %r rename to %r' % (rev_rename[v], k, v,))
+				raise Exception('Both column %r and column %r rename to %r (in %s)' % (rev_rename[v], k, v, source_name))
 			rev_rename[v] = k
 	none_support = set()
 	for colname, coltype in column2type.items():
 		orig_colname = rev_rename.get(colname, colname)
 		if orig_colname not in source.columns:
-			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source.quoted, orig_colname, set(source.columns),))
+			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source_name, orig_colname, set(source.columns),))
 		dc = source.columns[orig_colname]
 		if dc.type not in byteslike_types:
-			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source.quoted, orig_colname, dc.type, byteslike_types,))
+			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, orig_colname, dc.type, byteslike_types,))
 		coltype = coltype.split(':', 1)[0]
 		columns[colname] = dataset_type.typerename.get(coltype, coltype)
 		if options.defaults.get(colname, False) is None or dc.none_support:
@@ -170,7 +171,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		parent = source
 	if hashlabel and hashlabel not in columns:
 		if options.hashlabel:
-			raise Exception("Can't rehash on discarded column %r." % (hashlabel,))
+			raise Exception("Can't rehash %s on discarded column %r." % (source_name, hashlabel,))
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
 	columns = {
@@ -194,7 +195,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 				name = '%s.%d' % (ds_name, sliceno,)
 			dw = job.datasetwriter(
 				columns=columns,
-				caption='%s (from %s slice %d)' % (options.caption, source.quoted, sliceno,),
+				caption='%s (from %s slice %d)' % (options.caption, source_name, sliceno,),
 				hashlabel=hashlabel,
 				filename=filename,
 				previous=previous,
@@ -218,7 +219,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		dw = job.datasetwriter(
 			name=ds_name,
 			columns=columns,
-			caption='%s (from %s)' % (options.caption, source.quoted,),
+			caption='%s (from %s)' % (options.caption, source_name,),
 			hashlabel=hashlabel,
 			hashlabel_override=hashlabel_override,
 			filename=filename,
@@ -248,7 +249,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		)
 	else:
 		dw_bad = None
-	return dw, dw_bad, dws, source, column2type, sorted(columns), rev_rename
+	return dw, dw_bad, dws, source, source_name, column2type, sorted(columns), rev_rename
 
 
 def map_init(vars, name, z='badmap_size'):
@@ -287,7 +288,7 @@ def analysis(sliceno, slices, prepare_res):
 	return res
 
 def analysis_one(sliceno, slices, prepare_res):
-	dw, dw_bad, dws, source, column2type, _, rev_rename = prepare_res
+	dw, dw_bad, dws, source, source_name, column2type, _, rev_rename = prepare_res
 	if source.lines[sliceno] == 0:
 		dummy = [0] * slices
 		return {}, dummy, {}, {}, dummy
@@ -315,6 +316,7 @@ def analysis_one(sliceno, slices, prepare_res):
 		dw_bad=dw_bad,
 		save_bad=False,
 		source=source,
+		source_name=source_name,
 		column2type=column2type,
 		rev_rename=rev_rename,
 	)
@@ -511,7 +513,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	else:
 		# python func
 		if for_hasher:
-			raise Exception("Can't hash %s on column of type %s." % (d.quoted, coltype,))
+			raise Exception("Can't hash %s on column of type %s." % (vars.source_name, coltype,))
 		nodefault = object()
 		if dest_colname in options.defaults:
 			default_value = options.defaults[dest_colname]
@@ -568,7 +570,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 					badmap[ix // 8] = bv | (1 << (ix % 8))
 					continue
 				else:
-					raise Exception("Invalid value %r with no default in %s" % (v, colname,))
+					raise Exception("Invalid value %r with no default in %r in %s" % (v, colname, vars.source_name,))
 			if do_minmax and not isinstance(v, NoneType):
 				if col_min is None:
 					col_min = col_max = v
@@ -593,7 +595,7 @@ def synthesis(slices, analysis_res, prepare_res):
 		synthesis_one(slices, p, a)
 
 def synthesis_one(slices, prepare_res, analysis_res):
-	dw, dw_bad, dws, source, column2type, columns, rev_rename = prepare_res
+	dw, dw_bad, dws, source, source_name, column2type, columns, rev_rename = prepare_res
 	analysis_res = list(analysis_res)
 	header_printed = [False]
 	def print(msg=''):
@@ -604,7 +606,7 @@ def synthesis_one(slices, prepare_res, analysis_res):
 			else:
 				from accelerator.extras import quote
 				ds_name = quote(dws[0].ds_name[:-1] + '<sliceno>')
-			header = '%s -> %s' % (source.quoted, ds_name)
+			header = '%s -> %s' % (source_name, ds_name)
 			builtins.print('%s\n%s' % (header, '=' * len(header)))
 			header_printed[0] = True
 		builtins.print(msg)
