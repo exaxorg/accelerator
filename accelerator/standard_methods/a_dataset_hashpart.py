@@ -39,22 +39,25 @@ options = {
 datasets = ('source', 'previous',)
 
 def prepare(job, slices):
-	d = datasets.source
-	caption = options.caption % dict(caption=d.caption, hashlabel=options.hashlabel)
-	chain = d.chain(stop_ds={datasets.previous: 'source'}, length=options.length)
+	previous = datasets.previous
+	res = []
+	chain = datasets.source.chain(stop_ds={datasets.previous: 'source'}, length=options.length)
 	if not chain:
 		raise Exception("previous had the same source - this job makes no sense")
-	if len(chain) == 1:
-		filename = d.filename
-	else:
-		filename = None
+	for ix, ds in enumerate(chain):
+		res.append(prepare_one(ix, ds, previous, job, chain, slices))
+		previous = res[-1][0][-1] # dws[-1]
+	return chain, res
+
+def prepare_one(ix, source, previous, job, chain, slices):
+	caption = options.caption % dict(caption=source.caption, hashlabel=options.hashlabel)
+	filename = source.filename
 	dws = []
-	previous = datasets.previous
 	for sliceno in range(slices):
-		if sliceno == slices - 1 and options.chain_slices:
+		if sliceno == slices - 1 and options.chain_slices and ix == len(chain) - 1:
 			name = "default"
 		else:
-			name = str(sliceno)
+			name = '%d.%d' % (ix, sliceno,)
 		dw = job.datasetwriter(
 			caption="%s (slice %d)" % (caption, sliceno),
 			hashlabel=options.hashlabel,
@@ -68,7 +71,7 @@ def prepare(job, slices):
 		dws.append(dw)
 	names = []
 	cols = {}
-	for n, c in d.columns.items():
+	for n, c in source.columns.items():
 		# names has to be in the same order as the add calls
 		# so the iterator returns the same order the writer expects.
 		names.append(n)
@@ -79,28 +82,33 @@ def prepare(job, slices):
 	return dws, names, caption, filename, cols
 
 def analysis(sliceno, prepare_res):
+	chain, p_res = prepare_res
+	for ds, p in zip(chain, p_res):
+		analysis_one(sliceno, ds, p)
+
+def analysis_one(sliceno, source, prepare_res):
 	dws, names = prepare_res[:2]
-	it = datasets.source.iterate_chain(
-		sliceno,
-		names,
-		stop_ds={datasets.previous: 'source'},
-		length=options.length,
-		copy_mode=True,
-	)
 	write = dws[sliceno].get_split_write_list()
-	for values in it:
+	for values in source.iterate(sliceno, names, copy_mode=True):
 		write(values)
 
 def synthesis(prepare_res, job, slices):
 	if not options.chain_slices:
+		chain, p_res = prepare_res
+		previous = datasets.previous
+		for ix, p in enumerate(p_res):
+			previous = synthesis_one(ix, chain, p, job, slices, previous)
+
+def synthesis_one(ix, chain, prepare_res, job, slices, previous):
 		# If we don't want a chain we abuse our knowledge of dataset internals
 		# to avoid recompressing. Don't do this stuff yourself.
 		dws, names, caption, filename, cols = prepare_res
 		merged_dw = job.datasetwriter(
+			name='default' if ix == len(chain) - 1 else str(ix),
 			caption=caption,
 			hashlabel=options.hashlabel,
 			filename=filename,
-			previous=datasets.previous,
+			previous=previous,
 			meta_only=True,
 			columns=cols,
 		)
@@ -119,3 +127,4 @@ def synthesis(prepare_res, job, slices):
 								copyfileobj(in_fh, out_fh)
 		for dw in dws:
 			dw.discard()
+		return merged_dw
