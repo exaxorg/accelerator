@@ -89,6 +89,9 @@ def verify(slices, data, source, previous=None, **options):
 			assert h(row[hl]) % slices == slice, "row %r is incorrectly in slice %d in %s" % (row, slice, ds)
 			want = good[row[hl]]
 			assert row == want, '%s (rehashed from %s) did not contain the right data for "%s".\nWanted\n%r\ngot\n%r' % (ds, source, hl, want, row)
+	want_lines = len(data)
+	got_lines = ds.chain().lines()
+	assert got_lines == want_lines, '%s (rehashed from %s) had %d lines, should have had %d' % (ds, source, got_lines, want_lines,)
 	return ds
 
 def verify_empty(source, previous=None, **options):
@@ -132,6 +135,6 @@ def synthesis(params):
 	dw.write_dict(data[0])
 	dw.set_slice(2)
 	dw.write_dict(data[0])
-	ds = verify(params.slices, [data[0]], dw.finish(), hashlabel="date", chain_slices=True)
+	ds = verify(params.slices, [data[0], data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
 	assert got_slices == params.slices, "%s (built with chain_slices=True) has %d datasets in chain, expected %d." % (ds, got_slices, params.slices)
