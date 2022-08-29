@@ -50,6 +50,30 @@ def printcolwise(data, template, printfunc, minrows=8, indent=4):
 		if v:
 			print(' ' * indent + '  '.join(template.format(*printfunc(x)) for x in v))
 
+def original_location(ds, col):
+	from accelerator.dataset import Dataset
+	from accelerator.job import Job
+	parts = col.location.split('/')
+	job = Job(parts[0])
+	if job.version >= 4: # with /DS/, .[pm] and encoding of problem characters
+		import re
+		dsname = re.sub(r'\\x[0-9a-f]{2}', lambda m: chr(int(m.group()[2:], 16)), parts[2][:-2]).replace('\\\\', '\\')
+	else:
+		dsname = parts[1]
+	src_ds = Dataset(job, dsname)
+	for colname, cand_col in src_ds.columns.items():
+		if cand_col.location == col.location and cand_col.offsets == col.offsets:
+			return (src_ds == ds), src_ds, colname
+
+def format_location(loc):
+	if not loc:
+		return '???' # should never happen
+	is_local, ds, colname = loc
+	if is_local:
+		return 'local'
+	return '%s in %s' % (quote(colname), ds.quoted,)
+
+
 def main(argv, cfg):
 	usage = "%(prog)s [options] ds [ds [...]]"
 	parser = ArgumentParser(prog=argv.pop(0), usage=usage)
@@ -167,11 +191,13 @@ def main(argv, cfg):
 			name2typ = {n: c.type + '+None' if c.none_support else c.type for n, c in ds.columns.items()}
 			len_n, len_t = colwidth((quote(n), name2typ[n]) for n, c in ds.columns.items())
 			if args.location:
-				len_l = max(len(quote(c.location)) for c in ds.columns.values())
+				locations = {n: original_location(ds, c) for n, c in ds.columns.items()}
+				len_l = max(len(format_location(locations[n])) for n in ds.columns)
 				len_c = max(len(c.compression) for c in ds.columns.values())
-				template = '        {2} {0:%d}  {1:%d}  {4:%d} {5:%d}  {3}' % (len_n, len_t, len_l, len_c,)
+				template = '        {2} {0:%d}  {1:%d}  {4:%d}  {5:%d}  {3}' % (len_n, len_t, len_l, len_c,)
 			else:
 				template = '        {2} {0:%d}  {1:%d}  {3}' % (len_n, len_t,)
+				locations = {}
 			chain = False
 			if args.chainedslices or args.chain:
 				chain = ds.chain()
@@ -181,7 +207,7 @@ def main(argv, cfg):
 				else:
 					minval, maxval = c.min, c.max
 				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
-				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), quote(c.location), c.compression).rstrip())
+				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), format_location(locations.get(n)), c.compression).rstrip())
 			print("    {0:n} columns".format(len(ds.columns)))
 		print("    {0:n} lines".format(sum(ds.lines)))
 
