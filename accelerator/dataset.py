@@ -387,13 +387,13 @@ class Dataset(unicode):
 		else:
 			previous = None
 		if self == other:
-			raise DatasetUsageError("Can't merge with myself (%s)" % (other,))
+			raise DatasetUsageError("Can't merge with myself (%s)" % (other.quoted,))
 		if self.lines != other.lines:
-			raise DatasetUsageError("%s and %s don't have the same line counts" % (self, other,))
+			raise DatasetUsageError("%s and %s don't have the same line counts" % (self.quoted, other.quoted,))
 		hashlabels = {self.hashlabel, other.hashlabel}
 		hashlabels.discard(None)
 		if len(hashlabels) > 1:
-			raise DatasetUsageError("Hashlabel mismatch, %s has %r, %s has %r" % (self, self.hashlabel, other, other.hashlabel,))
+			raise DatasetUsageError("Hashlabel mismatch, %s has %r, %s has %r" % (self.quoted, self.hashlabel, other.quoted, other.hashlabel,))
 		new_ds._data.columns.update(other._data.columns)
 		if not allow_unrelated:
 			def parents(ds, tips):
@@ -408,7 +408,7 @@ class Dataset(unicode):
 				return tips
 			related = parents(self, set()) & parents(other, set())
 			if not related:
-				raise DatasetUsageError("%s and %s have no common ancenstors, set allow_unrelated to allow this" % (self, other,))
+				raise DatasetUsageError("%s and %s have no common ancenstors, set allow_unrelated to allow this" % (self.quoted, other.quoted,))
 		new_ds.job = job
 		new_ds.name = name
 		new_ds.fs_name = _fs_name(name)
