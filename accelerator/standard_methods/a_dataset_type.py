@@ -76,7 +76,6 @@ options = {
 	'defaults'                  : {}, # {'COLNAME': value}, unspecified -> method fails on unconvertible unless filter_bad
 	'rename'                    : {}, # {'OLDNAME': 'NEWNAME'} doesn't shadow OLDNAME. (Other COLNAMEs use NEWNAME.)
 	                                  # Use {'OLDNAME': None} to discard OLDNAME.
-	                                  # Renaming a column that is not typed is not possible.
 	'caption'                   : 'typed dataset',
 	'discard_untyped'           : bool, # Make unconverted columns inaccessible ("new" dataset)
 	'filter_bad'                : False, # Discard lines where any column fails typing, saving them in a dataset named "bad"
@@ -118,26 +117,16 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	source_name = source.quoted
 	columns = {}
 	column2type = dict(options.column2type)
-	# temporary stupidity to preserve the old inconsistent behaviour
-	def making_new_ds():
-		if len(chain) > 1 or options.filter_bad or options.discard_untyped or options.hashlabel:
-			return True
-		rev_rename = {}
-		for k, v in options.rename.items():
-			if k in source.columns and v in column2type:
-				rev_rename[v] = k
-		return (rev_rename.get(source.hashlabel, source.hashlabel) in column2type)
-	making_new_ds = making_new_ds()
 	dup_rename = {}
 	just_rename = {}
 	rev_rename = {}
 	for k, v in options.rename.items():
-		if k in source.columns and (v is None or v in column2type or making_new_ds):
+		if k in source.columns:
 			if v in rev_rename:
 				raise Exception('Both column %r and column %r rename to %r (in %s)' % (rev_rename[v], k, v, source_name))
 			if v is not None:
 				rev_rename[v] = k
-			if v in column2type and not making_new_ds:
+			if v in column2type:
 				dup_rename[k] = v
 			else:
 				just_rename[k] = v

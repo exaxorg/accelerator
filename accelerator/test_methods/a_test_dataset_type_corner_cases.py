@@ -422,8 +422,8 @@ def test_filter_bad_with_rename_and_chain():
 	)
 	typed_ds = jid.dataset()
 	coltypes = sorted((name, col.type) for name, col in typed_ds.columns.items())
-	assert coltypes == [('b', 'int32'), ('c', 'int64'), ('d', 'int32')], coltypes
-	assert list(typed_ds.iterate(0)) == [(0, 1, 2), (9, 10, 11)]
+	assert coltypes == [('a', 'ascii'), ('b', 'int32'), ('c', 'int64'), ('d', 'int32')], coltypes
+	assert list(typed_ds.iterate(0)) == [('0', 0, 1, 2), ('9', 9, 10, 11)]
 	bad_ds = jid.dataset('bad')
 	coltypes = sorted((name, col.type) for name, col in bad_ds.columns.items())
 	assert coltypes == [('b', 'ascii'), ('c', 'bytes'), ('d', 'unicode')], coltypes

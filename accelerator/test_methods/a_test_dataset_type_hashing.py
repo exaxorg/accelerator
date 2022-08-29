@@ -234,7 +234,6 @@ def test(src_ds, opts, expect_lines):
 		assert set(bad_ds.columns) == set(opts.column2type), bad_ds
 		assert sum(bad_ds.lines) + expect_lines == sum(src_ds.lines), bad_ds
 		assert bad_ds.lines == [len(list(bad_ds.iterate(sliceno))) for sliceno in range(len(bad_ds.lines))], bad_ds
-	del opts.discard_untyped
 	rev_rename = {v: k for k, v in opts.get('rename', {}).items()}
 	discard = set(src_ds.columns) - set(rev_rename.get(n, n) for n in cols)
 	if discard:
