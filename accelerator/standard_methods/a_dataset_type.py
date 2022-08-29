@@ -118,49 +118,65 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	source_name = source.quoted
 	columns = {}
 	column2type = dict(options.column2type)
+	# temporary stupidity to preserve the old inconsistent behaviour
+	def making_new_ds():
+		if len(chain) > 1 or options.filter_bad or options.discard_untyped or options.hashlabel:
+			return True
+		rev_rename = {}
+		for k, v in options.rename.items():
+			if k in source.columns and v in column2type:
+				rev_rename[v] = k
+		return (rev_rename.get(source.hashlabel, source.hashlabel) in column2type)
+	making_new_ds = making_new_ds()
+	dup_rename = {}
+	just_rename = {}
 	rev_rename = {}
 	for k, v in options.rename.items():
-		if k in source.columns and (v in column2type or options.discard_untyped is not True):
+		if k in source.columns and (v is None or v in column2type or making_new_ds):
 			if v in rev_rename:
 				raise Exception('Both column %r and column %r rename to %r (in %s)' % (rev_rename[v], k, v, source_name))
-			rev_rename[v] = k
+			if v is not None:
+				rev_rename[v] = k
+			if v in column2type and not making_new_ds:
+				dup_rename[k] = v
+			else:
+				just_rename[k] = v
+	renamed_over = set(list(dup_rename.values()) + list(just_rename.values()))
+	for k in renamed_over.intersection(dup_rename):
+		# renamed over don't need to be duplicated
+		just_rename[k] = dup_rename.pop(k)
+	if dup_rename:
+		dup_ds = source.link_to_here(name='dup.%d' % (ix,), rename=dup_rename, column_filter=dup_rename.values())
+		if source.hashlabel in dup_rename:
+			just_rename[source.hashlabel] = None
+	if just_rename:
+		source = source.link_to_here(name='rename.%d' % (ix,), rename=just_rename)
+	if dup_rename:
+		source = source.merge(dup_ds, name='merge.%d' % (ix,))
 	none_support = set()
 	for colname, coltype in column2type.items():
-		orig_colname = rev_rename.get(colname, colname)
-		if orig_colname not in source.columns:
-			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source_name, orig_colname, set(source.columns),))
-		dc = source.columns[orig_colname]
+		if colname not in source.columns:
+			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source_name, colname, set(source.columns),))
+		dc = source.columns[colname]
 		if dc.type not in byteslike_types:
-			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, orig_colname, dc.type, byteslike_types,))
+			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, colname, dc.type, byteslike_types,))
 		coltype = coltype.split(':', 1)[0]
 		columns[colname] = dataset_type.typerename.get(coltype, coltype)
 		if options.defaults.get(colname, False) is None or dc.none_support:
 			none_support.add(colname)
 	if options.hashlabel is None:
 		hashlabel_override = False
-		hashlabel = options.rename.get(source.hashlabel, source.hashlabel)
-		if hashlabel in columns:
-			if rev_rename.get(hashlabel, hashlabel) != source.hashlabel:
-				# hashlabel gets overwritten
-				hashlabel = None
-				hashlabel_override = True
+		hashlabel = source.hashlabel
 		rehashing = (hashlabel in columns)
-		if hashlabel is None: # discarded through options.rename
-			hashlabel_override = True
 	else:
 		hashlabel_override = True
 		hashlabel = options.hashlabel or None
 		rehashing = bool(hashlabel)
 	if (options.filter_bad or rehashing) and not options.discard_untyped:
 		untyped_columns = set(source.columns)
-		orig_columns = set(rev_rename.get(n, n) for n in columns)
 		untyped_columns -= set(columns) # anything renamed over is irrelevant
-		untyped_columns -= orig_columns
 		for colname in sorted(untyped_columns):
-			if options.rename.get(colname, 0) is None or colname in columns:
-				continue
-			orig_colname = rev_rename.get(colname, colname)
-			dc = source.columns[orig_colname]
+			dc = source.columns[colname]
 			columns[colname] = dc.type
 			column2type[colname] = dataset_type.copy_types[dc.type]
 			if dc.none_support:
@@ -208,14 +224,6 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	if rehashing and options.chain_slices:
 		dw = None
 	else:
-		if parent:
-			# Discard columns with rename set to None (unless already renamed over)
-			discard = {colname: None for colname, t in options.rename.items() if t is None and colname not in columns and colname in parent.columns}
-			if hashlabel in discard:
-				hashlabel = None
-				hashlabel_override = True
-				assert options.hashlabel is None, "Can't hash on discarded column %r" % (options.hashlabel,)
-			columns.update(discard)
 		dw = job.datasetwriter(
 			name=ds_name,
 			columns=columns,
@@ -236,8 +244,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 			except NoSuchDatasetError:
 				previous = None
 		def best_bad_type(colname):
-			orig_colname = rev_rename.get(colname, colname)
-			dc = source.columns[orig_colname]
+			dc = source.columns[colname]
 			assert dc.type in byteslike_types
 			return (dc.type, dc.none_support)
 		bad_columns = {name: best_bad_type(name) for name in options.column2type}
@@ -249,7 +256,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		)
 	else:
 		dw_bad = None
-	return dw, dw_bad, dws, source, source_name, column2type, sorted(columns), rev_rename
+	return dw, dw_bad, dws, source, source_name, column2type, sorted(columns)
 
 
 def map_init(vars, name, z='badmap_size'):
@@ -288,7 +295,7 @@ def analysis(sliceno, slices, prepare_res):
 	return res
 
 def analysis_one(sliceno, slices, prepare_res):
-	dw, dw_bad, dws, source, source_name, column2type, _, rev_rename = prepare_res
+	dw, dw_bad, dws, source, source_name, column2type, _ = prepare_res
 	if source.lines[sliceno] == 0:
 		dummy = [0] * slices
 		return {}, dummy, {}, {}, dummy
@@ -318,7 +325,6 @@ def analysis_one(sliceno, slices, prepare_res):
 		source=source,
 		source_name=source_name,
 		column2type=column2type,
-		rev_rename=rev_rename,
 	)
 	if options.filter_bad:
 		vars.badmap_fd = map_init(vars, 'badmap%d' % (sliceno,))
@@ -378,13 +384,12 @@ def analysis_lap(vars):
 	if vars.rehashing:
 		if vars.first_lap:
 			out_fn = 'hashtmp.%d' % (vars.sliceno,)
-			dest_colname = vars.dw.hashlabel
-			src_colname = vars.rev_rename.get(dest_colname, dest_colname)
-			coltype = vars.column2type[dest_colname]
+			colname = vars.dw.hashlabel
+			coltype = vars.column2type[colname]
 			vars.rehashing = False
-			real_coltype = one_column(vars, src_colname, coltype, [out_fn], True)
+			real_coltype = one_column(vars, colname, coltype, [out_fn], True)
 			vars.rehashing = True
-			assert vars.res_bad_count[dest_colname] == [0] # implicitly has a default
+			assert vars.res_bad_count[colname] == [0] # implicitly has a default
 			vars.slicemap_fd = map_init(vars, 'slicemap%d' % (vars.sliceno,), 'slicemap_size')
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			vars.map_fhs.append(slicemap)
@@ -407,7 +412,7 @@ def analysis_lap(vars):
 			vars.save_bad = True
 		else:
 			vars.save_bad = False
-		one_column(vars, vars.rev_rename.get(colname, colname), coltype, out_fns)
+		one_column(vars, colname, coltype, out_fns)
 	return vars.res_bad_count, vars.res_default_count, vars.res_minmax
 
 
@@ -456,7 +461,6 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	in_fns = []
 	offsets = []
 	max_counts = []
-	dest_colname = options.rename.get(colname, colname)
 	d = vars.source
 	assert colname in d.columns, '%s not in %s' % (colname, d.quoted,)
 	if not is_null_converter:
@@ -469,7 +473,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		offsets.append(0)
 		max_counts.append(-1)
 	if cfunc:
-		default_value = options.defaults.get(dest_colname, cstuff.NULL)
+		default_value = options.defaults.get(colname, cstuff.NULL)
 		if for_hasher and default_value is cstuff.NULL:
 			default_value = None
 		default_len = 0
@@ -494,8 +498,8 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			assert len(out_fns) == c_slices + vars.save_bad
 			res = c(*cstuff.bytesargs(in_fns, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
 			assert not res, 'Failed to convert ' + colname
-		vars.res_bad_count[dest_colname] = list(bad_count)
-		vars.res_default_count[dest_colname] = sum(default_count)
+		vars.res_bad_count[colname] = list(bad_count)
+		vars.res_default_count[colname] = sum(default_count)
 		coltype = coltype.split(':', 1)[0]
 		if is_null_converter:
 			dc = d.columns[colname]
@@ -503,20 +507,20 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			# Some lines may have been filtered out, so these minmax values
 			# could be wrong. There's no easy/cheap way to fix that though,
 			# and they will never be wrong in the bad direction.
-			vars.res_minmax[dest_colname] = [dc.min, dc.max]
+			vars.res_minmax[colname] = [dc.min, dc.max]
 		else:
 			real_coltype = dataset_type.typerename.get(coltype, coltype)
 			if exists(minmax_fn):
 				with typed_reader(real_coltype)(minmax_fn) as it:
-					vars.res_minmax[dest_colname] = list(it)
+					vars.res_minmax[colname] = list(it)
 				unlink(minmax_fn)
 	else:
 		# python func
 		if for_hasher:
 			raise Exception("Can't hash %s on column of type %s." % (vars.source_name, coltype,))
 		nodefault = object()
-		if dest_colname in options.defaults:
-			default_value = options.defaults[dest_colname]
+		if colname in options.defaults:
+			default_value = options.defaults[colname]
 			if default_value is not None:
 				if isinstance(default_value, unicode):
 					default_value = default_value.encode('utf-8')
@@ -583,9 +587,9 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			slicemap.close()
 		if options.filter_bad:
 			badmap.close()
-		vars.res_bad_count[dest_colname] = bad_count
-		vars.res_default_count[dest_colname] = default_count
-		vars.res_minmax[dest_colname] = [col_min, col_max]
+		vars.res_bad_count[colname] = bad_count
+		vars.res_default_count[colname] = default_count
+		vars.res_minmax[colname] = [col_min, col_max]
 	return real_coltype
 
 def synthesis(slices, analysis_res, prepare_res):
@@ -595,7 +599,7 @@ def synthesis(slices, analysis_res, prepare_res):
 		synthesis_one(slices, p, a)
 
 def synthesis_one(slices, prepare_res, analysis_res):
-	dw, dw_bad, dws, source, source_name, column2type, columns, rev_rename = prepare_res
+	dw, dw_bad, dws, source, source_name, column2type, columns = prepare_res
 	analysis_res = list(analysis_res)
 	header_printed = [False]
 	def print(msg=''):
@@ -675,7 +679,7 @@ def synthesis_one(slices, prepare_res, analysis_res):
 			dw.set_minmax(sliceno, data[3])
 	if dw:
 		dw.set_compressions('gzip')
-	used = {rev_rename.get(colname, colname) for colname in column2type}
+	used = set(column2type)
 	discarded = set(source.columns) - used
 	if discarded:
 		print()
