@@ -668,13 +668,5 @@ def synthesis_one(slices, prepare_res, analysis_res):
 			dw.set_minmax(sliceno, data[3])
 	if dw:
 		dw.set_compressions('gzip')
-	used = set(column2type)
-	discarded = set(source.columns) - used
-	if discarded:
-		print()
-		print('Discarded columns:')
-		template = '    %%-%ds  %%s' % (max(len(colname) for colname in discarded),)
-		for colname in discarded:
-			print(template % (colname, source.columns[colname].type,))
 	if header_printed[0]:
 		print()
