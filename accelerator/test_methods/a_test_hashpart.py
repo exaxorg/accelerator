@@ -98,8 +98,9 @@ def verify_empty(source, previous=None, **options):
 		options=options,
 	)
 	ds = Dataset(jid)
-	assert list(ds.iterate(None)) == [], "source=%s previous=%s did not produce empty dataset in %s" % (source, previous, ds,)
-	assert ds.previous == previous, "Empty %s should have had previous=%s, but had %s" % (ds, previous, ds.previous,)
+	chain = ds.chain_within_job()
+	assert list(chain.iterate(None)) == [], "source=%s previous=%s did not produce empty dataset in %s" % (source, previous, ds,)
+	assert chain[0].previous == previous, "Empty %s should have had previous=%s, but had %s" % (ds, previous, chain[0].previous,)
 
 def synthesis(params):
 	ds = write(data)
@@ -133,4 +134,4 @@ def synthesis(params):
 	dw.write_dict(data[0])
 	ds = verify(params.slices, [data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
-	assert got_slices == 2, "%s (built with chain_slices=True) has %d datasets in chain, expected 2." % (ds, got_slices,)
+	assert got_slices == params.slices, "%s (built with chain_slices=True) has %d datasets in chain, expected %d." % (ds, got_slices, params.slices)

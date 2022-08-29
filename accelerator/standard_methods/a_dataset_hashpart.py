@@ -48,34 +48,21 @@ def prepare(job, slices):
 		filename = None
 	dws = []
 	previous = datasets.previous
-	if options.chain_slices:
-		# The last slice that actually has data in it becomes 'default'.
-		# Or slice 0 if the whole source is empty (we must produce a ds).
-		default_sliceno = 0
-		for sliceno in range(slices - 1, -1, -1):
-			if chain.lines(sliceno):
-				default_sliceno = sliceno
-				break
-	else:
-		default_sliceno = None
 	for sliceno in range(slices):
-		if sliceno == default_sliceno or chain.lines(sliceno):
-			if sliceno == default_sliceno:
-				name = "default"
-			else:
-				name = str(sliceno)
-			dw = job.datasetwriter(
-				caption="%s (slice %d)" % (caption, sliceno),
-				hashlabel=options.hashlabel,
-				filename=filename,
-				previous=previous,
-				name=name,
-				for_single_slice=sliceno,
-				copy_mode=True,
-			)
-			previous = dw
+		if sliceno == slices - 1 and options.chain_slices:
+			name = "default"
 		else:
-			dw = None
+			name = str(sliceno)
+		dw = job.datasetwriter(
+			caption="%s (slice %d)" % (caption, sliceno),
+			hashlabel=options.hashlabel,
+			filename=filename,
+			previous=previous,
+			name=name,
+			for_single_slice=sliceno,
+			copy_mode=True,
+		)
+		previous = dw
 		dws.append(dw)
 	names = []
 	cols = {}
@@ -91,8 +78,6 @@ def prepare(job, slices):
 
 def analysis(sliceno, prepare_res):
 	dws, names = prepare_res[:2]
-	if not dws[sliceno]:
-		return
 	it = datasets.source.iterate_chain(
 		sliceno,
 		names,
@@ -109,19 +94,14 @@ def synthesis(prepare_res, job, slices):
 		# If we don't want a chain we abuse our knowledge of dataset internals
 		# to avoid recompressing. Don't do this stuff yourself.
 		dws, names, caption, filename, cols = prepare_res
-		dws = list(filter(None, dws))
 		merged_dw = job.datasetwriter(
 			caption=caption,
 			hashlabel=options.hashlabel,
 			filename=filename,
 			previous=datasets.previous,
-			meta_only=bool(dws),
+			meta_only=True,
 			columns=cols,
 		)
-		if not dws:
-			# There is no data, but we still have to start the dataset
-			merged_dw.get_split_write()
-			return
 		merged_dw.set_compressions(dws[0]._compressions)
 		for sliceno in range(slices):
 			merged_dw.set_lines(sliceno, sum(dw._lens[sliceno] for dw in dws))
