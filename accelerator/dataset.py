@@ -390,10 +390,10 @@ class Dataset(unicode):
 			raise DatasetUsageError("Can't merge with myself (%s)" % (other.quoted,))
 		if self.lines != other.lines:
 			raise DatasetUsageError("%s and %s don't have the same line counts" % (self.quoted, other.quoted,))
-		hashlabels = {self.hashlabel, other.hashlabel}
-		hashlabels.discard(None)
-		if len(hashlabels) > 1:
-			raise DatasetUsageError("Hashlabel mismatch, %s has %r, %s has %r" % (self.quoted, self.hashlabel, other.quoted, other.hashlabel,))
+		if other.hashlabel is not None:
+			new_ds._data.hashlabel = other.hashlabel
+		elif self.hashlabel in other.columns:
+			new_ds._data.hashlabel = None
 		new_ds._data.columns.update(other._data.columns)
 		if not allow_unrelated:
 			def parents(ds, tips):

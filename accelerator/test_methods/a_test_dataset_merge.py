@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019 Carl Drougge                                          #
+# Copyright (c) 2019-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -99,9 +99,7 @@ def synthesis(params):
 
 	# check hashed datasets too
 	ab_a = mkds('ab_a', ['a', 'b'], [(1, 2), (3, 4), (5, 6)], hashlabel='a')
-	ab_b = mkds('ab_b', ['a', 'b'], [(7, 8), (9, 10), (11, 12)], hashlabel='b')
 	ac_a = mkds('ac_a', ['a', 'c'], [(1, 14), (3, 15), (5, 16)], hashlabel='a') # a values must match ab_a
-	fail_merge(ab_a, ab_b, allow_unrelated=True) # different hashlabels
 	abac_a = merge('abac_a', ab_a, ac_a, allow_unrelated=True)
 	assert abac_a.hashlabel == 'a'
 	check(abac_a, [(1, 2, 14), (3, 4, 15), (5, 6, 16)])
