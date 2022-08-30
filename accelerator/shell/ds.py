@@ -81,7 +81,12 @@ def typed_from(ds, loc):
 		return
 	src_ds = ds.job.params.datasets.source
 	colname = unrename_column(ds.job, src_ds, colname)
-	return 'typed from ' + format_location((False, src_ds, colname))
+	res = 'typed from ' + format_location((False, src_ds, colname))
+	orig_loc = original_location(src_ds, src_ds.columns[colname])
+	if orig_loc and not orig_loc[0]:
+		return '%s, originally %s' % (res, format_location(orig_loc))
+	else:
+		return res
 
 def unrename_column(type_job, ds, colname):
 	rename = type_job.params.options.rename
