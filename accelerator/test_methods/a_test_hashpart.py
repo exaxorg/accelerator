@@ -65,7 +65,7 @@ columns = {
 	"date": ("date", True),
 }
 
-def write(data, **kw):
+def write(data, columns=columns, **kw):
 	dw = DatasetWriter(columns=columns, **kw)
 	w = dw.get_split_write_dict()
 	for values in data:
@@ -135,3 +135,18 @@ def synthesis(params):
 	ds = verify(params.slices, [data[0], data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
 	assert got_slices == params.slices, "%s (built with chain_slices=True) has %d datasets in chain, expected %d." % (ds, got_slices, params.slices)
+
+	# test varying types and available columns over the chain (including the hashlabel type)
+	v1 = write([{'a': '101', 'b':  201 }], columns={'a': 'ascii',  'b': 'int32'}, name='varying1')
+	v2 = write([{'a':  102 , 'c': '202'}], columns={'a': 'number', 'c': 'ascii'}, name='varying2', previous=v1)
+	v3 = write([{'a':  103             }], columns={'a': 'int32'               }, name='varying3', previous=v2)
+	hashed_varying = subjobs.build("dataset_hashpart", source=v3, hashlabel="a").dataset().chain()
+	assert len(hashed_varying) == 3
+	for unhashed, hashed in zip([v1, v2, v3], hashed_varying):
+		assert {n: dc.type for n, dc in unhashed.columns.items()} == {n: dc.type for n, dc in hashed.columns.items()}
+		assert list(unhashed.iterate(0)) == list(hashed.iterate(None))
+		assert hashed.hashlabel == 'a'
+		hash_t = unhashed.columns['a'].type
+		hash_v = next(unhashed.iterate(0, 'a'))
+		want_slice = typed_writer(hash_t).hash(hash_v) % params.slices
+		assert hashed.lines[want_slice] == 1
