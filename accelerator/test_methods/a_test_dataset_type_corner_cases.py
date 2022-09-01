@@ -589,6 +589,30 @@ def test_rehash_with_empty_slices():
 	verify_hashing('with default=0 (probably two slices)', {(0, '42',), (42, 'b',)}, defaults=dict(a='0'))
 	verify_hashing('with default=42 (one slice)', {(42, '42',), (42, 'b',)}, defaults=dict(a='42'))
 
+def test_varying_hashlabel():
+	columns = {'a': 'ascii', 'b': 'ascii', 'c': 'ascii'}
+	def mk(name, hashlabel, previous):
+		dw = DatasetWriter(name=name, hashlabel=hashlabel, previous=previous, columns=columns)
+		w = dw.get_split_write()
+		w('1', '2', '3')
+		return dw.finish()
+	ds1 = mk('hlchain0', None, None)
+	ds2 = mk('hlchain1', 'a', ds1)
+	ds3 = mk('hlchain2', 'b', ds2)
+	ds4 = mk('hlchain3', 'c', ds3)
+	typed_dss = subjobs.build(
+		'dataset_type',
+		source=ds4,
+		column2type=dict(a='int32_10', b='int32_10', c='int32_10'),
+	).dataset().chain()
+	assert list(typed_dss.iterate(None)) == 4 * [(1, 2, 3)]
+	assert [ds.hashlabel for ds in typed_dss] == [None, 'a', 'b', 'c']
+	h = typed_writer('int32').hash
+	assert typed_dss[0].lines[0] == 1
+	for ix in (1, 2, 3):
+		assert typed_dss[ix].lines[h(ix) % g.slices] == 1
+
+
 def synthesis():
 	test_bytes()
 	test_ascii()
@@ -599,6 +623,7 @@ def synthesis():
 	test_column_discarding()
 	test_rehash_with_empty_slices()
 	test_rename()
+	test_varying_hashlabel()
 
 	verify('json', ['json'],
 		[b'null', b'[42, {"a": "b"}]', b'\r  {  "foo":\r"bar" \r   }\t ', b'nope'],
