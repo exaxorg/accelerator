@@ -355,11 +355,11 @@ def test_filter_bad_across_types():
 		want.sort() # adding them out of order, int32_10 sorts correctly.
 
 def test_rename():
-	def mk(name, **kw):
+	def mk(name, colnames="abc", **kw):
 		dw = DatasetWriter(name='rename_' + name, **kw)
-		dw.add('a', 'ascii')
-		dw.add('b', 'bytes')
-		dw.add('c', 'unicode', none_support=True)
+		assert len(colnames) == 3
+		for name, typ in zip(colnames, ('ascii', 'bytes', 'unicode')):
+			dw.add(name, typ, none_support=(typ == 'unicode'))
 		dw.get_split_write()('0', b'1', '2')
 		return dw.finish()
 	plain = mk('plain')
