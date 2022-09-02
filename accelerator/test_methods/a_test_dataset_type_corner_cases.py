@@ -403,6 +403,28 @@ def test_rename():
 	assert list(typed_ds.iterate(None)) == [(1, '2')]
 	assert typed_ds.hashlabel == None
 
+	# test renaming several columns to the same name
+	# (but in different parts of the chain)
+	plain2 = mk('plain2', colnames="def", previous=plain)
+	plain3 = mk('plain3', colnames="abi", previous=plain2)
+	# once without rehashing, and once with
+	hash_slice = typed_writer('number').hash(1) % g.slices
+	for hashlabel, want_slice in ((None, 0), ('one', hash_slice)):
+		jid = subjobs.build(
+			'dataset_type',
+			column2type=dict(zero='number', one='number', two='number'),
+			hashlabel=hashlabel,
+			rename=dict(a='zero', d='zero', b='one', e='one', c='two', f='two', i='two'),
+			source=plain3,
+		)
+		typed_dss = jid.dataset().chain()
+		assert len(typed_dss) == 3
+		for org_cols, ds in zip(["abc", "def", "abi"], typed_dss):
+			assert ds.hashlabel == hashlabel
+			assert set(ds.columns) == set(org_cols) | {'zero', 'one', 'two'}
+			assert list(ds.iterate(want_slice)) == [('0', b'1', '2', 1, 2, 0)]
+			assert sum(ds.lines) == 1
+
 def test_filter_bad_with_rename_and_chain():
 	dw = DatasetWriter(name="filter bad with rename", allow_missing_slices=True)
 	dw.add('a', 'ascii')
