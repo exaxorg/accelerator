@@ -241,12 +241,11 @@ def main(argv, cfg):
 
 		if ds.previous or args.chain:
 			chain = ds.chain()
+			full_name = 'Full chain' if args.non_empty_chain else 'Chain'
+			print("    {0} length {1:n}, from {2} to {3}".format(full_name, len(chain), chain[0], chain[-1]))
 			if args.non_empty_chain:
-				print("    Full chain length {0:n}, from {1} to {2}".format(len(chain), chain[0], chain[-1]))
 				chain = [ds for ds in chain if sum(ds.lines)]
 				print("    Filtered chain length {0:n}".format(len(chain)))
-			if not args.non_empty_chain:
-				print("    Chain length {0:n}, from {1} to {2}".format(len(chain), chain[0], chain[-1]))
 			if args.chain:
 				data = tuple((ix, "%s/%s" % (x.job, x.name), "{:n}".format(sum(x.lines))) for ix, x in enumerate(chain))
 				max_n, max_l = colwidth(x[1:] for x in data)
