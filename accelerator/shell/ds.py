@@ -242,7 +242,15 @@ def main(argv, cfg):
 		if ds.previous or args.chain:
 			chain = ds.chain()
 			full_name = 'Full chain' if args.non_empty_chain else 'Chain'
-			print("    {0} length {1:n}, from {2} to {3}".format(full_name, len(chain), chain[0], chain[-1]))
+			in_job = len(ds.chain_within_job())
+			if in_job > 1:
+				if in_job == len(chain):
+					in_job = ' (all within job)'
+				else:
+					in_job = ' ({0:n} within job)'.format(in_job)
+			else:
+				in_job = ''
+			print("    {0} length {1:n}{2}, from {3} to {4}".format(full_name, len(chain), in_job, chain[0], chain[-1]))
 			if args.non_empty_chain:
 				chain = [ds for ds in chain if sum(ds.lines)]
 				print("    Filtered chain length {0:n}".format(len(chain)))
