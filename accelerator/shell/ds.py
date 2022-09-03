@@ -245,14 +245,13 @@ def main(argv, cfg):
 				print("    Full chain length {0:n}, from {1} to {2}".format(len(chain), chain[0], chain[-1]))
 				chain = [ds for ds in chain if sum(ds.lines)]
 				print("    Filtered chain length {0:n}".format(len(chain)))
-			if chain:
-				if not args.non_empty_chain:
-					print("    Chain length {0:n}, from {1} to {2}".format(len(chain), chain[0], chain[-1]))
-				if args.chain:
-					data = tuple((ix, "%s/%s" % (x.job, x.name), "{:n}".format(sum(x.lines))) for ix, x in enumerate(chain))
-					max_n, max_l = colwidth(x[1:] for x in data)
-					template = "{0:3}: {1:%d} ({2:>%d})" % (max_n, max_l)
-					printcolwise(data, template, lambda x: (x[0], x[1], x[2]), minrows=8, indent=8)
+			if not args.non_empty_chain:
+				print("    Chain length {0:n}, from {1} to {2}".format(len(chain), chain[0], chain[-1]))
+			if args.chain:
+				data = tuple((ix, "%s/%s" % (x.job, x.name), "{:n}".format(sum(x.lines))) for ix, x in enumerate(chain))
+				max_n, max_l = colwidth(x[1:] for x in data)
+				template = "{0:3}: {1:%d} ({2:>%d})" % (max_n, max_l)
+				printcolwise(data, template, lambda x: (x[0], x[1], x[2]), minrows=8, indent=8)
 
 		if args.slices or args.chainedslices:
 			if args.chainedslices and ds.previous:
