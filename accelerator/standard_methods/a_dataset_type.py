@@ -66,7 +66,7 @@ options = {
 	'column2type'               : {'COLNAME': TYPENAME},
 	# Anything your system would accept in $TZ. Parses datetimes (but not
 	# dates or times) as being in this timezone (you get UTC).
-	# Doesn't work for %s (which is always in UTC).
+	# Probably doesn't do what you want for %s and %J (goes "the wrong way").
 	# No error checking can be done on this (tzset(3) can not return failure).
 	# On most 32bit systems this will break dates outside about 1970 - 2037.
 	# Setting this will mask most bad dates (mktime(3) "fixes" them).

@@ -37,41 +37,6 @@ from . import c_backend_support
 
 __all__ = ('convfuncs', 'typerename', 'typesizes', 'minmaxfuncs',)
 
-def _resolve_datetime(coltype):
-	cfunc, fmt = coltype.split(':', 1)
-	percent = False
-	fmt_a = []
-	for c in fmt:
-		if percent:
-			fmt_a.append('%' + c)
-			percent = False
-		elif c == '%':
-			percent = True
-		else:
-			fmt_a.append(c)
-	if percent:
-		raise Exception('Stray %% at end of pattern %r' % (fmt,))
-	def split(sep):
-		cnt = fmt_a.count(sep)
-		if cnt == 1:
-			pos = fmt_a.index(sep)
-			return fmt_a[:pos], fmt_a[pos + 1:]
-		elif cnt:
-			raise Exception('Bad pattern %r, only a single %r supported' % (fmt, sep,))
-	if '%J' in fmt_a:
-		fmt_a, fmt_b = split('%J')
-		if any(v[0] == '%' and v != '%%' for v in fmt_a + fmt_b):
-			raise Exception('Can only parse %%J as the only format specifier. (%r)' % (fmt,))
-		assert cfunc.startswith('datetime'), 'Only datetime can use %J'
-		cfunc = 'java' + cfunc
-		fmt_b = ''.join(fmt_b)
-	elif '%f' in fmt_a:
-		fmt_a, fmt_b = split('%f')
-		fmt_b = ''.join(fmt_b)
-	else:
-		fmt_b = None
-	return cfunc, ''.join(fmt_a), fmt_b
-
 def _resolve_unicode(coltype, strip=False):
 	_, fmt = coltype.split(':', 1)
 	if '/' in fmt:
@@ -272,115 +237,19 @@ _c_conv_unicode_specific_template = r'''
 	}
 '''
 
-_c_conv_date_java_ts_template = r'''
-	const char *startptr = line;
-	const char *fmtptr = fmt;
-	char *endptr;
-	while (*fmtptr) {
-		if (*fmtptr++ != *startptr++) {
-			startptr = "";
-			break;
-		}
-	}
-	errno = 0;
-	long long ts_j = strtoll(startptr, &endptr, 0);
-	if (errno || !endptr || startptr == endptr) {
-		ptr = 0;
-	} else {
-		fmtptr = fmt_b;
-		while (*fmtptr) {
-			if (*fmtptr++ != *endptr++) {
-				ptr = 0;
-				break;
-			}
-		}
-		if ((%(whole)d) && ptr) {
-			while (*endptr == 32 || (*endptr >= 9 && *endptr <= 13)) endptr++;
-		}
-		if (((%(whole)d) && *endptr) || !ptr) {
-			ptr = 0;
-		} else {
-			int32_t f = (ts_j %% 1000) * 1000;
-			time_t ts_u = ts_j / 1000;
-			const int fit = (ts_j / 1000 == ts_u);
-			if (f < 0) {
-				f += 1000000;
-				ts_u--;
-			}
-			struct tm tm;
-			memset(&tm, 0, sizeof(tm));
-			if (fit && gmtime_r(&ts_u, &tm)) {
-				uint32_t *p = (uint32_t *)ptr;
-%(conv)s
-			} else {
-				ptr = 0;
-			}
-		}
-	}
-'''
 _c_conv_date_template = r'''
-	const char *pres;
 	struct tm tm;
-	memset(&tm, 0, sizeof(tm));
-	tm.tm_year = 70;
-	tm.tm_mday = 1;
-	if (*fmt) {
-		pres = strptime(line, fmt, &tm);
-	} else {
-		pres = line;
+	int32_t f;
+	const char *pres = line;
+	int ret = mystrptime(&pres, fmt, &tm, &f);
+	if (%(whole)d) { // spaces at the end are fine
+		while (dt_isspace(*pres)) pres++;
 	}
-	if (fmt_b) { // There is %%f in the fmt
-		if (pres) {
-			const char *lres;
-			size_t plen = strlen(pres);
-			int32_t f;
-			if (plen > 6) {
-				char tmp[7];
-				char *end;
-				memcpy(tmp, pres, 6);
-				tmp[6] = 0;
-				f = strtol(tmp, &end, 10);
-				lres = pres + (end - tmp);
-			} else {
-				char *end;
-				f = strtol(pres, &end, 10);
-				lres = end;
-			}
-			// "123000", "123" and "123   " should probably be equivalent.
-			for (int digitcnt = lres - pres; digitcnt < 6; digitcnt++) {
-				f *= 10;
-				if (isspace(*lres)) lres++;
-			}
-			if (pres == lres || f < 0) {
-				pres = 0;
-			} else if (*fmt_b) {
-				pres = strptime(lres, fmt_b, &tm);
-			} else {
-				pres = lres;
-			}
-			if ((%(whole)d) && pres) {
-				while (*pres == 32 || (*pres >= 9 && *pres <= 13)) pres++;
-			}
-			if (pres && ((!%(whole)d) || !*pres)) {
-				uint32_t *p = (uint32_t *)ptr;
-%(conv)s
-			} else {
-				ptr = 0;
-			}
-		} else {
-			ptr = 0;
-		}
+	if (!ret && ((!%(whole)d) || !*pres)) {
+		uint32_t *p = (uint32_t *)ptr;
+		%(conv)s
 	} else {
-		if ((%(whole)d) && pres) {
-			while (*pres == 32 || (*pres >= 9 && *pres <= 13)) pres++;
-		}
-		if (pres && ((!%(whole)d) || !*pres)) {
-			uint32_t *p = (uint32_t *)ptr;
-			const int32_t f = 0;
-%(conv)s
-		} else {
-			ptr = 0;
-		}
+		ptr = 0;
 	}
 '''
 _c_conv_datetime = r'''
@@ -397,24 +266,13 @@ _c_conv_datetime = r'''
 		const uint32_t sec  = tm.tm_sec;
 		// Our definition of a valid date is whatever Python will accept.
 		// On Python 2 that's unfortunately pretty much anything.
-		// We validate the time ourselves because that's easy, but the
-		// date part will just be broken on python 2 unless your strptime
-		// validates more than most implementations.
-		if (
-			hour >= 0 && hour < 24 &&
-			min >= 0 && min < 60 &&
-			sec >= 0 && sec < 60
-		) {
-			PyObject *o = PyDateTime_FromDateAndTime(year, mon, mday, hour, min, sec, f);
-			if (o) {
-				Py_DECREF(o);
-				p[0] = year << 14 | mon << 10 | mday << 5 | hour;
-				p[1] = min << 26 | sec << 20 | f;
-			} else {
-				PyErr_Clear();
-				ptr = 0;
-			}
+		PyObject *o = PyDateTime_FromDateAndTime(year, mon, mday, hour, min, sec, f);
+		if (o) {
+			Py_DECREF(o);
+			p[0] = year << 14 | mon << 10 | mday << 5 | hour;
+			p[1] = min << 26 | sec << 20 | f;
 		} else {
+			PyErr_Clear();
 			ptr = 0;
 		}
 '''
@@ -438,16 +296,8 @@ _c_conv_time = r'''
 		const uint32_t hour = tm.tm_hour;
 		const uint32_t min  = tm.tm_min;
 		const uint32_t sec  = tm.tm_sec;
-		if (
-			hour >= 0 && hour < 24 &&
-			min >= 0 && min < 60 &&
-			sec >= 0 && sec < 60
-		) {
-			p[0] = 32277536 | hour; // 1970 if read as datetime
-			p[1] = min << 26 | sec << 20 | f;
-		} else {
-			ptr = 0;
-		}
+		p[0] = 32277536 | hour; // 1970 if read as datetime
+		p[1] = min << 26 | sec << 20 | f;
 '''
 
 _c_conv_float_template = r'''
@@ -707,12 +557,12 @@ convfuncs = {
 	'strbool'      : ConvTuple(1, _c_conv_strbool, None),
 	'floatbool'    : ConvTuple(1, _c_conv_floatbool_template % dict(whole=1)                   , None),
 	'floatbooli'   : ConvTuple(1, _c_conv_floatbool_template % dict(whole=0)                   , None),
-	'datetime:*'   : ConvTuple(8, _c_conv_date_template % dict(whole=1, conv=_c_conv_datetime,), _resolve_datetime),
+	'datetime:*'   : ConvTuple(8, _c_conv_date_template % dict(whole=1, conv=_c_conv_datetime,), None),
 	'date:*'       : ConvTuple(4, _c_conv_date_template % dict(whole=1, conv=_c_conv_date,    ), None),
-	'time:*'       : ConvTuple(8, _c_conv_date_template % dict(whole=1, conv=_c_conv_time,    ), _resolve_datetime),
-	'datetimei:*'  : ConvTuple(8, _c_conv_date_template % dict(whole=0, conv=_c_conv_datetime,), _resolve_datetime),
+	'time:*'       : ConvTuple(8, _c_conv_date_template % dict(whole=1, conv=_c_conv_time,    ), None),
+	'datetimei:*'  : ConvTuple(8, _c_conv_date_template % dict(whole=0, conv=_c_conv_datetime,), None),
 	'datei:*'      : ConvTuple(4, _c_conv_date_template % dict(whole=0, conv=_c_conv_date,    ), None),
-	'timei:*'      : ConvTuple(8, _c_conv_date_template % dict(whole=0, conv=_c_conv_time,    ), _resolve_datetime),
+	'timei:*'      : ConvTuple(8, _c_conv_date_template % dict(whole=0, conv=_c_conv_time,    ), None),
 	'bytes'        : ConvTuple(0, _c_conv_bytes_template % dict(strip=0), None),
 	'bytesstrip'   : ConvTuple(0, _c_conv_bytes_template % dict(strip=1), None),
 	# unicode[strip]:encoding or unicode[strip]:encoding/errorhandling
@@ -739,8 +589,6 @@ convfuncs = {
 # can be selected based on the :fmt specified in those values.
 # null_* is used when just copying a column with filtering.
 hidden_convfuncs = {
-	'javadatetime'       : ConvTuple(8, _c_conv_date_java_ts_template % dict(whole=1, conv=_c_conv_datetime,), None),
-	'javadatetimei'      : ConvTuple(8, _c_conv_date_java_ts_template % dict(whole=0, conv=_c_conv_datetime,), None),
 	'unicode_utf8'       : ConvTuple(0, ['', _c_conv_unicode_specific_template % dict(strip=0, func='PyUnicode_DecodeUTF8'), _c_conv_unicode_cleanup], None),
 	'unicodestrip_utf8'  : ConvTuple(0, ['', _c_conv_unicode_specific_template % dict(strip=1, func='PyUnicode_DecodeUTF8'), _c_conv_unicode_cleanup], None),
 	'unicode_latin1'     : ConvTuple(0, ['', _c_conv_unicode_specific_template % dict(strip=0, func='PyUnicode_DecodeLatin1'), _c_conv_unicode_cleanup], None),
@@ -780,8 +628,6 @@ typerename = {
 	'float64i'     : 'float64',
 	'float32i'     : 'float32',
 	'datetimei'    : 'datetime',
-	'javadatetime' : 'datetime',
-	'javadatetimei': 'datetime',
 	'datei'        : 'date',
 	'timei'        : 'time',
 	'bytesstrip'   : 'bytes',
@@ -1808,6 +1654,246 @@ err:
 	g->pos += z;
 	return 0;
 }
+
+// Here we re-implement the useful parts of strptime plus some extensions.
+
+#define TM_SKIPSPACE while (dt_isspace(**s)) (*s)++;
+
+#define TM_NUMBER(low, high) do {                                   \
+		const int maxdigits = strlen(#high);                        \
+		if (tm_number(s, low, high, maxdigits, &num)) return 1;     \
+	} while (0)
+
+static int tm_number(const char **s, int low, int high, int maxdigits, int *r_num)
+{
+	TM_SKIPSPACE;
+	int num = 0;
+	int c = **s;
+	if (c < '0' || c > '9') return 1;
+	int ix = 0;
+	while (ix < maxdigits && c >= '0' && c <= '9') {
+		num = num * 10 + c - '0';
+		c = (*s)[++ix];
+	}
+	if (num < low || num > high) return 1;
+	*s += ix;
+	if (r_num) *r_num = num;
+	return 0;
+}
+
+struct mytm {
+	int century;
+	int year;
+	int pm;
+	int optional;
+	int32_t fraction;
+};
+
+// for %%b
+static const char * const monthnames[] = {
+	"JANUARY",
+	"FEBRUARY",
+	"MARCH",
+	"APRIL",
+	"MAY",
+	"JUNE",
+	"JULY",
+	"AUGUST",
+	"SEPTEMBER",
+	"OCTOBER",
+	"NOVEMBER",
+	"DECEMBER"
+};
+
+static int tm_fraction(const char **s, struct mytm *mytm)
+{
+	// This is always considered to be six digits, so
+	// "123000", "123" and "123   " are all the same number.
+	// (Unlike other numbers spaces are allowed at the end, not start.)
+	// Pre-fill the buffer with 0 to help with that.
+	char buf[7] = "000000\0";
+	int pos = 0, space = 0;
+	TM_SKIPSPACE;
+	if (**s < '0' || **s > '9') return 1;
+	while (pos < 6) {
+		if (space) {
+			if (!dt_isspace(**s)) break;
+		} else {
+			if (dt_isspace(**s)) {
+				space = 1;
+			} else {
+				if (**s < '0' || **s > '9') break;
+				buf[pos] = **s;
+			}
+		}
+		pos++;
+		(*s)++;
+	}
+	mytm->fraction = strtol(buf, 0, 10);
+	return 0;
+}
+
+static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *mytm)
+{
+	char *end;
+	int num;
+	switch (f) {
+		case 'Y': // YYYY
+			TM_NUMBER(1, 9999);
+			mytm->century = num / 100;
+			mytm->year = num % 100;
+			return 0;
+		case 'C': // Century number
+			TM_NUMBER(0, 99);
+			mytm->century = num;
+			return 0;
+		case 'y': // YY
+			TM_NUMBER(0, 99);
+			mytm->year = num;
+			return 0;
+		case 'm': // month num
+			TM_NUMBER(1, 12);
+			tm->tm_mon = num - 1;
+			return 0;
+		case 'b': // month name
+			TM_SKIPSPACE;
+			for (int month = 0; month < 12; month++) {
+				const char * const name = monthnames[month];
+				for (int ix = 0; ; ix++) {
+					const char c = (*s)[ix];
+					const char n = name[ix];
+					if (c == 0 || (c != n && c != (n | 32))) {
+						if (n == 0) {
+							*s += ix;
+						} else if (ix > 2) { // short version matched
+							*s += 3;
+						} else {
+							break;
+						}
+						tm->tm_mon = month;
+						return 0;
+					}
+				}
+			}
+			return 1;
+		case 'd': // mday
+			TM_NUMBER(1, 31);
+			tm->tm_mday = num;
+			return 0;
+		case 'H': // 24h hour
+			TM_NUMBER(0, 23);
+			tm->tm_hour = num;
+			mytm->pm = -1;
+			return 0;
+		case 'I': // 12h hour
+			TM_NUMBER(1, 12);
+			tm->tm_hour = num;
+			return 0;
+		case 'p': // AM/PM
+			TM_SKIPSPACE;
+			if (**s == 0 || ((*s)[1] != 'm' && (*s)[1] != 'M')) return 1;
+			if (**s == 'a' || **s == 'A') {
+				mytm->pm = 0;
+			} else if (**s == 'p' || **s == 'P') {
+				mytm->pm = 1;
+			} else {
+				return 1;
+			}
+			if (tm->tm_hour > 12) tm->tm_hour -= 12;
+			*s += 2;
+			return 0;
+		case 'M': // minute
+			TM_NUMBER(0, 59);
+			tm->tm_min = num;
+			return 0;
+		case 'S': // second
+			TM_NUMBER(0, 59);
+			tm->tm_sec = num;
+			return 0;
+		case 's': // unix epoch time
+		case 'J': // java epoch time
+			errno = 0;
+			long long lt = strtoll(*s, &end, 10);
+			if (errno || end == *s) return 1;
+			time_t t;
+			int32_t frac = mytm->fraction;
+			if (f == 's') {
+				t = lt;
+				if (t != lt) return 1;
+			} else { // must be J
+				t = lt / 1000;
+				if (lt / 1000 != t) return 1;
+				frac = (lt % 1000) * 1000;
+				if (frac < 0) {
+					frac += 1000000;
+					t--;
+				}
+			}
+			if (!gmtime_r(&t, tm)) return 1;
+			mytm->fraction = frac;
+			mytm->century = tm->tm_year / 100 + 19;
+			mytm->year = tm->tm_year % 100;
+			mytm->pm = -1;
+			*s = end;
+			return 0;
+		case 'f': // microsecond
+			return tm_fraction(s, mytm);
+		case '%': // literal "%"
+			if (**s != '%') return 1;
+			(*s)++;
+			return 0;
+		case '/': // anything after this is optional
+			mytm->optional = 1;
+			return 0;
+	}
+	return 1;
+}
+
+static int mystrptime2(const char **s, const char *format, struct tm *tm, struct mytm *mytm)
+{
+	while (1) {
+		switch (*format) {
+			case 0:
+				return 0;
+			case '%':
+				if (tm_conv(s, format[1], tm, mytm)) return 1;
+				format++;
+				break;
+			case ' ':
+			case '\t':
+			case '\n':
+			case '\v':
+			case '\f':
+			case '\r':
+				TM_SKIPSPACE;
+				break;
+			default:
+				if (**s != *format) return 1;
+				(*s)++;
+				break;
+		}
+		format++;
+	}
+}
+
+static int mystrptime(const char **s, const char *format, struct tm *tm, int32_t *r_frac)
+{
+	struct mytm mytm = {-1, 70, -1};
+	memset(tm, 0, sizeof(*tm));
+	tm->tm_mday = 1;
+	const int ret = mystrptime2(s, format, tm, &mytm);
+	if (mytm.century == -1) mytm.century = (mytm.year < 69 ? 20 : 19);
+	tm->tm_year = (mytm.century - 19) * 100 + mytm.year;
+	if (mytm.pm != -1) {
+		if (tm->tm_hour == 12) tm->tm_hour = 0;
+		if (mytm.pm) tm->tm_hour += 12;
+	}
+	*r_frac = mytm.fraction;
+	return (mytm.optional ? 0 : ret);
+}
+
+#undef TM_SKIPSPACE
+#undef TM_NUMBER
 
 #define MAYBE_SAVE_BAD_BLOB                                                \
 	if (save_bad) {                                                        \
