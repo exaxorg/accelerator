@@ -69,7 +69,7 @@ def split_tildes(n, allow_empty=False):
 
 def method2job(cfg, method, count=0, start_from=None):
 	def get(count):
-		url ='%s/method2job/%s/%s' % (cfg.url, method, count)
+		url ='%s/method2job/%s/%s' % (cfg.url, url_quote(method), count)
 		if start_from:
 			url += '?start_from=' + url_quote(start_from)
 		return call(url)
