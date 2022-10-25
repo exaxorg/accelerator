@@ -30,7 +30,7 @@ from struct import Struct
 
 from accelerator.compat import NoneType, unicode, itervalues, PY2
 
-from accelerator.extras import OptionEnum, DotDict
+from accelerator.extras import OptionEnum, DotDict, quote
 from accelerator.dsutil import typed_writer, typed_reader
 from accelerator.error import NoSuchDatasetError
 from . import dataset_type
@@ -448,6 +448,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	assert cfunc or pyfunc, coltype + " didn't have cfunc or pyfunc"
 	coltype = shorttype
 	in_fns = []
+	in_msgnames = []
 	offsets = []
 	max_counts = []
 	d = vars.source
@@ -455,6 +456,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	if not is_null_converter:
 		assert d.columns[colname].type in byteslike_types, '%s has bad type in %s' % (colname, d.quoted,)
 	in_fns.append(d.column_filename(colname, vars.sliceno))
+	in_msgnames.append('%s column %s slice %d' % (d.quoted, quote(colname), vars.sliceno,))
 	if d.columns[colname].offsets:
 		offsets.append(d.columns[colname].offsets[vars.sliceno])
 		max_counts.append(d.lines[vars.sliceno])
@@ -485,7 +487,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		gzip_mode = "wb%d" % (options.compression,)
 		if in_fns:
 			assert len(out_fns) == c_slices + vars.save_bad
-			res = c(*cstuff.bytesargs(in_fns, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
+			res = c(*cstuff.bytesargs(in_fns, in_msgnames, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
 			assert not res, 'Failed to convert ' + colname
 		vars.res_bad_count[colname] = list(bad_count)
 		vars.res_default_count[colname] = sum(default_count)
@@ -597,7 +599,6 @@ def synthesis_one(slices, prepare_res, analysis_res):
 			if dw:
 				ds_name = dw.quoted_ds_name
 			else:
-				from accelerator.extras import quote
 				ds_name = quote(dws[0].ds_name[:-1] + '<sliceno>')
 			header = '%s -> %s' % (source_name, ds_name)
 			builtins.print('%s\n%s' % (header, '=' * len(header)))

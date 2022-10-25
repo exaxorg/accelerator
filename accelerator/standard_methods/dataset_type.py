@@ -840,7 +840,7 @@ convert_template = r'''
 	uint16_t *slicemap = 0;
 	int chosen_slice = 0;
 	int current_file = 0;
-	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
+	G_INIT(1);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
 		if (badmap == MAP_FAILED) badmap = 0;
@@ -895,7 +895,7 @@ more_infiles:
 				continue;
 			}
 			if (!default_value) {
-				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.filename, (long long)i - first_line + 1);
+				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.msgname, (long long)i - first_line + 1);
 				goto err;
 			}
 			ptr = (char *)defbuf;
@@ -910,7 +910,7 @@ more_infiles:
 	}
 	current_file++;
 	if (current_file < in_count) {
-		g_init(&g, in_fns[current_file], offsets[current_file], 0);
+		G_INIT(0);
 		goto more_infiles;
 	}
 	if (minmax_any) {
@@ -1092,7 +1092,7 @@ err:
 #ifdef CFFI_ATE_MY_GIL
 	PyGILState_STATE gstate = PyGILState_Ensure();
 #endif
-	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
+	G_INIT(1);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
 		if (badmap == MAP_FAILED) badmap = 0;
@@ -1149,7 +1149,7 @@ more_infiles:
 				continue;
 			}
 			if (!deflen) {
-				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.filename, (long long)i - first_line + 1);
+				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.msgname, (long long)i - first_line + 1);
 				goto err;
 			}
 			ptr = defbuf;
@@ -1226,7 +1226,7 @@ more_infiles:
 	}
 	current_file++;
 	if (current_file < in_count) {
-		g_init(&g, in_fns[current_file], offsets[current_file], 0);
+		G_INIT(0);
 		goto more_infiles;
 	}
 	if (!minlen && saw_nan) {
@@ -1267,7 +1267,7 @@ err:
 }
 '''
 
-proto_template = 'static int convert_column_%s(const char **in_fns, int in_count, const char **out_fns, const char *gzip_mode, const char *minmax_fn, const char *default_value, uint32_t default_len, int default_value_is_None, const char *fmt, const char *fmt_b, int record_bad, int skip_bad, int badmap_fd, size_t badmap_size, int save_bad, int slices, int slicemap_fd, size_t slicemap_size, uint64_t *bad_count, uint64_t *default_count, off_t *offsets, int64_t *max_counts)'
+proto_template = 'static int convert_column_%s(const char **in_fns, const char **in_msgnames, int in_count, const char **out_fns, const char *gzip_mode, const char *minmax_fn, const char *default_value, uint32_t default_len, int default_value_is_None, const char *fmt, const char *fmt_b, int record_bad, int skip_bad, int badmap_fd, size_t badmap_size, int save_bad, int slices, int slicemap_fd, size_t slicemap_size, uint64_t *bad_count, uint64_t *default_count, off_t *offsets, int64_t *max_counts)'
 
 protos = []
 funcs = [noneval_data]
@@ -1293,7 +1293,7 @@ convert_blob_template = r'''
 	uint16_t *slicemap = 0;
 	int chosen_slice = 0;
 	int current_file = 0;
-	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
+	G_INIT(1);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
 		if (badmap == MAP_FAILED) badmap = 0;
@@ -1375,7 +1375,7 @@ more_infiles:
 				continue;
 			}
 			if (!default_value) {
-				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.filename, (long long)i - first_line + 1);
+				PyErr_Format(PyExc_ValueError, "Failed to convert \"%%s\" from %%s line %%lld", line, g.msgname, (long long)i - first_line + 1);
 				goto err;
 			}
 			ptr = (const uint8_t *)default_value;
@@ -1387,7 +1387,7 @@ more_infiles:
 	}
 	current_file++;
 	if (current_file < in_count) {
-		g_init(&g, in_fns[current_file], offsets[current_file], 0);
+		G_INIT(0);
 		goto more_infiles;
 	}
 	res = g.error;
@@ -1423,7 +1423,7 @@ null_number_template = r'''
 	uint16_t *slicemap = 0;
 	int chosen_slice = 0;
 	int current_file = 0;
-	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
+	G_INIT(1);
 	err1(save_bad);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
@@ -1468,7 +1468,7 @@ more_infiles:
 	}
 	current_file++;
 	if (current_file < in_count) {
-		g_init(&g, in_fns[current_file], offsets[current_file], 0);
+		G_INIT(0);
 		goto more_infiles;
 	}
 	res = g.error;
@@ -1503,7 +1503,7 @@ null_template = r'''
 	uint16_t *slicemap = 0;
 	int chosen_slice = 0;
 	int current_file = 0;
-	err1(g_init(&g, in_fns[current_file], offsets[current_file], 1));
+	G_INIT(1);
 	err1(save_bad);
 	if (badmap_fd != -1) {
 		badmap = mmap(0, badmap_size, PROT_READ | PROT_WRITE, MAP_NOSYNC | MAP_SHARED, badmap_fd, 0);
@@ -1541,7 +1541,7 @@ more_infiles:
 	}
 	current_file++;
 	if (current_file < in_count) {
-		g_init(&g, in_fns[current_file], offsets[current_file], 0);
+		G_INIT(0);
 		goto more_infiles;
 	}
 	res = g.error;
@@ -1629,6 +1629,7 @@ typedef struct {
 	uint32_t saved_size;
 	int32_t linelen;
 	const char *filename;
+	const char *msgname;
 	char *largetmp;
 	char buf[Z + 1];
 } g;
@@ -1636,7 +1637,9 @@ typedef struct {
 static const char NoneMarker[1] = {0};
 static char decimal_separator = '.';
 
-static int g_init(g *g, const char *filename, off_t offset, const int first)
+#define G_INIT(first) err1(g_init(&g, in_fns[current_file], in_msgnames[current_file], offsets[current_file], first));
+
+static int g_init(g *g, const char *filename, const char *msgname, off_t offset, const int first)
 {
 	if (!first) {
 		int e = gzclose(g->fh);
@@ -1647,6 +1650,7 @@ static int g_init(g *g, const char *filename, off_t offset, const int first)
 	g->pos = g->len = 0;
 	g->error = 0;
 	g->filename = filename;
+	g->msgname = msgname;
 	if (first) g->largetmp = 0;
 	int fd = open(filename, O_RDONLY);
 	if (fd < 0) return 1;
@@ -1710,7 +1714,7 @@ size_again:
 		if (offset < 4) {
 			memmove(g->buf, g->buf + g->pos, offset);
 			if (read_chunk(g, offset) || g->len < 4) {
-				PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+				PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 				g->error = 1;
 				return 0;
 			}
@@ -1726,7 +1730,7 @@ size_again:
 			g->linelen = 0;
 			return NoneMarker;
 		} else if (size < 255 || size > 0x7fffffff) {
-			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1743,7 +1747,7 @@ size_again:
 		const int fill_len = size - avail;
 		const int read_len = gzread(g->fh, g->largetmp + avail, fill_len);
 		if (read_len != fill_len) {
-			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1755,13 +1759,13 @@ size_again:
 	if (avail < size) {
 		memmove(g->buf, g->buf + g->pos, avail);
 		if (read_chunk(g, avail)) {
-			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 			g->error = 1;
 			return 0;
 		}
 		avail = g->len;
 		if (avail < size) {
-			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1790,7 +1794,7 @@ static inline int read_fixed(g *g, unsigned char *res, int z)
 		z -= avail;
 		if (read_chunk(g, 0) || g->len < z) {
 err:
-			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error (%s)", g->msgname, g->filename);
 			g->error = 1;
 			return 1;
 		}
@@ -1873,8 +1877,10 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	int good = 0;
 	const char *err = 0;
 	PyObject *o_in_fns;
+	PyObject *o_in_msgnames;
 	int in_count;
 	const char **in_fns = 0;
+	const char **in_msgnames = 0;
 	PyObject *o_out_fns;
 	const char **out_fns = 0;
 	const char *gzip_mode;
@@ -1903,8 +1909,9 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	off_t *offsets = 0;
 	PyObject *o_max_counts;
 	int64_t *max_counts = 0;
-	if (!PyArg_ParseTuple(args, "OiOetetOiiOOiiiLiiiLOOOO",
+	if (!PyArg_ParseTuple(args, "OOiOetetOiiOOiiiLiiiLOOOO",
 		&o_in_fns,
+		&o_in_msgnames,
 		&in_count,
 		&o_out_fns,
 		Py_FileSystemDefaultEncoding, &gzip_mode,
@@ -1939,12 +1946,15 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	LISTCHK(bad_count, slices);
 	LISTCHK(default_count, slices);
 	LISTCHK(in_fns, in_count);
+	LISTCHK(in_msgnames, in_count);
 	LISTCHK(offsets, in_count);
 	LISTCHK(max_counts, in_count);
 	LISTCHK(out_fns, slices + save_bad);
 #undef LISTCHK
 	in_fns = malloc(in_count * sizeof(*in_fns));
 	err1(!in_fns);
+	in_msgnames = malloc(in_count * sizeof(*in_msgnames));
+	err1(!in_msgnames);
 	offsets = malloc(in_count * sizeof(*offsets));
 	err1(!offsets);
 	max_counts = malloc(in_count * sizeof(*max_counts));
@@ -1952,6 +1962,8 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	for (int i = 0; i < in_count; i++) {
 		in_fns[i] = PyBytes_AS_STRING(PyList_GetItem(o_in_fns, i));
 		err1(!in_fns[i]);
+		in_msgnames[i] = PyBytes_AS_STRING(PyList_GetItem(o_in_msgnames, i));
+		err1(!in_msgnames[i]);
 		offsets[i] = PyLong_AsLongLong(PyList_GetItem(o_offsets, i));
 		err1(PyErr_Occurred());
 		max_counts[i] = PyLong_AsLongLong(PyList_GetItem(o_max_counts, i));
@@ -1969,7 +1981,7 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 		err1(!out_fns[i]);
 	}
 
-	err1(%s(in_fns, in_count, out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, badmap_fd, badmap_size, save_bad, slices, slicemap_fd, slicemap_size, bad_count, default_count, offsets, max_counts));
+	err1(%s(in_fns, in_msgnames, in_count, out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, badmap_fd, badmap_size, save_bad, slices, slicemap_fd, slicemap_size, bad_count, default_count, offsets, max_counts));
 	for (int i = 0; i < slices; i++) {
 		err1(PyList_SetItem(o_default_count, i, PyLong_FromUnsignedLongLong(default_count[i])));
 		err1(PyList_SetItem(o_bad_count, i, PyLong_FromUnsignedLongLong(bad_count[i])));
@@ -1981,6 +1993,7 @@ err:
 	if (out_fns) free(out_fns);
 	if (max_counts) free(max_counts);
 	if (offsets) free(offsets);
+	if (in_msgnames) free(in_msgnames);
 	if (in_fns) free(in_fns);
 	if (good) Py_RETURN_NONE;
 	if (err) {
