@@ -180,7 +180,7 @@ _c_null_blob_template = r'''
 _c_conv_unicode_setup = r'''
 	PyObject *decoder = PyCodec_Decoder(fmt);
 	if (!decoder) {
-		PyErr_Format(PyExc_ValueError, "No decoder for '%s'.\n", fmt);
+		PyErr_Format(PyExc_ValueError, "No decoder for '%s'.", fmt);
 		goto err;
 	}
 	PyObject *dec_errors = PyUnicode_FromString(fmt_b);
@@ -192,7 +192,7 @@ _c_conv_unicode_setup = r'''
 		if (tst_res) {
 			if (PyTuple_Check(tst_res)) {
 				if (!PyUnicode_Check(PyTuple_GetItem(tst_res, 0))) {
-					PyErr_Format(PyExc_ValueError, "Decoder for '%s' does not produce unicode.\n", fmt);
+					PyErr_Format(PyExc_ValueError, "Decoder for '%s' does not produce unicode.", fmt);
 				}
 			}
 			Py_DECREF(tst_res);
@@ -1710,7 +1710,7 @@ size_again:
 		if (offset < 4) {
 			memmove(g->buf, g->buf + g->pos, offset);
 			if (read_chunk(g, offset) || g->len < 4) {
-				PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+				PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 				g->error = 1;
 				return 0;
 			}
@@ -1726,7 +1726,7 @@ size_again:
 			g->linelen = 0;
 			return NoneMarker;
 		} else if (size < 255 || size > 0x7fffffff) {
-			PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1743,7 +1743,7 @@ size_again:
 		const int fill_len = size - avail;
 		const int read_len = gzread(g->fh, g->largetmp + avail, fill_len);
 		if (read_len != fill_len) {
-			PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1755,13 +1755,13 @@ size_again:
 	if (avail < size) {
 		memmove(g->buf, g->buf + g->pos, avail);
 		if (read_chunk(g, avail)) {
-			PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 			g->error = 1;
 			return 0;
 		}
 		avail = g->len;
 		if (avail < size) {
-			PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 			g->error = 1;
 			return 0;
 		}
@@ -1790,7 +1790,7 @@ static inline int read_fixed(g *g, unsigned char *res, int z)
 		z -= avail;
 		if (read_chunk(g, 0) || g->len < z) {
 err:
-			PyErr_Format(PyExc_IOError, "%s: Format error\n", g->filename);
+			PyErr_Format(PyExc_IOError, "%s: Format error", g->filename);
 			g->error = 1;
 			return 1;
 		}
