@@ -242,9 +242,6 @@ _c_conv_date_template = r'''
 	int32_t f;
 	const char *pres = line;
 	int ret = mystrptime(&pres, fmt, &tm, &f);
-	if (%(whole)d) { // spaces at the end are fine
-		while (dt_isspace(*pres)) pres++;
-	}
 	if (!ret && ((!%(whole)d) || !*pres)) {
 		uint32_t *p = (uint32_t *)ptr;
 		%(conv)s
@@ -1657,8 +1654,6 @@ err:
 
 // Here we re-implement the useful parts of strptime plus some extensions.
 
-#define TM_SKIPSPACE while (dt_isspace(**s)) (*s)++;
-
 #define TM_NUMBER(low, high) do {                                   \
 		const int maxdigits = strlen(#high);                        \
 		if (tm_number(s, low, high, maxdigits, &num)) return 1;     \
@@ -1666,7 +1661,11 @@ err:
 
 static int tm_number(const char **s, int low, int high, int maxdigits, int *r_num)
 {
-	TM_SKIPSPACE;
+	// initial spaces are accepted (as initial zeroes)
+	while (maxdigits > 1 && dt_isspace(**s)) {
+		(*s)++;
+		maxdigits--;
+	}
 	int num = 0;
 	int c = **s;
 	if (c < '0' || c > '9') return 1;
@@ -1713,7 +1712,6 @@ static int tm_fraction(const char **s, struct mytm *mytm)
 	// Pre-fill the buffer with 0 to help with that.
 	char buf[7] = "000000\0";
 	int pos = 0, space = 0;
-	TM_SKIPSPACE;
 	if (**s < '0' || **s > '9') return 1;
 	while (pos < 6) {
 		if (space) {
@@ -1756,7 +1754,6 @@ static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *myt
 			tm->tm_mon = num - 1;
 			return 0;
 		case 'b': // month name
-			TM_SKIPSPACE;
 			for (int month = 0; month < 12; month++) {
 				const char * const name = monthnames[month];
 				for (int ix = 0; ; ix++) {
@@ -1790,7 +1787,6 @@ static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *myt
 			tm->tm_hour = num;
 			return 0;
 		case 'p': // AM/PM
-			TM_SKIPSPACE;
 			if (**s == 0 || ((*s)[1] != 'm' && (*s)[1] != 'M')) return 1;
 			if (**s == 'a' || **s == 'A') {
 				mytm->pm = 0;
@@ -1812,6 +1808,7 @@ static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *myt
 			return 0;
 		case 's': // unix epoch time
 		case 'J': // java epoch time
+			if (dt_isspace(**s)) return 1; // strtoll accepts leading spaces
 			errno = 0;
 			long long lt = strtoll(*s, &end, 10);
 			if (errno || end == *s) return 1;
@@ -1865,7 +1862,7 @@ static int mystrptime2(const char **s, const char *format, struct tm *tm, struct
 			case '\v':
 			case '\f':
 			case '\r':
-				TM_SKIPSPACE;
+				while (dt_isspace(**s)) (*s)++;
 				break;
 			default:
 				if (**s != *format) return 1;
@@ -1892,7 +1889,6 @@ static int mystrptime(const char **s, const char *format, struct tm *tm, int32_t
 	return (mytm.optional ? 0 : ret);
 }
 
-#undef TM_SKIPSPACE
 #undef TM_NUMBER
 
 #define MAYBE_SAVE_BAD_BLOB                                                \

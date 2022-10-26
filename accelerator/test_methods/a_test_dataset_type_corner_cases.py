@@ -238,13 +238,12 @@ def test_unicode():
 	verify('utf7 all', ['unicode:utf-7/replace'], [b'a+b', b'a+-b', b'+ALA-'], ['a\ufffd', 'a+b', '°'], all_source_types=True);
 
 def test_datetimes():
-	# These use the libc functions, so may only work for dates after 1900.
-	# They also use the python datetime classes to verify valid dates,
-	# so on Python < 3.6 they will accept various invalid dates if strptime
-	# does. So we only try nearly-good dates on Python 3.6+.
+	# These use the python datetime classes to verify valid dates,
+	# so on Python < 3.6 they will accept various invalid dates.
+	# So we only try nearly-good dates on Python 3.6+.
 	todo = [
 		('date YYYYMMDD', 'date:%Y%m%d', [b'20190521', b'19700101', b'1970-01-01', b'1980', b'nah'], [date(2019, 5, 21), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20), date(1945, 6, 20)], '19450620', True,),
-		('date spacy YYYYMMDD', 'date: %Y %m %d', [b'20190521', b'   1970 01\n\n\n01', b'1970\t1 1    ', b'70 0 0', b'1981'], [date(2019, 5, 21), date(1970, 1, 1), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20)], '1945 6 20', False,),
+		('date spacy YYYYMMDD', 'date: %Y %m %d ', [b'20190521', b'   1970 01\n\n\n01', b'1970\t1 1    ', b'70 0 0', b'1981'], [date(2019, 5, 21), date(1970, 1, 1), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20)], '1945 6 20', False,),
 		('date YYYYblahMMDD', 'date:%Yblah%m%d', [b'2019blah0521', b'1970blah0101', b'1970blah-01-01', b'1980blah', b'nah'], [date(2019, 5, 21), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20), date(1945, 6, 20)], '1945blah0620', True,),
 		('datetime hhmmYYMMDD', 'datetime:%H%M%y%m%d', [b'1852190521', b'0000700101', b'today'], [datetime(2019, 5, 21, 18, 52), datetime(1970, 1, 1), datetime(1978, 1, 1)], '0000780101', False,),
 		('datetime YYYYMMDD HHMMSS.mmmmmm', 'datetime:%Y%m%d %H%M%S.%f', [b'20190521 185206.123', b'19700203040506.000007', b'19700203040506.-00007', b'today'], [datetime(2019, 5, 21, 18, 52, 6, 123000), datetime(1970, 2, 3, 4, 5, 6, 7), datetime(1978, 1, 1), datetime(1978, 1, 1)], '19780101 000000.0', True,),
@@ -258,7 +257,7 @@ def test_datetimes():
 		('datetime mmmmmmpercentfpercentDD', 'datetime:%f%%f%%%d', [b'30%f%30', b'0%f%06', b'00030%f%03', b'999999%f%99', b'999999%f%11'], [datetime(1970, 1, 30, microsecond=300000), datetime(1970, 1, 6), datetime(1970, 1, 3, microsecond=300), None, datetime(1970, 1, 11, microsecond=999999)], None, False,),
 		('datetime unix.f', 'datetime:%s.%f', [b'30.30', b'1558662853.847211', b''], [datetime(1970, 1, 1, 0, 0, 30, 300000), datetime(2019, 5, 24, 1, 54, 13, 847211), datetime(1970, 1, 1, microsecond=100000)], '0.1', False,),
 		('datetime java', 'datetime:%J', [b'0', b'1558662853847', b'', b'-2005'], [datetime(1970, 1, 1), datetime(2019, 5, 24, 1, 54, 13, 847000), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1969, 12, 31, 23, 59, 57, 995000)], '1', False,),
-		('datetime java blahbluh', 'datetime:blah%Jbluh', [b'blah0bluh', b'blah   30000bluh', b'bla0bluh', b'blah0blu', b'blah-2005bluh'], [datetime(1970, 1, 1), datetime(1970, 1, 1, 0, 0, 30), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1969, 12, 31, 23, 59, 57, 995000)], 'blah1bluh', False,),
+		('datetime java blahbluh', 'datetime:blah %Jbluh', [b'blah0bluh', b'blah   30000bluh', b'bla0bluh', b'blah0blu', b'blah-2005bluh'], [datetime(1970, 1, 1), datetime(1970, 1, 1, 0, 0, 30), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1969, 12, 31, 23, 59, 57, 995000)], 'blah1bluh', False,),
 	]
 	if sys.version_info >= (3, 6):
 		todo.extend((
