@@ -1484,6 +1484,30 @@ static inline int dt_isspace(const int c)
 {
 	return (c == 32 || (c >= 9 && c <= 13));
 }
+static inline int dt_notspace(int c)
+{
+	return !dt_isspace(c);
+}
+static inline int dt_isany(int c)
+{
+	return 1;
+}
+static inline int dt_isdigit(int c)
+{
+	return c >= '0' && c <= '9';
+}
+static inline int dt_notdigit(int c)
+{
+	return !dt_isdigit(c);
+}
+static inline int dt_notspacedigit(int c)
+{
+	return dt_notspace(c) && dt_notdigit(c);
+}
+static inline int dt_ispercent(int c)
+{
+	return c == '%';
+}
 
 #define G_INIT(first) err1(g_init(&g, in_fns[current_file], in_msgnames[current_file], offsets[current_file], first));
 
@@ -1704,6 +1728,39 @@ static const char * const monthnames[] = {
 	"DECEMBER"
 };
 
+typedef int (*tm_matcher)(int c);
+
+static int tm_skip(const char **s, int low, int high, tm_matcher match)
+{
+	int pos = 0;
+	if (low == -1) low = 1;
+	if (high == -1) high = low;
+	while (pos < high && (*s)[pos] && match((*s)[pos])) pos++;
+	if (pos < low) return 1;
+	*s += pos;
+	return 0;
+}
+
+static int tm_parse_percent(const char **format, int *r_low, int *r_high)
+{
+	const char *p = *format + 1;
+	if (dt_isdigit(*p)) {
+		if (tm_number(&p, 0, 999999999, 9, r_low)) return 1;
+		if (*p == ',') {  // it's a range
+			p++;
+			if (tm_number(&p, *r_low, 999999999, 9, r_high)) return 1;
+			if (*r_high < *r_low || *r_high == 0) return 1;
+		} else {          // it's a count
+			*r_high = -1;
+		}
+	} else {
+		*r_high = *r_low = -1;
+	}
+	if (!*p) return 1;
+	*format = p;
+	return 0;
+}
+
 static int tm_fraction(const char **s, struct mytm *mytm)
 {
 	// This is always considered to be six digits, so
@@ -1731,11 +1788,13 @@ static int tm_fraction(const char **s, struct mytm *mytm)
 	return 0;
 }
 
-static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *mytm)
+static int tm_conv(const char **s, const char **format, struct tm *tm, struct mytm *mytm)
 {
 	char *end;
 	int num;
-	switch (f) {
+	int low, high;
+	if (tm_parse_percent(format, &low, &high)) return 1;
+	switch (**format) {
 		case 'Y': // YYYY
 			TM_NUMBER(1, 9999);
 			mytm->century = num / 100;
@@ -1814,7 +1873,7 @@ static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *myt
 			if (errno || end == *s) return 1;
 			time_t t;
 			int32_t frac = mytm->fraction;
-			if (f == 's') {
+			if (**format == 's') {
 				t = lt;
 				if (t != lt) return 1;
 			} else { // must be J
@@ -1836,9 +1895,40 @@ static int tm_conv(const char **s, const char f, struct tm *tm, struct mytm *myt
 		case 'f': // microsecond
 			return tm_fraction(s, mytm);
 		case '%': // literal "%"
-			if (**s != '%') return 1;
-			(*s)++;
-			return 0;
+			return tm_skip(s, low, high, dt_ispercent);
+		case ' ':
+			return tm_skip(s, low, high, dt_isspace);
+		case '.':
+			return tm_skip(s, low, high, dt_notspace);
+		case '*':
+			return tm_skip(s, low, high, dt_isany);
+		case '#':
+			if (low == -1) {
+				return tm_skip(s, 1, 1, dt_isdigit);
+			} else {
+				int digits;
+				if (high == -1) {
+					// %N#, up to N digits
+					digits = low;
+					if (digits < 1 || digits > 9) return 1;
+					high = 10;
+					while (--low) high *= 10;
+					high--;
+				} else {
+					// %LOW,HIGH#, allow as many digits as the high number takes
+					digits = 1;
+					int tmp = high;
+					while (tmp > 9) {
+						tmp /= 10;
+						digits++;
+					}
+				}
+				return tm_number(s, low, high, digits, 0);
+			}
+		case '^':
+			return tm_skip(s, low, high, dt_notdigit);
+		case '@':
+			return tm_skip(s, low, high, dt_notspacedigit);
 		case '/': // anything after this is optional
 			mytm->optional = 1;
 			return 0;
@@ -1853,8 +1943,7 @@ static int mystrptime2(const char **s, const char *format, struct tm *tm, struct
 			case 0:
 				return 0;
 			case '%':
-				if (tm_conv(s, format[1], tm, mytm)) return 1;
-				format++;
+				if (tm_conv(s, &format, tm, mytm)) return 1;
 				break;
 			case ' ':
 			case '\t':
