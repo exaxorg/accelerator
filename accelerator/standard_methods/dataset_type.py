@@ -1761,16 +1761,19 @@ static int tm_parse_percent(const char **format, int *r_low, int *r_high)
 	return 0;
 }
 
-static int tm_fraction(const char **s, struct mytm *mytm)
+static int tm_fraction(const char **s, const int digits, struct mytm *mytm)
 {
-	// This is always considered to be six digits, so
+	// This is always considered to be six digits (unless overridden), so
 	// "123000", "123" and "123   " are all the same number.
 	// (Unlike other numbers spaces are allowed at the end, not start.)
+	// Stops early when digits < 6.
+	// Discards digits at the end when digits > 6.
 	// Pre-fill the buffer with 0 to help with that.
 	char buf[7] = "000000\0";
 	int pos = 0, space = 0;
 	if (**s < '0' || **s > '9') return 1;
-	while (pos < 6) {
+	if (digits < 1) return 1;
+	while (pos < digits) {
 		if (space) {
 			if (!dt_isspace(**s)) break;
 		} else {
@@ -1778,7 +1781,7 @@ static int tm_fraction(const char **s, struct mytm *mytm)
 				space = 1;
 			} else {
 				if (**s < '0' || **s > '9') break;
-				buf[pos] = **s;
+				if (pos < 6) buf[pos] = **s;
 			}
 		}
 		pos++;
@@ -1893,7 +1896,7 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 			*s = end;
 			return 0;
 		case 'f': // microsecond
-			return tm_fraction(s, mytm);
+			return tm_fraction(s, (low == -1) ? 6 : low, mytm);
 		case '%': // literal "%"
 			return tm_skip(s, low, high, dt_ispercent);
 		case ' ':
