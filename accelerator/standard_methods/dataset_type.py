@@ -102,11 +102,11 @@ def _resolve_unicode(coltype, strip=False):
 _c_conv_bytes_template = r'''
 	int32_t len = g.linelen;
 #if %(strip)d
-	while (*line == 32 || (*line >= 9 && *line <= 13)) {
+	while (dt_isspace(*line)) {
 		line++;
 		len--;
 	}
-	while (len && (line[len - 1] == 32 || (line[len - 1] >= 9 && line[len - 1] <= 13))) len--;
+	while (len && dt_isspace(line[len - 1])) len--;
 #endif
 	const uint8_t *ptr = (uint8_t *)line;
 '''
@@ -114,11 +114,11 @@ _c_conv_bytes_template = r'''
 _c_conv_ascii_template = r'''
 	int32_t len = g.linelen;
 #if %(strip)d
-	while (*line == 32 || (*line >= 9 && *line <= 13)) {
+	while (dt_isspace(*line)) {
 		line++;
 		len--;
 	}
-	while (len && (line[len - 1] == 32 || (line[len - 1] >= 9 && line[len - 1] <= 13))) len--;
+	while (len && dt_isspace(line[len - 1])) len--;
 #endif
 	const uint8_t *ptr = (uint8_t *)line;
 	char *free_ptr = 0;
@@ -157,11 +157,11 @@ _c_conv_ascii_cleanup = r'''
 _c_conv_ascii_strict_template = r'''
 	int32_t len = g.linelen;
 #if %(strip)d
-	while (*line == 32 || (*line >= 9 && *line <= 13)) {
+	while (dt_isspace(*line)) {
 		line++;
 		len--;
 	}
-	while (len && (line[len - 1] == 32 || (line[len - 1] >= 9 && line[len - 1] <= 13))) len--;
+	while (len && dt_isspace(line[len - 1])) len--;
 #endif
 	const uint8_t *ptr = (uint8_t *)line;
 	for (uint32_t i = 0; i < (uint32_t)len; i++) {
@@ -203,11 +203,11 @@ _c_conv_unicode_setup = r'''
 _c_conv_unicode_template = r'''
 	int32_t len = g.linelen;
 #if %(strip)d
-	while (*line == 32 || (*line >= 9 && *line <= 13)) {
+	while (dt_isspace(*line)) {
 		line++;
 		len--;
 	}
-	while (len && (line[len - 1] == 32 || (line[len - 1] >= 9 && line[len - 1] <= 13))) len--;
+	while (len && dt_isspace(line[len - 1])) len--;
 #endif
 	const uint8_t *ptr = 0;
 	PyObject *tmp_bytes = PyBytes_FromStringAndSize(line, len);
@@ -242,11 +242,11 @@ _c_conv_unicode_cleanup = r'''
 _c_conv_unicode_specific_template = r'''
 	int32_t len = g.linelen;
 #if %(strip)d
-	while (*line == 32 || (*line >= 9 && *line <= 13)) {
+	while (dt_isspace(*line)) {
 		line++;
 		len--;
 	}
-	while (len && (line[len - 1] == 32 || (line[len - 1] >= 9 && line[len - 1] <= 13))) len--;
+	while (len && dt_isspace(line[len - 1])) len--;
 #endif
 	const uint8_t *ptr = 0;
 	PyObject *tmp_res = %(func)s(line, len, fmt_b);
@@ -455,7 +455,7 @@ _c_conv_float_template = r'''
 		char *endptr;
 		%(type)s value = %(func)s(line, &endptr);
 #if %(whole)d
-		while (*endptr == 32 || (*endptr >= 9 && *endptr <= 13)) endptr++;
+		while (dt_isspace(*endptr)) endptr++;
 		if (*endptr) { // not a valid float
 			ptr = 0;
 		} else {
@@ -474,14 +474,14 @@ _c_conv_int_template = r'''
 		const char *startptr = line;
 		char *endptr;
 #if %(unsigned)d
-		while (isspace((unsigned char)*startptr)) startptr++;
+		while (dt_isspace(*startptr)) startptr++;
 		if (*startptr == '-') {
 			ptr = 0;
 		} else {
 #endif
 		%(rtype)s value = %(func)s(startptr, &endptr, %(base)d);
 #if %(whole)d
-		while (isspace((unsigned char)*endptr)) endptr++;
+		while (dt_isspace(*endptr)) endptr++;
 		if (*endptr) { // not a valid int
 			ptr = 0;
 		} else
@@ -523,7 +523,7 @@ _c_conv_floatbool_template = r'''
 		char *endptr;
 		double value = strtod(line, &endptr);
 #if %(whole)d
-		while (*endptr == 32 || (*endptr >= 9 && *endptr <= 13)) endptr++;
+		while (dt_isspace(*endptr)) endptr++;
 		if (*endptr) { // not a valid float
 			ptr = 0;
 		} else {
@@ -949,7 +949,7 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 {
 	unsigned char *outptr = (unsigned char *)outptr_;
 	// First remove whitespace at the start
-	while (*inptr == 32 || (*inptr >= 9 && *inptr <= 13)) inptr++;
+	while (dt_isspace(*inptr)) inptr++;
 	// Then check length and what symbols we have
 	int inlen = 0;
 	int hasdot = 0, hasexp = 0, hasletter = 0;
@@ -976,7 +976,7 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 		inlen++;
 	}
 	// Now remove whitespace at end
-	while (inlen && (inptr[inlen - 1] == 32 || (inptr[inlen - 1] >= 9 && inptr[inlen - 1] <= 13))) inlen--;
+	while (inlen && dt_isspace(inptr[inlen - 1])) inlen--;
 	// Then remove ending zeroes if there is a decimal dot and no exponent
 	if (hasdot && !hasexp) {
 		while (inlen && inptr[inlen - 1] == '0') inlen--;
@@ -1636,6 +1636,11 @@ typedef struct {
 
 static const char NoneMarker[1] = {0};
 static char decimal_separator = '.';
+
+static inline int dt_isspace(const int c)
+{
+	return (c == 32 || (c >= 9 && c <= 13));
+}
 
 #define G_INIT(first) err1(g_init(&g, in_fns[current_file], in_msgnames[current_file], offsets[current_file], first));
 
