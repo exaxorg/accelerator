@@ -1709,6 +1709,7 @@ struct mytm {
 	int year;
 	int pm;
 	int optional;
+	int bad_pattern;
 	int32_t fraction;
 };
 
@@ -1761,6 +1762,52 @@ static int tm_parse_percent(const char **format, int *r_low, int *r_high)
 	return 0;
 }
 
+static int tm_skip_fmt(const char **format, int count)
+{
+	while (count--) {
+		if (**format == '%') {
+			int low, high;
+			if (tm_parse_percent(format, &low, &high)) return 1;
+			if (**format == '?') count += abs(high == -1 ? low : high);
+		}
+		if (!**format) {
+			// not enough format -> error
+			return 1;
+		}
+		(*format)++;
+	}
+	return 0;
+}
+
+static int mystrptime2(const char **s, const char **format, struct tm *tm, struct mytm *mytm, int *r_count, const int max_count);
+
+static int tm_optional(const char **s, const char **format, struct tm *tm, struct mytm *mytm, const int low, const int high)
+{
+	if (low < 1 || high < 1 || high < low) goto bad;
+	const struct tm save_tm = *tm;
+	const struct mytm save_mytm = *mytm;
+	const char *try_s = *s;
+	int count = 0;
+	if (**format != '?') goto bad;
+	(*format)++;
+	(void) mystrptime2(&try_s, format, tm, mytm, &count, high);
+	if (mytm->bad_pattern) return 1;
+	if (count < high) {
+		if (tm_skip_fmt(format, high - count)) goto bad;
+	}
+	if (count < low) {
+		*tm = save_tm;
+		*mytm = save_mytm;
+	} else {
+		*s = try_s;
+	}
+	(*format)--; // caller advances one before using format
+	return 0;
+bad:
+	mytm->bad_pattern = 1;
+	return 1;
+}
+
 static int tm_fraction(const char **s, const int digits, struct mytm *mytm)
 {
 	// This is always considered to be six digits (unless overridden), so
@@ -1796,7 +1843,10 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 	char *end;
 	int num;
 	int low, high;
-	if (tm_parse_percent(format, &low, &high)) return 1;
+	if (tm_parse_percent(format, &low, &high)) {
+		mytm->bad_pattern = 1;
+		return 1;
+	}
 	switch (**format) {
 		case 'Y': // YYYY
 			TM_NUMBER(1, 9999);
@@ -1935,18 +1985,21 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 		case '/': // anything after this is optional
 			mytm->optional = 1;
 			return 0;
+		case '?': // one (or range of) optional item(s) follow
+			if (low == -1) low = 1;
+			if (high == -1) high = low;
+			return tm_optional(s, format, tm, mytm, low, high);
 	}
+	mytm->bad_pattern = 1;
 	return 1;
 }
 
-static int mystrptime2(const char **s, const char *format, struct tm *tm, struct mytm *mytm)
+static int mystrptime2(const char **s, const char **format, struct tm *tm, struct mytm *mytm, int *r_count, const int max_count)
 {
-	while (1) {
-		switch (*format) {
-			case 0:
-				return 0;
+	while (**format && *r_count < max_count) {
+		switch (**format) {
 			case '%':
-				if (tm_conv(s, &format, tm, mytm)) return 1;
+				if (tm_conv(s, format, tm, mytm)) return 1;
 				break;
 			case ' ':
 			case '\t':
@@ -1957,12 +2010,15 @@ static int mystrptime2(const char **s, const char *format, struct tm *tm, struct
 				while (dt_isspace(**s)) (*s)++;
 				break;
 			default:
-				if (**s != *format) return 1;
+				if (**s != **format) return 1;
 				(*s)++;
 				break;
 		}
-		format++;
+		if (mytm->bad_pattern) return 1;
+		(*format)++;
+		(*r_count)++;
 	}
+	return 0;
 }
 
 static int mystrptime(const char **s, const char *format, struct tm *tm, int32_t *r_frac)
@@ -1970,7 +2026,8 @@ static int mystrptime(const char **s, const char *format, struct tm *tm, int32_t
 	struct mytm mytm = {-1, 70, -1};
 	memset(tm, 0, sizeof(*tm));
 	tm->tm_mday = 1;
-	const int ret = mystrptime2(s, format, tm, &mytm);
+	int count = 0;
+	const int ret = mystrptime2(s, &format, tm, &mytm, &count, INT_MAX);
 	if (mytm.century == -1) mytm.century = (mytm.year < 69 ? 20 : 19);
 	tm->tm_year = (mytm.century - 19) * 100 + mytm.year;
 	if (mytm.pm != -1) {
@@ -1978,7 +2035,7 @@ static int mystrptime(const char **s, const char *format, struct tm *tm, int32_t
 		if (mytm.pm) tm->tm_hour += 12;
 	}
 	*r_frac = mytm.fraction;
-	return (mytm.optional ? 0 : ret);
+	return (mytm.optional ? mytm.bad_pattern : ret);
 }
 
 #undef TM_NUMBER
