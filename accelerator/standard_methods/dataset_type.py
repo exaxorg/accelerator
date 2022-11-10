@@ -1710,6 +1710,7 @@ struct mytm {
 	int pm;
 	int optional;
 	int bad_pattern;
+	int previous_matched;
 	int32_t fraction;
 };
 
@@ -1768,7 +1769,9 @@ static int tm_skip_fmt(const char **format, int count)
 		if (**format == '%') {
 			int low, high;
 			if (tm_parse_percent(format, &low, &high)) return 1;
-			if (**format == '?') count += abs(high == -1 ? low : high);
+			if (**format == '?' || **format == ':') {
+				count += abs(high == -1 ? low : high);
+			}
 		}
 		if (!**format) {
 			// not enough format -> error
@@ -1796,9 +1799,11 @@ static int tm_optional(const char **s, const char **format, struct tm *tm, struc
 		if (tm_skip_fmt(format, high - count)) goto bad;
 	}
 	if (count < low) {
+		mytm->previous_matched = 0;
 		*tm = save_tm;
 		*mytm = save_mytm;
 	} else {
+		mytm->previous_matched = 1;
 		*s = try_s;
 	}
 	(*format)--; // caller advances one before using format
@@ -1989,7 +1994,17 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 			if (low == -1) low = 1;
 			if (high == -1) high = low;
 			return tm_optional(s, format, tm, mytm, low, high);
+		case ':': // skipped if the previous ? matched (no range support)
+			if (low == -1) low = 1;
+			if (high != -1) goto bad;
+			if (mytm->previous_matched) {
+				(*format)++;
+				if (tm_skip_fmt(format, low)) goto bad;
+				(*format)--; // caller advances one before using format
+			}
+			return 0;
 	}
+bad:
 	mytm->bad_pattern = 1;
 	return 1;
 }
