@@ -1769,7 +1769,7 @@ static int tm_skip_fmt(const char **format, int count)
 		if (**format == '%') {
 			int low, high;
 			if (tm_parse_percent(format, &low, &high)) return 1;
-			if (**format == '?' || **format == ':') {
+			if (**format == '?' || **format == ':' || **format == '-') {
 				count += abs(high == -1 ? low : high);
 			}
 		}
@@ -1783,6 +1783,28 @@ static int tm_skip_fmt(const char **format, int count)
 }
 
 static int mystrptime2(const char **s, const char **format, struct tm *tm, struct mytm *mytm, int *r_count, const int max_count);
+
+static int tm_ignore(const char **s, const char **format, struct tm *tm, struct mytm *mytm, const int ignore_count)
+{
+	if (ignore_count < 1) goto bad;
+	if (**format != '-') goto bad;
+	(*format)++;
+	const struct tm save_tm = *tm;
+	const struct mytm save_mytm = *mytm;
+	int count = 0;
+	const int ret = mystrptime2(s, format, tm, mytm, &count, ignore_count);
+	if (mytm->bad_pattern) return 1;
+	if (count < ignore_count) {
+		if (tm_skip_fmt(format, ignore_count - count)) goto bad;
+	}
+	*tm = save_tm;
+	*mytm = save_mytm;
+	(*format)--; // caller advances one before using format
+	return ret;
+bad:
+	mytm->bad_pattern = 1;
+	return 1;
+}
 
 static int tm_optional(const char **s, const char **format, struct tm *tm, struct mytm *mytm, const int low, const int high)
 {
@@ -1987,6 +2009,8 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 			return tm_skip(s, low, high, dt_notdigit);
 		case '@':
 			return tm_skip(s, low, high, dt_notspacedigit);
+		case '-': // parse but don't use value from next item(s)
+			return tm_ignore(s, format, tm, mytm, abs(low));
 		case '/': // anything after this is optional
 			mytm->optional = 1;
 			return 0;
