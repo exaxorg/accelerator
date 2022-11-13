@@ -68,6 +68,8 @@ config_template = r"""# The configuration is a collection of key value pairs.
 # (any leading whitespace is ok)
 #
 # Use ${{VAR}} or ${{VAR=DEFAULT}} to use environment variables.
+#
+# Created by accelerator version {version}
 
 slices: {slices}
 workdirs:
@@ -159,6 +161,7 @@ def main(argv):
 	from accelerator.compat import shell_quote
 	from accelerator.error import UserError
 	from accelerator.extras import DotDict
+	import accelerator
 
 	parser = ArgumentParser(
 		prog=argv.pop(0),
@@ -263,6 +266,7 @@ def main(argv):
 		fh.write(config_template.format(
 			name=shell_quote(options.name),
 			slices=options.slices,
+			version=accelerator.__version__,
 			examples=examples,
 			input=options.input,
 			major=version_info.major,
