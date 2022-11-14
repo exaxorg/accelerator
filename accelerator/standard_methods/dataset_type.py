@@ -1865,6 +1865,68 @@ static int tm_fraction(const char **s, const int digits, struct mytm *mytm)
 	return 0;
 }
 
+// "Excel" time, days since an epoch as a float
+// Possible flag values:
+//     0 LibreOffice dates, epoch is 1899-12-30
+//     1 Lotus 1-2-3 dates, epoch is 1899-12-31 and 1900 is a leap year.
+//     2 Excel Mac dates, epoch is 1904-01-01.
+// The default flag value is 1, because that's what Excel for Windows (and web) uses.
+// If all your dates are >= 1900-03-01 flags 0 and 1 are the same
+// (i.e. you very rarely have to worry about the flags.).
+//
+//  value       flags = 0           flags = 1           flags = 2
+// -36522       1800-01-01          1800-01-02          1804-01-03
+//     -1       1899-12-29          1899-12-30          1903-12-31
+//     -0.75    1899-12-29 06:00    1899-12-30 06:00    1903-12-31 06:00
+//      0       1899-12-30          1899-12-31          1904-01-01
+//      1       1899-12-31          1900-01-01          1904-01-02
+//      2       1900-01-01          1900-01-02          1904-01-03
+//      2.75    1900-01-01 18:00    1900-03-01 00:00    1904-01-03 18:00
+//     59       1900-02-27          1900-02-28          1904-02-29
+//     60       1900-02-28          1900-03-01  !!!     1904-03-01
+//     61       1900-03-01          1900-03-01  !!!     1904-03-02
+//  25569       1970-01-01          1970-01-01          1974-01-02
+
+static int tm_excel_time(const char **s, int flags, struct tm *tm, struct mytm *mytm)
+{
+	if (dt_isspace(**s)) return 1; // strtoll accepts leading spaces
+	if (flags == -1) flags = 1;
+	errno = 0;
+	char *end;
+	int seconds = 0;
+	int negative = (**s == '-'); // can't check days, because "-0" is 0.
+	long long days = strtoll(*s, &end, 10);
+	if (errno || end == *s) return 1;
+	if (days > 0xf0000000LL) {
+		// Sometimes Gnumeric adds 1 << 32 to negative dates.
+		days -= 0x100000000LL;
+		if (days >= 0) return 1;
+		negative = 0; // -36522.25 -> 4294930773.75, so -36523 + 0.75 is correct
+	}
+	if (flags & 2) days += 1462; // base year is 1904 in Mac version of Excel
+	if (flags & 1 && days < 61) days++; // 1900 is not actually a leap year
+	if (*end == decimal_separator) {
+		double frac = strtod(end, &end);
+		// errors return 0 without changing end, which is fine.
+		if (frac) {
+			if (negative) frac = -frac;
+			seconds = round(frac * 86400);
+			if (seconds > 86399) seconds = 86399; // don't overflow to the next day
+			if (seconds < -86399) seconds = -86399; // don't overflow to the previous day
+		}
+	}
+	if (days < -693593 || days > 2958465) return 1; // 0001-01-01 to 9999-12-31
+	if (seconds < 0 && days == -693593) return 1; // don't underflow 0001-01-01
+	time_t t = (days - 25569) * 86400 + seconds;
+	if (t != (days - 25569) * 86400 + seconds) return 1; // time_t not wide enough
+	if (!gmtime_r(&t, tm)) return 1;
+	mytm->century = tm->tm_year / 100 + 19;
+	mytm->year = tm->tm_year % 100;
+	mytm->pm = -1;
+	*s = end;
+	return 0;
+}
+
 static int tm_conv(const char **s, const char **format, struct tm *tm, struct mytm *mytm)
 {
 	char *end;
@@ -1972,6 +2034,8 @@ static int tm_conv(const char **s, const char **format, struct tm *tm, struct my
 			mytm->pm = -1;
 			*s = end;
 			return 0;
+		case 'e':
+			return tm_excel_time(s, low, tm, mytm);
 		case 'f': // microsecond
 			return tm_fraction(s, (low == -1) ? 6 : low, mytm);
 		case '%': // literal "%"
