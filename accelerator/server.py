@@ -48,6 +48,7 @@ from accelerator.setupfile import load_setup
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import statmsg_sink, children, print_status_stacks, status_stacks_export
 from accelerator import iowrapper, board, g, __version__ as ax_version
+import accelerator
 
 
 
@@ -379,6 +380,8 @@ def main(argv, config):
 	options = parser.parse_intermixed_args(argv)
 
 	config.debuggable = options.debuggable
+
+	print('Accelerator', accelerator.__version__)
 
 	# all forks belong to the same happy family
 	try:
