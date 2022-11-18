@@ -2207,6 +2207,47 @@ static PyObject *py_numeric_comma(PyObject *dummy, PyObject *o_localename)
 	if (numeric_comma(localename)) Py_RETURN_TRUE;
 	Py_RETURN_FALSE;
 }
+
+static PyObject *py_strptime(PyObject *dummy, PyObject *args, PyObject *kwds)
+{
+	static int first_time = 1;
+	if (first_time) {
+		PyDateTime_IMPORT;
+		first_time = 0;
+	}
+	const char *value, *format;
+	PyObject *default_obj = 0;
+	static char *kwlist[] = {
+		"value", "format", "default", 0
+	};
+	if (!PyArg_ParseTupleAndKeywords(
+		args, kwds, "etet|O", kwlist,
+		Py_FileSystemDefaultEncoding, &value,
+		Py_FileSystemDefaultEncoding, &format,
+		&default_obj
+	)) return 0;
+	struct tm tm;
+	int32_t f;
+	const char *p = value;
+	if (!mystrptime(&p, format, &tm, &f) && !*p) {
+		const uint32_t year = tm.tm_year + 1900;
+		const uint32_t mon  = tm.tm_mon + 1;
+		const uint32_t mday = tm.tm_mday;
+		const uint32_t hour = tm.tm_hour;
+		const uint32_t min  = tm.tm_min;
+		const uint32_t sec  = tm.tm_sec;
+		PyObject *dt = PyDateTime_FromDateAndTime(year, mon, mday, hour, min, sec, f);
+		if (dt) return dt;
+	}
+	if (default_obj) {
+		PyErr_Clear();
+		Py_INCREF(default_obj);
+		return default_obj;
+	} else {
+		PyErr_Format(PyExc_ValueError, "Failed to parse '%s' as '%s'", value, format);
+		return 0;
+	}
+}
 '''
 
 
@@ -2348,6 +2389,7 @@ err:
 extra_method_defs = [
 	'{"init", py_init, METH_O, 0}',
 	'{"numeric_comma", py_numeric_comma, METH_O, 0}',
+	'{"strptime", (PyCFunction)py_strptime, METH_VARARGS | METH_KEYWORDS, "strptime(value, format, default=<no>) -> datetime\\nlike \\"datetime:format\\" in dataset_type."}',
 ]
 
 c_module_code, c_module_hash = c_backend_support.make_source('dataset_type', all_c_functions, protos, extra_c_functions, extra_method_defs, c_module_wrapper_template)

@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2021 Carl Drougge                                     #
+# Copyright (c) 2020-2022 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -22,6 +22,9 @@ try:
 	# (to make building with a previous version installed work).
 	from ._dsutil import ReadComplex64
 	del ReadComplex64
+	# also protect from failing with old installations without strptime
+	from .standard_methods._dataset_type import strptime
+	del strptime
 	before_install = False
 except ImportError:
 	before_install = True

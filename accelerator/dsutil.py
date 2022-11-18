@@ -22,6 +22,7 @@ from __future__ import division
 
 from accelerator import _dsutil
 from accelerator.compat import str_types, PY3
+from accelerator.standard_methods._dataset_type import strptime
 
 _convfuncs = {
 	'number'   : _dsutil.WriteNumber,
