@@ -2208,7 +2208,7 @@ static PyObject *py_numeric_comma(PyObject *dummy, PyObject *o_localename)
 	Py_RETURN_FALSE;
 }
 
-static PyObject *py_strptime(PyObject *dummy, PyObject *args, PyObject *kwds)
+static PyObject *_py_strptime(PyObject *args, PyObject *kwds, const char **r_p)
 {
 	static int first_time = 1;
 	if (first_time) {
@@ -2228,8 +2228,10 @@ static PyObject *py_strptime(PyObject *dummy, PyObject *args, PyObject *kwds)
 	)) return 0;
 	struct tm tm;
 	int32_t f;
-	const char *p = value;
-	if (!mystrptime(&p, format, &tm, &f) && !*p) {
+	const char *p;
+	const char **p_p = (r_p ? r_p : &p);
+	*p_p = value;
+	if (!mystrptime(p_p, format, &tm, &f) && (r_p || !**p_p)) {
 		const uint32_t year = tm.tm_year + 1900;
 		const uint32_t mon  = tm.tm_mon + 1;
 		const uint32_t mday = tm.tm_mday;
@@ -2247,6 +2249,23 @@ static PyObject *py_strptime(PyObject *dummy, PyObject *args, PyObject *kwds)
 		PyErr_Format(PyExc_ValueError, "Failed to parse '%s' as '%s'", value, format);
 		return 0;
 	}
+}
+
+static PyObject *py_strptime(PyObject *dummy, PyObject *args, PyObject *kwds)
+{
+	return _py_strptime(args, kwds, 0);
+}
+
+static PyObject *py_strptime_i(PyObject *dummy, PyObject *args, PyObject *kwds)
+{
+	const char *remaining;
+	PyObject *res = _py_strptime(args, kwds, &remaining);
+	if (!res) return 0;
+#if PY_MAJOR_VERSION < 3
+	return Py_BuildValue("(Os)", res, remaining);
+#else
+	return Py_BuildValue("(Oy)", res, remaining);
+#endif
 }
 '''
 
@@ -2390,6 +2409,7 @@ extra_method_defs = [
 	'{"init", py_init, METH_O, 0}',
 	'{"numeric_comma", py_numeric_comma, METH_O, 0}',
 	'{"strptime", (PyCFunction)py_strptime, METH_VARARGS | METH_KEYWORDS, "strptime(value, format, default=<no>) -> datetime\\nlike \\"datetime:format\\" in dataset_type."}',
+	'{"strptime_i", (PyCFunction)py_strptime_i, METH_VARARGS | METH_KEYWORDS, "strptime_i(value, format, default=<no>) -> (datetime, remaining_bytes)\\nlike \\"datetimei:format\\" in dataset_type."}',
 ]
 
 c_module_code, c_module_hash = c_backend_support.make_source('dataset_type', all_c_functions, protos, extra_c_functions, extra_method_defs, c_module_wrapper_template)
