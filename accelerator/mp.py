@@ -340,6 +340,15 @@ class MpSet:
 	def add(self, value):
 		return self._call('add', value)
 
+	def clear(self):
+		return self._call('clear')
+
+	def pop(self):
+		return self._call('pop')
+
+	def remove(self, value):
+		return self._call('remove', value)
+
 	def __contains__(self, value):
 		return self._call('__contains__', value)
 
