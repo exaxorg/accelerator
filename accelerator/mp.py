@@ -286,16 +286,16 @@ class SimplifiedProcess:
 class MpSet:
 	__slots__ = ('_lock', '_q_r', '_q_w', '_p', '_broken')
 
-	def __init__(self):
+	def __init__(self, initial=()):
 		self._lock = multiprocessing.Lock()
 		self._q_r = LockFreeQueue()
 		self._q_w = LockFreeQueue()
-		self._p = SimplifiedProcess(target=self._process, name='MpSet')
+		self._p = SimplifiedProcess(target=self._process, args=(set(initial),), name='MpSet')
 		self._q_r.make_reader()
 		self._q_w.make_writer()
 		self._broken = False
 
-	def _process(self):
+	def _process(self, s):
 		fd_keep = {self._q_r.r, self._q_r.w, self._q_w.r, self._q_w.w}
 		fd = 0
 		fd_end = fd + 20
@@ -309,7 +309,6 @@ class MpSet:
 			fd += 1
 		self._q_r.make_writer()
 		self._q_w.make_reader()
-		s = set()
 		while True:
 			try:
 				funcname, a = self._q_w.get()
