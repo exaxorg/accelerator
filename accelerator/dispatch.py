@@ -105,7 +105,11 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 		children.add(child)
 		status, data = runner.launch_finish(child, prof_r, workdir, jobid, method)
 		if status:
-			os.killpg(child, SIGTERM) # give it a chance to exit gracefully
+			try:
+				os.killpg(child, SIGTERM) # give it a chance to exit gracefully
+			except OSError:
+				# On macOS you get EPERM if the child has exited (tested on 12.6.1)
+				pass
 			# The dying process won't have sent an end message, so it has
 			# the endwait time until we SIGKILL it.
 			print('%s| %s [%s]  failed!    (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
