@@ -25,9 +25,11 @@ description = r'''
 Verify various corner cases in dataset_type.
 '''
 
+from collections import defaultdict
 from datetime import date, time, datetime
 from math import isnan
 import json
+import random
 import sys
 
 from accelerator import subjobs
@@ -241,43 +243,270 @@ def test_datetimes():
 	# These use the python datetime classes to verify valid dates,
 	# so on Python < 3.6 they will accept various invalid dates.
 	# So we only try nearly-good dates on Python 3.6+.
-	todo = [
-		('date YYYYMMDD', 'date:%Y%m%d', [b'20190521', b'19700101', b'1970-01-01', b'1980', b'nah'], [date(2019, 5, 21), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20), date(1945, 6, 20)], '19450620', True,),
-		('date spacy YYYYMMDD', 'date: %Y %m %d ', [b'20190521', b'   1970 01\n\n\n01', b'1970\t1 1    ', b'70 0 0', b'1981'], [date(2019, 5, 21), date(1970, 1, 1), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20)], '1945 6 20', False,),
-		('date YYYYblahMMDD', 'date:%Yblah%m%d', [b'2019blah0521', b'1970blah0101', b'1970blah-01-01', b'1980blah', b'nah'], [date(2019, 5, 21), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20), date(1945, 6, 20)], '1945blah0620', True,),
-		('datetime hhmmYYMMDD', 'datetime:%H%M%y%m%d', [b'1852190521', b'0000700101', b'today'], [datetime(2019, 5, 21, 18, 52), datetime(1970, 1, 1), datetime(1978, 1, 1)], '0000780101', False,),
-		('datetime YYYYMMDD HHMMSS.mmmmmm', 'datetime:%Y%m%d %H%M%S.%f', [b'20190521 185206.123', b'19700203040506.000007', b'19700203040506.-00007', b'today'], [datetime(2019, 5, 21, 18, 52, 6, 123000), datetime(1970, 2, 3, 4, 5, 6, 7), datetime(1978, 1, 1), datetime(1978, 1, 1)], '19780101 000000.0', True,),
-		('time HH:MM', 'time:%H:%M', [b'03:14', b'18:52', b'25:10'], [time(3, 14), time(18, 52), time(0, 42)], '00:42', True,),
-		('time HHMMpercentfSS', 'time:%H%M%%f%S', [b'0314%f00', b'1852%f09', b'1938%f60'], [time(3, 14), time(18, 52, 9), time(0, 42, 18)], '0042%f18', False,),
-		('time HHMM mmm.SS', 'time:%H%M %f.%S', [b'03149.00', b'1852456.09', b'1938   123456.44', b'1938123456.60', b'1852456   .09', b'1852456    .09'], [time(3, 14, 0, 900000), time(18, 52, 9, 456000), time(19, 38, 44, 123456), time(0, 42, 18), time(18, 52, 9, 456000), time(0, 42, 18)], '004200.18', False,),
-		('date MMDD', 'date:%m%d', [b'0101', b'1020', b'nah'], [date(1970, 1, 1), date(1970, 10, 20), date(1970, 6, 20)], '0620', False,),
-		('datetime YY', 'datetime:%y', [b'70', b'2000', b'19'], [datetime(1970, 1, 1, 0, 0, 0), None, datetime(2019, 1, 1, 0, 0, 0)], None, False,),
-		('datetime mmmmmmDD', 'datetime:%f%d', [b'00030030', b'00000006', b'00003003', b'99999999', b'99999911'], [datetime(1970, 1, 30, microsecond=300), datetime(1970, 1, 6), datetime(1970, 1, 3, microsecond=30), None, datetime(1970, 1, 11, microsecond=999999)], None, False,),
-		('datetime mmmmmm.DD', 'datetime:%f.%d', [b'30.30', b'0.06', b'00030.03', b'999999.99', b'999999.11'], [datetime(1970, 1, 30, microsecond=300000), datetime(1970, 1, 6), datetime(1970, 1, 3, microsecond=300), None, datetime(1970, 1, 11, microsecond=999999)], None, False,),
-		('datetime mmmmmmpercentfpercentDD', 'datetime:%f%%f%%%d', [b'30%f%30', b'0%f%06', b'00030%f%03', b'999999%f%99', b'999999%f%11'], [datetime(1970, 1, 30, microsecond=300000), datetime(1970, 1, 6), datetime(1970, 1, 3, microsecond=300), None, datetime(1970, 1, 11, microsecond=999999)], None, False,),
-		('datetime unix.f', 'datetime:%s.%f', [b'30.30', b'1558662853.847211', b''], [datetime(1970, 1, 1, 0, 0, 30, 300000), datetime(2019, 5, 24, 1, 54, 13, 847211), datetime(1970, 1, 1, microsecond=100000)], '0.1', False,),
-		('datetime java', 'datetime:%J', [b'0', b'1558662853847', b'', b'-2005'], [datetime(1970, 1, 1), datetime(2019, 5, 24, 1, 54, 13, 847000), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1969, 12, 31, 23, 59, 57, 995000)], '1', False,),
-		('datetime java blahbluh', 'datetime:blah %Jbluh', [b'blah0bluh', b'blah   30000bluh', b'bla0bluh', b'blah0blu', b'blah-2005bluh'], [datetime(1970, 1, 1), datetime(1970, 1, 1, 0, 0, 30), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1970, 1, 1, 0, 0, 0, 1000), datetime(1969, 12, 31, 23, 59, 57, 995000)], 'blah1bluh', False,),
-	]
-	if sys.version_info >= (3, 6):
-		todo.extend((
-			('nearly good date YYYY-MM-DD', 'date:%Y-%m-%d', [b'2019-02-29', b'1970-02-31', b'1980-06-31', b'1992-02-29'], [None, None, None, date(1992, 2, 29)], None, False,),
-			('nearly good datetime YYYY-MM-DD', 'datetime:%Y-%m-%d', [b'2019-02-29', b'1970-02-31', b'1980-06-31', b'1992-02-29'], [None, None, None, datetime(1992, 2, 29)], None, False,),
-		))
-	for name, typ, data, want, default, all_source_types in todo:
-		verify(name, [typ], data, want, default, all_source_types=all_source_types)
-		if default is not None:
-			if typ.endswith('%f') or typ.endswith('%J'):
-				idata = [v + b'abc123' for v in data]
-				default += 'a2'
-			else:
-				idata = [v + b'1868' for v in data]
-				default += '42'
-			verify(name + ' i', [typ.replace(':', 'i:', 1)], idata, want, default)
+
+	# We start with some normal verify() calls which test basic function,
+	# normal defaults and timezones.
+	name = 'date YYYYMMDD'
+	typ = 'date:%Y%m%d'
+	data = [b'20190521', b'19700101', b'1970-01-01', b'1980', b'nah']
+	want = [date(2019, 5, 21), date(1970, 1, 1), date(1945, 6, 20), date(1945, 6, 20), date(1945, 6, 20)]
+	default = '19450620'
+	verify(name, [typ], data, want, default, all_source_types=True)
+	# A datei:-one with extra numbers at end (later i-versions will not add numbers)
+	idata = [v + b'1868' for v in data]
+	default += '42'
+	verify(name + ' i', [typ.replace(':', 'i:', 1)], idata, want, default)
+
 	# Timezone tests. I hope all systems accept the :Region/City syntax.
 	verify('tz a', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 11:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-26 23:15')
 	verify('tz b', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 11:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-26 23:15', timezone='UTC')
 	verify('tz c', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 13:44', b'2020-02-22 12:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2020, 2, 22, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-27 00:15', timezone=':Europe/Stockholm')
+
+	# And now, for efficiency, all the remaining tests will be collected in
+	# just three datasets to speed things up.
+	# Each gets typed three times, as datetime, date and time.
+	# They are also first tested with dsutil.strptime[_i](), both to test
+	# those functions and to give better errors.
+
+	from accelerator.dsutil import strptime, strptime_i
+
+	# Test that the functions work at all, including default=
+	assert strptime('2022-11-23', '%Y-%m-%d') == datetime(2022, 11, 23)
+	assert strptime('abc', '%Y-%m-%d', default='nah') == 'nah'
+	assert strptime_i('2022-11-23xyz', '%Y-%m-%d') == (datetime(2022, 11, 23), b'xyz')
+	assert strptime_i('abc', '%Y-%m-%d', default='nah') == ('nah', b'abc')
+	# If some matching succeeded the remaining string should reflect that even on failure.
+	assert strptime_i('2022-xyz', '%Y-%m-%d', default='nah') == ('nah', b'xyz')
+
+	tests = defaultdict(list)
+
+	def good(want, *a):
+		# datetime is a subclasses of date, so can't use isinstance
+		if type(want) == date:
+			want = datetime.combine(want, time(0, 0, 0))
+		elif type(want) == time:
+			want = datetime.combine(date(1970, 1, 1), want)
+		for value in a:
+			tests[pattern].append((value, want))
+			got = strptime(value, pattern)
+			assert got == want, "Parsing %r as %r\n    expected %s\n    got      %s" % (value, pattern, want, got,)
+			value += 'x'
+			got, remaining = strptime_i(value, pattern)
+			assert got == want, "Parsing %r as %r\n    expected %s\n    got      %s" % (value, pattern, want, got,)
+			assert remaining == b'x', "Parsing %r as %r left %r unparsed, expected %r" % (value, pattern, remaining, b'x',)
+
+	def bad(*a):
+		for value in a:
+			tests[pattern].append((value, None))
+			try:
+				got = strptime(value, pattern)
+				raise Exception("Parsing %r as %r gave %s, should have failed" % (value, pattern, got,))
+			except ValueError:
+				pass
+
+	pattern = '%Y%m%d'
+	#                         YYYYmmdd
+	good(date(2019,  5, 21), '20190521')
+	good(date(1970,  1,  1), '19700101')
+	good(date(1945,  6, 20), '19450620')
+	#    YYYYmmd!    YYYYm!        YYYY!         YYYY!   !
+	bad('19700100', '1970 01 01', '1970-01-01', '1980', 'nah')
+
+	pattern = ' %Y %m %d '
+	#                         YYYYmmdd
+	good(date(2019,  5, 21), '20190521')
+	#                            YYYY mm      dd    YYYY  m d
+	good(date(1970,  1,  1), '   1970 01\n\n\n01', '1970\t1 1    ')
+	#                         YYYY m dd
+	good(date(1945,  6, 20), '1945 6 20')
+	#    YY m!     YYYY!
+	bad('70 0 0', '1981')
+
+	pattern = '%Yblah%m%d'
+	#                         YYYYblahmmdd
+	good(date(2019,  5, 21), '2019blah0521')
+	good(date(1970,  1,  1), '1970blah0101')
+	good(date(1945,  6, 20), '1945blah0620')
+	#    YYYYblah!         YYYYblah!   !
+	bad('1970blah-01-01', '1980blah', 'nah')
+
+	pattern = '%H%M%y%m%d'
+	#                                     HHMMyymmdd
+	good(datetime(2019,  5, 21, 18, 52), '1852190521')
+	good(datetime(1970,  1,  1,  0,  0), '0000700101')
+	good(datetime(1978,  1,  1,  0,  0), '0000780101')
+	bad('today')
+
+	pattern = '%Y%m%d %H%M%S.%f'
+	#                                                 YYYYmmdd HHMMSS.fff
+	good(datetime(2019,  5, 21, 18, 52,  6, 123000), '20190521 185206.123')
+	#                                                 YYYYmmddHHMMSS.ffffff
+	good(datetime(1970,  2,  3,  4,  5,  6,      7), '19700203040506.000007')
+	#                                                 YYYYmmdd HHMMSS.f
+	good(datetime(1978,  1,  1,  0,  0,  0,      0), '19780101 000000.0')
+	#    YYYYMMDD  HHMMSS.!         !
+	bad('19700203  040506.-00007', 'today')
+
+	pattern = '%H:%M'
+	#                   HH:MM
+	good(time( 3, 14), '03:14')
+	good(time(18, 52), '18:52')
+	good(time( 0, 42), '00:42')
+	#    H!
+	bad('25:10')
+
+	pattern = '%H%M%%f%S' # this is HHMM followed by literal '%f' and then SS
+	#                       HHMM%fSS
+	good(time( 3, 14,  0), '0314%f00')
+	good(time(18, 52,  9), '1852%f09')
+	good(time( 0, 42, 18), '0042%f18')
+	#    HHMM%fS!
+	bad('1938%f60')
+
+	# Test microseconds (%f)
+	pattern = '%H%M %f.%S'
+	#                               HHMMf.SS
+	good(time( 3, 14,  0, 900000), '03149.00')
+	#                               HHMMfff.SS
+	good(time(18, 52,  9, 456000), '1852456.09')
+	#                               HHMM   ffffff.SS
+	good(time(19, 38, 44, 123456), '1938   123456.44')
+	#                               HHMMffffff.SS
+	good(time(18, 52,  9, 456000), '1852456   .09')
+	#                               HHMMff.SS
+	good(time( 0, 42, 18,      0), '004200.18')
+	#    HHMMffffff.S!    HHMMffffff!
+	bad('1938123456.60', '1852456    .09')
+
+	# Just month and day (implicitly 1970)
+	pattern = '%m%d'
+	#                         mmdd
+	good(date(1970,  1,  1), '0101')
+	good(date(1970, 10, 20), '1020')
+	good(date(1970,  6, 20), '0620')
+	bad('nah')
+
+	# Test that two digit years choose the right century
+	pattern = '%y'
+	#                         yy
+	good(date(1970,  1,  1), '70')
+	good(date(2019,  1,  1), '19')
+	#    yy!
+	bad('2000')
+
+	pattern = '%f%d'
+	#                                                ffffffdd
+	good(datetime(1970, 1, 30, microsecond=300   ), '00030030')
+	good(datetime(1970, 1,  6                    ), '00000006')
+	good(datetime(1970, 1,  3, microsecond=30    ), '00003003')
+	good(datetime(1970, 1, 11, microsecond=999999), '99999911')
+	#    ffffffd!
+	bad('99999999')
+
+	pattern = '%f.%d'
+	good(datetime(1970,  1, 30, microsecond=300000), '30.30')
+	good(datetime(1970,  1,  6                    ), '0.06')
+	good(datetime(1970,  1,  3, microsecond=300   ), '00030.03')
+	good(datetime(1970,  1, 11, microsecond=999999), '999999.11')
+	#    ffffff.d!
+	bad('999999.99')
+
+	pattern = '%f%%f%%%d' # this is %f, literal '%f%', %d
+	good(datetime(1970,  1, 30, microsecond=300000), '30%f%30')
+	good(datetime(1970,  1,  6                    ), '0%f%06')
+	good(datetime(1970,  1,  3, microsecond=300   ), '00030%f%03')
+	good(datetime(1970,  1, 11, microsecond=999999), '999999%f%11')
+	#    ffffff%f%d!
+	bad('999999%f%99')
+
+	# "Unix" timestamps, seconds since 1970-01-01 00:00:00.
+	# Uses gmtime_r, so limited by the platform time_t.
+	pattern = '%s.%f'
+	good(datetime(1970,  1,  1,  0,  0, 30, 300000), '30.30')
+	good(datetime(2019,  5, 24,  1, 54, 13, 847211), '1558662853.847211')
+	good(datetime(1970,  1,  1,  0,  0,  0, 100000), '0.1')
+	bad('')
+
+	# "Java" timestamps, milliseconds since 1970-01-01 00:00:00.
+	# Uses gmtime_r, so limited by the platform time_t.
+	pattern = '%J'
+	good(datetime(1970,  1,  1,  0,  0,  0,      0), '0')
+	good(datetime(2019,  5, 24,  1, 54, 13, 847000), '1558662853847')
+	good(datetime(1970,  1,  1,  0,  0,  0,   1000), '1')
+	good(datetime(1969, 12, 31, 23, 59, 57, 995000), '-2005')
+	bad('')
+
+	pattern = 'blah %Jbluh'
+	good(datetime(1970,  1,  1,  0,  0,  0,      0), 'blah0bluh')
+	good(datetime(1970,  1,  1,  0,  0, 30,      0), 'blah   30000bluh')
+	good(datetime(1970,  1,  1,  0,  0,  0,   1000), 'blah1bluh')
+	good(datetime(1969, 12, 31, 23, 59, 57, 995000), 'blah-2005bluh')
+	bad('bla0bluh', 'blah0blu')
+
+	# Save all of these in three datasets with one column per pattern.
+	#     One with only good values
+	#     One with only good values, with trailing garbage (typed with *i:)
+	#     One with both good and bad values (typed with defaults)
+	# Columns are padded with None-values so they are all the same length.
+	# The order of each column is random, just in case there is some
+	# inter-value state.
+	# Each dataset is typed as datetime, date and time.
+	def one(name, type_suffix, value_suffix, with_defaults):
+		dw = DatasetWriter(name=name, allow_missing_slices=True)
+		colnames = []
+		to_write = []
+		want = []
+		max_len = max(len(values) for _, values in tests.items())
+		for pattern, values in tests.items():
+			dw.add(pattern, 'ascii', none_support=True)
+			colnames.append(pattern)
+			if not with_defaults: # remove bad
+				values = [v for v in values if v[1] is not None]
+			values = values + [(None, None)] * (max_len - len(values))
+			random.shuffle(values)
+			to_write.append([None if w is None else w + value_suffix for w, _ in values])
+			want.append([w for _, w in values])
+		dw.set_slice(0)
+		for line in zip(*to_write):
+			dw.write_dict(dict(zip(colnames, line)))
+		source = dw.finish()
+
+		def check(type_as, fix):
+			column2type = {col: type_as + type_suffix + ':' + col for col in colnames}
+			kw = dict(source=source, column2type=column2type)
+			if with_defaults:
+				kw['defaults'] = {col: None for col in colnames}
+			ds = subjobs.build('dataset_type', **kw).dataset()
+			for col, wrote, good in zip(colnames, to_write, want):
+				got = list(ds.iterate(0, col))
+				assert len(got) == len(wrote) == len(good) == max_len, col
+				for got, wrote, good in zip(got, wrote, good):
+					if good is not None:
+						good = fix(good)
+					assert got == good, 'Typing %r as %r gave %r, expected %r' % (wrote, column2type[col], got, good,)
+
+		check('datetime', lambda dt: dt)
+		check('date', lambda dt: dt.date())
+		check('time', lambda dt: dt.time())
+
+	one('good datetimes', '', '', False)
+	one('good datetimes with trailing garbage', 'i', 'whee', False)
+	one('good and bad datetimes', '', '', True)
+
+	if sys.version_info >= (3, 6):
+		# These can't be part of the dataset_type calls above, as they will only
+		# fail when typed as dates, not as times. Therefore, they are after the
+		# one() calls, so only the strptime part of the testing is done.
+		pattern = '%Y-%m-%d'
+		good(date(1992, 2, 29), '1992-02-29')
+		bad('2019-02-29', '1970-02-31', '1980-06-31')
+		# And then use verify() to test the same values in dataset_type.
+		for type_as, func in (
+			('date', date),
+			('datetime', datetime),
+		):
+			verify('nearly good %s YYYY-MM-DD' % (type_as,), ['%s:%s' % (type_as, pattern,)], [b'2019-02-29', b'1970-02-31', b'1980-06-31', b'1992-02-29'], [None, None, None, func(1992, 2, 29)], None, False)
+
 
 def test_filter_bad_across_types():
 	columns={
