@@ -305,20 +305,23 @@ def test_datetimes():
 				pass
 
 	pattern = '%Y%m%d'
-	#                         YYYYmmdd
-	good(date(2019,  5, 21), '20190521')
-	good(date(1970,  1,  1), '19700101')
+	#                         YYYYmmdd    YYYYmmdd    YYYYmmd    Ymmdd
+	good(date(2019,  5, 21), '20190521', '2019 521')
+	good(date(1970,  1,  1), '19700101', '1970 1 1', '1970 11')
 	good(date(1945,  6, 20), '19450620')
-	#    YYYYmmd!    YYYYm!        YYYY!         YYYY!   !
-	bad('19700100', '1970 01 01', '1970-01-01', '1980', 'nah')
+	good(date(   1,  1,  1), '00010101', '   1 1 1', '  01 11', '1 101')
+	good(date(9999, 12, 31), '99991231')
+	#    YYYYmmd!    YYYYm!        YYYY!         YYYY!   !      Ymmdd!
+	bad('19700100', '1970 01 01', '1970-01-01', '1980', 'nah', '1 1010')
 
 	pattern = ' %Y %m %d '
 	#                         YYYYmmdd
 	good(date(2019,  5, 21), '20190521')
 	#                            YYYY mm      dd    YYYY  m d
 	good(date(1970,  1,  1), '   1970 01\n\n\n01', '1970\t1 1    ')
-	#                         YYYY m dd
+	#                         YYYY m dd    Y m d    Y    m      d
 	good(date(1945,  6, 20), '1945 6 20')
+	good(date(   1,  2,  3), '  01 2  3', '1 2 3', '1\t\r2\n\v\f3 \r ')
 	#    YY m!     YYYY!
 	bad('70 0 0', '1981')
 
@@ -327,15 +330,26 @@ def test_datetimes():
 	good(date(2019,  5, 21), '2019blah0521')
 	good(date(1970,  1,  1), '1970blah0101')
 	good(date(1945,  6, 20), '1945blah0620')
+	good(date(  72, 11,  9), '  72blah11 9')
 	#    YYYYblah!         YYYYblah!   !
 	bad('1970blah-01-01', '1980blah', 'nah')
 
+	pattern = '%Y%m%d%H%M%S'
+	good(datetime(2013,  4,  9,  1,  2,  3),
+		#YYYYmmddHHMMSS    YYYYmmddHHMMSS    YYYYmmddHHMMDD    YYYYmmddHHMMSS
+		'2013 4 9 1 2 3', '2013 40901 203', '201304 901 2 3', '20130409010203',
+	)
+	#    YYYYmmd!           !                  YYYYmmd!           YYYYmmddHH!!
+	bad('2013 4 09 1 2 3', ' 2013 4 9 1 2 3', '201304009010203', '20130409016003')
+
 	pattern = '%H%M%y%m%d'
-	#                                     HHMMyymmdd
+	#                                     HHMMyymmdd    HHMMyymmdd    HMMyymmd
 	good(datetime(2019,  5, 21, 18, 52), '1852190521')
 	good(datetime(1970,  1,  1,  0,  0), '0000700101')
 	good(datetime(1978,  1,  1,  0,  0), '0000780101')
-	bad('today')
+	good(datetime(2000,  3,  4,  5,  6), '0506000304', ' 5 6 0 3 4', '5 6 0 34')
+	#    !        HHMMy!
+	bad('today', '56034')
 
 	pattern = '%Y%m%d %H%M%S.%f'
 	#                                                 YYYYmmdd HHMMSS.fff
@@ -348,20 +362,21 @@ def test_datetimes():
 	bad('19700203  040506.-00007', 'today')
 
 	pattern = '%H:%M'
-	#                   HH:MM
-	good(time( 3, 14), '03:14')
+	#                   HH:MM    HH:MM    H:MM
+	good(time( 3, 14), '03:14', ' 3:14', '3:14')
 	good(time(18, 52), '18:52')
 	good(time( 0, 42), '00:42')
 	#    H!
 	bad('25:10')
 
 	pattern = '%H%M%%f%S' # this is HHMM followed by literal '%f' and then SS
-	#                       HHMM%fSS
-	good(time( 3, 14,  0), '0314%f00')
-	good(time(18, 52,  9), '1852%f09')
+	#                       HHMM%fSS    HHMM%fS    HMM%fSS
+	good(time( 3, 14,  0), '0314%f00', ' 314%f0')
+	good(time(18, 52,  9), '1852%f09', '1852%f9')
 	good(time( 0, 42, 18), '0042%f18')
-	#    HHMM%fS!
-	bad('1938%f60')
+	good(time( 1,  2,  3), '0102%f03', ' 102%f3', '1 2%f 3')
+	#    HHMM%fS!    HHMM%f!   HMM!        HMM%fS!
+	bad('1938%f60', '1852%f', '1 02%f 3', '1 2%f ')
 
 	# Test microseconds (%f)
 	pattern = '%H%M %f.%S'
@@ -380,24 +395,29 @@ def test_datetimes():
 
 	# Just month and day (implicitly 1970)
 	pattern = '%m%d'
-	#                         mmdd
-	good(date(1970,  1,  1), '0101')
+	#                         mmdd    mmd    mmdd    mmd
+	good(date(1970,  1,  2), '0102', '012', ' 102', ' 12')
 	good(date(1970, 10, 20), '1020')
 	good(date(1970,  6, 20), '0620')
-	bad('nah')
+	#           m!   mm!   mmd!   mmd!
+	bad('nah', '1', '12', '12 ', '12  ')
 
 	# Test that two digit years choose the right century
 	pattern = '%y'
-	#                         yy
+	#                         yy    y
+	good(date(1969,  1,  1), '69')
 	good(date(1970,  1,  1), '70')
+	good(date(2000,  1,  1), '00', '0')
+	good(date(2008,  1,  1), '08', '8')
 	good(date(2019,  1,  1), '19')
-	#    yy!
-	bad('2000')
+	good(date(2068,  1,  1), '68')
+	#    yy!     yy!    !
+	bad('2000', '100', '-1')
 
 	pattern = '%f%d'
-	#                                                ffffffdd
+	#                                                ffffffdd    ffd    ffdd
 	good(datetime(1970, 1, 30, microsecond=300   ), '00030030')
-	good(datetime(1970, 1,  6                    ), '00000006')
+	good(datetime(1970, 1,  6                    ), '00000006', '0 6', '0 06')
 	good(datetime(1970, 1,  3, microsecond=30    ), '00003003')
 	good(datetime(1970, 1, 11, microsecond=999999), '99999911')
 	#    ffffffd!
@@ -411,13 +431,24 @@ def test_datetimes():
 	#    ffffff.d!
 	bad('999999.99')
 
+	pattern = '%f%d'
+	#                                                 fffdd
+	good(datetime(1970,  1, 30, microsecond=300000), '30 30')
+	#                                                 ffdd    fffffdd    ffffffdd
+	good(datetime(1970,  1,  6                    ), '0 06', '0    06', '0000   6')
+	#                                                 ffffffdd    ffffffdd    fffffd
+	good(datetime(1970,  1,  3, microsecond=300   ), '00030003', '00030 03', '0003 3')
+	good(datetime(1970,  1, 11, microsecond=999999), '99999911')
+	#    ffffffd!    ffffffdd!    ffffffd!
+	bad('99999999', '999999 11', '0000    6')
+
 	pattern = '%f%%f%%%d' # this is %f, literal '%f%', %d
 	good(datetime(1970,  1, 30, microsecond=300000), '30%f%30')
-	good(datetime(1970,  1,  6                    ), '0%f%06')
+	good(datetime(1970,  1,  6                    ), '0%f%06', '0000 %f%6')
 	good(datetime(1970,  1,  3, microsecond=300   ), '00030%f%03')
 	good(datetime(1970,  1, 11, microsecond=999999), '999999%f%11')
-	#    ffffff%f%d!
-	bad('999999%f%99')
+	#    ffffff%f%d!    !  (%f doesn't accept leading spaces)
+	bad('999999%f%99', ' 30%f%30')
 
 	# "Unix" timestamps, seconds since 1970-01-01 00:00:00.
 	# Uses gmtime_r, so limited by the platform time_t.
@@ -425,7 +456,8 @@ def test_datetimes():
 	good(datetime(1970,  1,  1,  0,  0, 30, 300000), '30.30')
 	good(datetime(2019,  5, 24,  1, 54, 13, 847211), '1558662853.847211')
 	good(datetime(1970,  1,  1,  0,  0,  0, 100000), '0.1')
-	bad('')
+	#    !   !      !   !     !           !          !  (%s accepts no spaces)
+	bad('', '.', '0.', '.1', ' 30.30', '30 .30', '30. 30')
 
 	# "Java" timestamps, milliseconds since 1970-01-01 00:00:00.
 	# Uses gmtime_r, so limited by the platform time_t.
@@ -434,7 +466,8 @@ def test_datetimes():
 	good(datetime(2019,  5, 24,  1, 54, 13, 847000), '1558662853847')
 	good(datetime(1970,  1,  1,  0,  0,  0,   1000), '1')
 	good(datetime(1969, 12, 31, 23, 59, 57, 995000), '-2005')
-	bad('')
+	#    !    !      !    !  (%J accepts no spaces)
+	bad('', '0x0', '0 ', ' 0')
 
 	pattern = 'blah %Jbluh'
 	good(datetime(1970,  1,  1,  0,  0,  0,      0), 'blah0bluh')
