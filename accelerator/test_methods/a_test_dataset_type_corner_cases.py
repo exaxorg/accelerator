@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -26,7 +26,7 @@ Verify various corner cases in dataset_type.
 '''
 
 from collections import defaultdict
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timedelta
 from math import isnan
 import json
 import random
@@ -475,6 +475,127 @@ def test_datetimes():
 	good(datetime(1970,  1,  1,  0,  0,  0,   1000), 'blah1bluh')
 	good(datetime(1969, 12, 31, 23, 59, 57, 995000), 'blah-2005bluh')
 	bad('bla0bluh', 'blah0blu')
+
+	# Excel dates. First in the default Lotus 1-2-3 format used by MS Excel.
+	pattern = '%e'
+	epoch = datetime(1899, 12, 31)
+	good(datetime(1900,  1,  1            ), '1')
+	good(datetime(1900,  1,  2            ), '2')
+	good(datetime(1900,  1,  2, 18        ), '2.75')
+	good(datetime(1900,  2, 27            ), '58')
+	good(datetime(1900,  2, 28            ), '59')
+	good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
+	good(datetime(1900,  3,  1            ), '61') # same as 60
+	good(datetime(1900,  3,  2            ), '62')
+	assert datetime(1970, 1, 1) - epoch == timedelta(days=25568) # one off because of incorrect leap year 1900
+	good(datetime(1970,  1,  1            ), '25569')
+	assert datetime(1800, 1, 2) - epoch == timedelta(days=-36522)
+	good(datetime(1800,  1,  2            ), '-36522')
+	good(datetime(1800,  1,  1, 18        ), '-36522.25')
+	good(datetime(1800,  1,  1, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+	good(datetime(1899, 12, 30            ), '-1')
+	good(datetime(1899, 12, 30,  6        ), '-0.75')
+	good(datetime(1899, 12, 31            ), '0')
+	good(datetime(1899, 12, 31, 18        ), '0.75')
+	assert datetime(9999, 12, 31) - epoch == timedelta(days=2958464) # one off because of incorrect leap year 1900
+	good(datetime(9999, 12, 31            ), '2958465')
+	good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
+	assert datetime(1, 1, 1) - epoch == timedelta(days=-693594)
+	good(datetime(   1,  1,  1            ), '-693594')
+	good(datetime(   1,  1,  1,  0,  0,  1), '-693593.99999')
+	good(datetime(1900,  1,  1, 23, 59, 59), '1.99999')
+	good(datetime(1900,  1,  1, 23, 59, 58), '1.99998')
+	good(datetime(1900,  1,  1, 23, 59, 57), '1.99997')
+	good(datetime(1900,  1,  1, 23, 59, 57), '1.99996') # also 57!
+	good(datetime(1900,  1,  1, 23, 59, 56), '1.99995')
+	bad('-36522.-25')
+	bad('2958466', '2958466.00001') # > positive max
+	bad('-693595', '-693594.00001') # < negative max
+
+	# Since 1 is the default flag for e, this is the same as %e
+	pattern = '%1e'
+	good(datetime(1900,  1,  1            ), '1')
+	good(datetime(1900,  2, 27            ), '58')
+	good(datetime(1900,  2, 28            ), '59')
+	good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
+	good(datetime(1900,  3,  1            ), '61') # same as 60
+	good(datetime(1900,  3,  2            ), '62')
+	good(datetime(1970,  1,  1            ), '25569')
+	good(datetime(1899, 12, 30            ), '-1')
+	# That's enough re-testing.
+
+	# 0 is "Libre Office" dates, where 1900 is not a leap year.
+	# (Dates before 1900-03-01 are offset compared to Lotus 1-2-3.)
+	pattern = '%0e'
+	epoch = datetime(1899, 12, 30)
+	good(datetime(1899, 12,  31           ), '1')
+	good(datetime(1900,  1,  1            ), '2')
+	good(datetime(1900,  1,  1, 18        ), '2.75')
+	good(datetime(1900,  2, 26            ), '58')
+	good(datetime(1900,  2, 27            ), '59')
+	good(datetime(1900,  2, 28            ), '60')
+	good(datetime(1900,  3,  1            ), '61')
+	good(datetime(1900,  3,  2            ), '62')
+	assert datetime(1970, 1, 1) - epoch == timedelta(days=25569)
+	good(datetime(1970,  1,  1            ), '25569')
+	assert datetime(1800, 1, 1) - epoch == timedelta(days=-36522)
+	good(datetime(1800,  1,  1            ), '-36522')
+	good(datetime(1799, 12, 31, 18        ), '-36522.25')
+	good(datetime(1799, 12, 31, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+	good(datetime(1899, 12, 29            ), '-1')
+	good(datetime(1899, 12, 29,  6        ), '-0.75')
+	good(datetime(1899, 12, 30            ), '0')
+	good(datetime(1899, 12, 30, 18        ), '0.75')
+	assert datetime(9999, 12, 31) - epoch == timedelta(days=2958465)
+	good(datetime(9999, 12, 31            ), '2958465')
+	good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
+	assert datetime(1, 1, 1) - epoch == timedelta(days=-693593)
+	good(datetime(   1,  1,  1            ), '-693593')
+	good(datetime(   1,  1,  1,  0,  0,  1), '-693592.99999')
+	good(datetime(1899, 12 , 31, 23, 59, 59), '1.99999')
+	good(datetime(1899, 12 , 31, 23, 59, 58), '1.99998')
+	good(datetime(1899, 12 , 31, 23, 59, 57), '1.99997')
+	good(datetime(1899, 12 , 31, 23, 59, 57), '1.99996') # also 57!
+	good(datetime(1899, 12 , 31, 23, 59, 56), '1.99995')
+	bad('-36522.-25')
+	bad('2958466', '2958466.00001') # > positive max
+	bad('-693594', '-693593.00001') # < negative max
+
+	# 2 is "Mac Office" dates, epoch is 1904-01-01 and leap years are correct.
+	pattern = '%2e'
+	epoch = datetime(1904, 1, 1)
+	good(datetime(1904,  1,  2            ), '1')
+	good(datetime(1904,  1,  3            ), '2')
+	good(datetime(1904,  1,  3, 18        ), '2.75')
+	good(datetime(1904,  2, 28            ), '58')
+	good(datetime(1904,  2, 29            ), '59')
+	good(datetime(1904,  3,  1            ), '60')
+	good(datetime(1904,  3,  2            ), '61')
+	good(datetime(1904,  3,  3            ), '62')
+	assert datetime(1974, 1, 2) - epoch == timedelta(days=25569)
+	good(datetime(1974,  1,  2            ), '25569')
+	assert datetime(1804, 1, 3) - epoch == timedelta(days=-36522)
+	good(datetime(1804,  1,  3            ), '-36522')
+	good(datetime(1804,  1,  2, 18        ), '-36522.25')
+	good(datetime(1804,  1,  2, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+	good(datetime(1903, 12, 31            ), '-1')
+	good(datetime(1903, 12, 31,  6        ), '-0.75')
+	good(datetime(1904,  1,  1            ), '0')
+	good(datetime(1904,  1,  1, 18        ), '0.75')
+	assert datetime(9999, 12, 31) - epoch == timedelta(days=2957003)
+	good(datetime(9999, 12, 31            ), '2957003')
+	good(datetime(9999, 12, 31, 23, 59, 58), '2957003.99998')
+	assert datetime(1, 1, 1) - epoch == timedelta(days=-695055)
+	good(datetime(   1,  1,  1            ), '-695055')
+	good(datetime(   1,  1,  1,  0,  0,  1), '-695054.99999')
+	good(datetime(1904,  1,  2, 23, 59, 59), '1.99999')
+	good(datetime(1904,  1,  2, 23, 59, 58), '1.99998')
+	good(datetime(1904,  1,  2, 23, 59, 57), '1.99997')
+	good(datetime(1904,  1,  2, 23, 59, 57), '1.99996') # also 57!
+	good(datetime(1904,  1,  2, 23, 59, 56), '1.99995')
+	bad('-36522.-25')
+	bad('2957004', '2957004.00001') # > positive max
+	bad('-695056', '-695056.00001') # < negative max
 
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
