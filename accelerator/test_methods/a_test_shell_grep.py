@@ -59,9 +59,10 @@ def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False, check_out
 # like subprocess.check_output except stdout is a pty
 def check_output_pty(cmd):
 	a, b = os.openpty()
-	p = Popen(cmd, stdout=a)
+	Popen(cmd, stdout=a)
 	os.close(a)
 	res = []
+	data = None
 	while not res or data:
 		try:
 			data = os.read(b, 1024)
