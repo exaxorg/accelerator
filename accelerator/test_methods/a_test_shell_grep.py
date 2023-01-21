@@ -504,6 +504,31 @@ def synthesis(job, slices):
 		{'spaced name': 'singlequote end', 'tabbed\tname': "foo'"},
 	])
 
+	# test -m / --max-count (still with the escapy dataset)
+	# with csv output and headers
+	grep_text(['-H', '-m', '5', '', escapy], [
+		['spaced name', '"tabbed\tname"'],
+		['comma', 'foo,bar'],
+		['tab', '"foo\tbar"'],
+		['newline', 'a brand new\\nline'],
+		['crlf', 'another brand new\\r\\nline'],
+		['doublequote start', '"""foo"'],
+	])
+	# with json output
+	grep_json(['--max-count=2', '', escapy], [
+		{'spaced name': 'comma', 'tabbed\tname': 'foo,bar'},
+		{'spaced name': 'tab', 'tabbed\tname': 'foo\tbar'},
+	])
+	# and finally with raw output, which gives more lines than matches
+	grep_text(['-f', 'raw', '--max-count', '4', '', escapy], [
+		['comma', 'foo,bar'],
+		['tab', 'foo\tbar'],
+		['newline', 'a brand new'],
+		['line'], # newline is not escaped, and not counted
+		['crlf', 'another brand new\r'],
+		['line'], # newline is not escaped, and not counted
+	])
+
 	# test that escaping of ds name works in the right places
 	comma_ds = mk_ds(',', ['ascii'], ['foo'])
 	commaquote_ds = mk_ds(',"', ['ascii'], ['bar'])
