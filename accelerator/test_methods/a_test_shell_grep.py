@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2022 Carl Drougge                                     #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -440,6 +440,7 @@ def synthesis(job, slices):
 		['comma', 'foo,bar'],
 		['tab', 'foo\tbar'],
 		['newline', 'a brand new\nline'],
+		['crlf', 'another brand new\r\nline'],
 		['doublequote start', '"foo'],
 		['doublequote inside', 'f"oo'],
 		['doublequote end', 'foo"'],
@@ -452,6 +453,7 @@ def synthesis(job, slices):
 		['comma', 'foo,bar'],
 		['tab', '"foo\tbar"'],
 		['newline', 'a brand new\\nline'],
+		['crlf', 'another brand new\\r\\nline'],
 		['doublequote start', '"""foo"'],
 		['doublequote inside', 'f"oo'],
 		['doublequote end', '"foo"""'],
@@ -464,6 +466,8 @@ def synthesis(job, slices):
 		['comma', 'foo,bar'],
 		['tab', 'foo\tbar'],
 		['newline', 'a brand new'],
+		['line'], # newline is not escaped
+		['crlf', 'another brand new\r'],
 		['line'], # newline is not escaped
 		['doublequote start', '"foo'],
 		['doublequote inside', 'f"oo'],
@@ -490,6 +494,7 @@ def synthesis(job, slices):
 		{'spaced name': 'comma', 'tabbed\tname': 'foo,bar'},
 		{'spaced name': 'tab', 'tabbed\tname': 'foo\tbar'},
 		{'spaced name': 'newline', 'tabbed\tname': 'a brand new\nline'},
+		{'spaced name': 'crlf', 'tabbed\tname': 'another brand new\r\nline'},
 		{'spaced name': 'doublequote start', 'tabbed\tname': '"foo'},
 		{'spaced name': 'doublequote inside', 'tabbed\tname': 'f"oo'},
 		{'spaced name': 'doublequote end', 'tabbed\tname': 'foo"'},
