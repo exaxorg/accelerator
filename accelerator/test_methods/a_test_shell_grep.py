@@ -281,28 +281,27 @@ def synthesis(job, slices):
 		['not ascii', mk_bytes(128, 256)],
 	)
 	if PY2:
-		not_ascii = '\ufffd'.encode('utf-8') * 128
+		encoded_not_ascii = raw_not_ascii = '\ufffd'.encode('utf-8') * 128
 	else:
-		not_ascii = mk_bytes(128, 256)
+		raw_not_ascii = mk_bytes(128, 256)
+		encoded_not_ascii = raw_not_ascii.decode('utf-8', 'surrogateescape').encode('utf-8', 'surrogatepass')
 	grep_text(
 		['--format=raw', '', allbytes],
 		[
 			[b'control chars', mk_bytes(0, 10)],
 			[mk_bytes(11, 32)], # we end up with an extra line because the control chars have a newline
 			[b'printable', mk_bytes(32, 128)],
-			[b'not ascii', not_ascii],
+			[b'not ascii', raw_not_ascii],
 		],
 		encoding=None,
 		sep=b'\t',
 	)
-	if PY3:
-		not_ascii = not_ascii.decode('utf-8', 'surrogateescape').encode('utf-8', 'surrogatepass')
 	grep_text(
 		['', allbytes],
 		[
 			[b'control chars', b'"' + mk_bytes(0, 10) + b'\\n\x0b\x0c\\r' + mk_bytes(14, 32) + b'"'],
 			[b'printable', mk_bytes(32, 128)],
-			[b'not ascii', not_ascii],
+			[b'not ascii', encoded_not_ascii],
 		],
 		encoding=None,
 		sep=b'\t',
@@ -504,7 +503,7 @@ def synthesis(job, slices):
 		{'spaced name': 'singlequote end', 'tabbed\tname': "foo'"},
 	])
 
-	# test -m / --max-count (still with the escapy dataset)
+	# test -m / --max-count (with the escapy and allbytes datasets)
 	# with csv output and headers
 	grep_text(['-H', '-m', '5', '', escapy], [
 		['spaced name', '"tabbed\tname"'],
@@ -528,6 +527,32 @@ def synthesis(job, slices):
 		['crlf', 'another brand new\r'],
 		['line'], # newline is not escaped, and not counted
 	])
+	# use the allbytes dataset to test -m with every possible csv/raw byte
+	# specify the dataset twice, so we can have all lines and still limit lines.
+	grep_text(
+		['-f=csv', '-m=4', '', allbytes, allbytes],
+		[
+			[b'control chars', b'"' + mk_bytes(0, 10) + b'\\n\x0b\x0c\\r' + mk_bytes(14, 32) + b'"'],
+			[b'printable', mk_bytes(32, 128)],
+			[b'not ascii', encoded_not_ascii],
+			[b'control chars', b'"' + mk_bytes(0, 10) + b'\\n\x0b\x0c\\r' + mk_bytes(14, 32) + b'"'],
+		],
+		encoding=None,
+		sep=b'\t',
+	)
+	grep_text(
+		['-f=raw', '-m=4', '', allbytes, allbytes],
+		[
+			[b'control chars', mk_bytes(0, 10)],
+			[mk_bytes(11, 32)], # we end up with an extra line because the control chars have a newline
+			[b'printable', mk_bytes(32, 128)],
+			[b'not ascii', raw_not_ascii],
+			[b'control chars', mk_bytes(0, 10)],
+			[mk_bytes(11, 32)], # same newline again
+		],
+		encoding=None,
+		sep=b'\t',
+	)
 
 	# test that escaping of ds name works in the right places
 	comma_ds = mk_ds(',', ['ascii'], ['foo'])
