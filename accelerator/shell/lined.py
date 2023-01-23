@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2022 Carl Drougge                                          #
+# Copyright (c) 2022-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -19,6 +19,7 @@
 from __future__ import division, print_function
 
 from itertools import cycle
+import errno
 import os
 import sys
 
@@ -85,6 +86,8 @@ def collect_escseq(it, line_fg, line_bg):
 	return chars
 
 
+_RC_EPIPE = 124 # process return code used to signal we died with EPIPE
+
 class Liner:
 	def __init__(self, process, saved_stdout):
 		self.process = process
@@ -94,7 +97,7 @@ class Liner:
 		os.dup2(self.saved_stdout, 1) # EOF for the liner process (after all children have also exited)
 		os.close(self.saved_stdout)
 		self.process.join()
-		if self.process.exitcode:
+		if self.process.exitcode and self.process.exitcode != _RC_EPIPE:
 			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
 
 
@@ -107,6 +110,14 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, 
 			return
 	else:
 		pre_fg0 = pre_bg0 = pre_fg1 = pre_bg1 = ''
+
+	def wrap_EPIPE(*a):
+		try:
+			return lineme(*a)
+		except OSError as e:
+			if e.errno == errno.EPIPE:
+				exit(_RC_EPIPE)
+			raise
 
 	def lineme(lined, max_count, after):
 		os.close(liner_w)
@@ -190,7 +201,7 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, 
 				break
 	liner_r, liner_w = os.pipe()
 	liner_process = mp.SimplifiedProcess(
-		target=lineme,
+		target=wrap_EPIPE,
 		args=(lined, max_count, after,),
 		stdin=liner_r,
 		name=colour_prefix + '-liner',
