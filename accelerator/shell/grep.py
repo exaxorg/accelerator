@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -36,6 +36,7 @@ import signal
 
 from accelerator.compat import unicode, izip, PY2
 from accelerator.compat import monotonic
+from accelerator.compat import num_types
 from accelerator.compat import QueueEmpty
 from accelerator.colourwrapper import colour
 from .parser import name2ds, ArgumentParser
@@ -49,6 +50,50 @@ from accelerator import mp
 def write(fd, data):
 	while data:
 		data = data[os.write(fd, data):]
+
+
+# Some things for --numeric
+def number_or_None(obj):
+	if isinstance(obj, num_types):
+		return obj
+	# int first, as float can round
+	try:
+		return int(obj, 10)
+	except ValueError:
+		try:
+			return float(obj)
+		except ValueError:
+			# Base 16 has to be handled separately, because using 0 will
+			# error on numbers starting with 0 (on python 3).
+			# But we have to check for 0x, so things like "a" are not accepted.
+			if (isinstance(obj, unicode) and '0x' in obj) or (isinstance(obj, bytes) and b'0x' in obj):
+				try:
+					return int(obj, 16)
+				except ValueError:
+					return None
+
+class NumericMatcher:
+	# Sufficiently re-compatible interface to number comparisons.
+	def __init__(self, pattern):
+		self.number = number_or_None(pattern)
+		if self.number is None:
+			raise re.error('not a number')
+
+	def search(self, number):
+		return number == self.number
+
+	def finditer(self, s):
+		if self.search(number_or_None(s)):
+			return (SpanWrap((0, len(s))),)
+		else:
+			return ()
+
+class SpanWrap:
+	# For .finditer(), to be compatible with re match-objects.
+	def __init__(self, span):
+		self._span = span
+	def span(self):
+		return self._span
 
 
 def main(argv, cfg):
@@ -118,6 +163,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
 	parser.add_argument('-F', '--fixed-strings',action='store_true', negation='not',  help="patterns are fixed strings, not regular expressions", )
+	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers (matching exactly)", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
@@ -161,6 +207,11 @@ def main(argv, cfg):
 		print('Context must be >= 0', file=sys.stderr)
 		return 1
 
+	if args.fixed_strings and args.numeric:
+		# this should be using mutually_exclusive_group, but that doesn't support negations
+		print('--numeric not allowed with --fixed-strings', file=sys.stderr)
+		return 1
+
 	columns = args.columns
 
 	try:
@@ -196,7 +247,10 @@ def main(argv, cfg):
 		if args.fixed_strings:
 			pattern = re.escape(pattern)
 		try:
-			patterns.append(re.compile(pattern, re_flags))
+			if args.numeric:
+				patterns.append(NumericMatcher(pattern))
+			else:
+				patterns.append(re.compile(pattern, re_flags))
 		except re.error as e:
 			print("Bad pattern %r:\n%s" % (pattern, e,), file=sys.stderr)
 			return 1
@@ -917,9 +971,13 @@ def main(argv, cfg):
 			maybe_invert = operator.not_
 		else:
 			maybe_invert = bool
+		if args.numeric:
+			fmtfix = number_or_None
+		else:
+			fmtfix = unicode
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
-			if maybe_invert(any(chk(unicode(item)) for item in grep_items or items)):
+			if maybe_invert(any(chk(fmtfix(item)) for item in grep_items or items)):
 				if q_list:
 					try:
 						q_list.put((ds, sliceno))
