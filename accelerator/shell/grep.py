@@ -73,6 +73,12 @@ def number_or_None(obj):
 				except ValueError:
 					return None
 
+def number_or_error(obj):
+	number = number_or_None(obj)
+	if number is None:
+		raise re.error('%r is not a valid not a number' % (obj,))
+	return number
+
 def splitprefix(s, prefixes):
 	for p in prefixes:
 		if s.startswith(p):
@@ -87,11 +93,23 @@ class NumericMatcher:
 			# Special case that matches any number, but not other things.
 			# (.search checks that it's not None, i.e. a number.)
 			self.cmp = lambda _: True
+		elif ':' in pattern:
+			# range, exludes end by default but can include it with :=
+			start, stop = pattern.split(':', 1)
+			start = number_or_error(start)
+			start = partial(operator.le, start)
+			if stop.startswith('='):
+				stop = number_or_error(stop[1:])
+				stop = partial(operator.ge, stop)
+			else:
+				stop = number_or_error(stop)
+				stop = partial(operator.gt, stop)
+			def in_range(number):
+				return start(number) and stop(number)
+			self.cmp = in_range
 		else:
 			prefix, pattern = splitprefix(pattern, ('<=', '<', '>=', '>', '='))
-			number = number_or_None(pattern)
-			if number is None:
-				raise re.error('not a number')
+			number = number_or_error(pattern)
 			self.cmp = partial({
 				None: operator.eq,
 				'=' : operator.eq,
@@ -186,7 +204,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
 	parser.add_argument('-F', '--fixed-strings',action='store_true', negation='not',  help="patterns are fixed strings, not regular expressions", )
-	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers, or empty to match all numbers\n(can start with comparison: = (default), <, <=, >, >=)", )
+	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers, or empty to match all numbers\ncan start with a comparison (=, <, <=, >, >=) or be a\nrange (a:b or a:=b to include end)", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
