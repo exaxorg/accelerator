@@ -25,6 +25,7 @@ from __future__ import division, print_function
 import sys
 import re
 import os
+from functools import partial
 from itertools import chain, repeat, cycle
 from collections import deque, defaultdict
 from argparse import RawTextHelpFormatter, Action, SUPPRESS, ArgumentError
@@ -72,15 +73,37 @@ def number_or_None(obj):
 				except ValueError:
 					return None
 
+def splitprefix(s, prefixes):
+	for p in prefixes:
+		if s.startswith(p):
+			return p, s[len(p):]
+	return None, s
+
 class NumericMatcher:
 	# Sufficiently re-compatible interface to number comparisons.
 	def __init__(self, pattern):
-		self.number = number_or_None(pattern)
-		if self.number is None:
-			raise re.error('not a number')
+		import operator
+		if pattern == '':
+			# Special case that matches any number, but not other things.
+			# (.search checks that it's not None, i.e. a number.)
+			self.cmp = lambda _: True
+		else:
+			prefix, pattern = splitprefix(pattern, ('<=', '<', '>=', '>', '='))
+			number = number_or_None(pattern)
+			if number is None:
+				raise re.error('not a number')
+			self.cmp = partial({
+				None: operator.eq,
+				'=' : operator.eq,
+				# These are "backwards" because that's how the argument order works out.
+				'>' : operator.lt,
+				'>=': operator.le,
+				'<' : operator.gt,
+				'<=': operator.ge,
+			}[prefix], number)
 
 	def search(self, number):
-		return number == self.number
+		return number is not None and self.cmp(number)
 
 	def finditer(self, s):
 		if self.search(number_or_None(s)):
@@ -163,7 +186,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
 	parser.add_argument('-F', '--fixed-strings',action='store_true', negation='not',  help="patterns are fixed strings, not regular expressions", )
-	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers (matching exactly)", )
+	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers, or empty to match all numbers\n(can start with comparison: = (default), <, <=, >, >=)", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
@@ -355,7 +378,7 @@ def main(argv, cfg):
 		highlight_matches = colour.enabled
 
 	# Don't highlight everything when just trying to cat
-	if args.patterns == ['']:
+	if args.patterns == [''] and not args.numeric:
 		highlight_matches = False
 	# Don't highlight anything with -l
 	if args.list_matching:
