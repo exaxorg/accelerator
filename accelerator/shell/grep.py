@@ -95,9 +95,14 @@ class NumericMatcher:
 			self.cmp = lambda _: True
 		elif ':' in pattern:
 			# range, exludes end by default but can include it with :=
+			# can also exclude start using <:
 			start, stop = pattern.split(':', 1)
-			start = number_or_error(start)
-			start = partial(operator.le, start)
+			if start.endswith('<'):
+				start = number_or_error(start[:-1])
+				start = partial(operator.lt, start)
+			else:
+				start = number_or_error(start)
+				start = partial(operator.le, start)
 			if stop.startswith('='):
 				stop = number_or_error(stop[1:])
 				stop = partial(operator.ge, stop)
@@ -204,7 +209,7 @@ def main(argv, cfg):
 	parser.add_argument(      '--no-colour', '--no-color', action='store_const', const='never', dest='colour', help=SUPPRESS)
 	parser.add_argument(      '--lined',        action='store_true', negation='not',  help="alternate line colour", )
 	parser.add_argument('-F', '--fixed-strings',action='store_true', negation='not',  help="patterns are fixed strings, not regular expressions", )
-	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers, or empty to match all numbers\ncan start with a comparison (=, <, <=, >, >=) or be a\nrange (a:b or a:=b to include end)", )
+	parser.add_argument('-N', '--numeric',      action='store_true', negation='not',  help="patterns are numbers, or empty to match all numbers\ncan start with a comparison (=, <, <=, >, >=) or be a\nrange (a:b, a<:b, a:=b, a<:=b (incl/excl start/stop))", )
 	parser.add_argument('-i', '--ignore-case',  action='store_true', negation='dont', help="case insensitive pattern", )
 	parser.add_argument('-v', '--invert-match', action='store_true', negation='dont', help="select non-matching lines", )
 	parser.add_argument('-o', '--only-matching',action='store_true', negation='not',  help="only print matching part (or columns with -l)", )
