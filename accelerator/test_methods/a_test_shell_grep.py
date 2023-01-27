@@ -884,3 +884,117 @@ def synthesis(job, slices):
 		'\x1b[Kfoo\rbar', # no \e[K at end because of \r
 		'\x1b[Kba\x1b[47;31mz\x1b[39;42m' + SEP_EVEN + 'aaa\x1b[K\x1b[m',
 	], sep='')
+
+	# test --numeric
+	numbers = mk_ds('numbers',
+		[         'ascii',          'bytes', 'number'],
+		[         'small',        b'number',  41     ],
+		[         'small',        b'number',  42     ],
+		[         'small',         b'float',  43.001 ],
+		[         'small',         b'float',  44.999 ],
+		[         'small',        b'number',  45     ],
+		[      'negative',        b'number',  -1     ],
+		[    str(10**500),           b'big',  27     ], # big enough to be inf as a float
+		[           'big',     str(10**500).encode('ascii'), 27],
+		[str(10**500 + 1),        b'bigger',  27     ],
+		[        'bigger', str(10**500 + 1).encode('ascii'), 27],
+		[           'hex',          b'0x2a',  27     ],
+		[         '-0x2a',           b'hex',  27     ],
+		[         'space',        b'\n 96 ',  27     ],
+		[           '012', b'zero prefixed',  27     ],
+		[           '0.2',         b'float',  27     ],
+		[        '\n -.7',   b'space float',  27     ],
+	)
+	# Anything numeric, in any column, i.e. everything.
+	grep_text(['-N', '', numbers], [
+		[         'small',         'number',  41     ],
+		[         'small',         'number',  42     ],
+		[         'small',          'float',  43.001 ],
+		[         'small',          'float',  44.999 ],
+		[         'small',         'number',  45     ],
+		[      'negative',         'number',  -1     ],
+		[    str(10**500),            'big',  27     ],
+		[           'big',     str(10**500),  27     ],
+		[str(10**500 + 1),         'bigger',  27     ],
+		[        'bigger', str(10**500 + 1),  27     ],
+		[           'hex',           '0x2a',  27     ],
+		[         '-0x2a',            'hex',  27     ],
+		[         'space',        '\\n 96 ',  27     ],
+		[           '012',  'zero prefixed',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# Anything numeric in the ascii column
+	grep_text(['-N', '-g', 'ascii', '', numbers], [
+		[    str(10**500),            'big',  27     ],
+		[str(10**500 + 1),         'bigger',  27     ],
+		[         '-0x2a',            'hex',  27     ],
+		[           '012',  'zero prefixed',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# Exact numbers
+	grep_text(['-N', '-e=43.001', '-e=12', numbers], [
+		[         'small',          'float',  43.001 ],
+		[           '012',  'zero prefixed',  27     ],
+	])
+	# Can also be written with =
+	grep_text(['-N', '=42', numbers], [
+		[         'small',         'number',  42     ],
+		[           'hex',           '0x2a',  27     ],
+	])
+	# Ranges
+	grep_text(['-N', '42:45', numbers], [
+		[         'small',         'number',  42     ],
+		[         'small',          'float',  43.001 ],
+		[         'small',          'float',  44.999 ],
+		[           'hex',           '0x2a',  27     ],
+	])
+	# include end
+	grep_text(['-N', '-e=-1:=12', numbers], [
+		[      'negative',         'number',  -1     ],
+		[           '012',  'zero prefixed',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# exclude start, include end
+	grep_text(['-N', '-e=-1<:=12', numbers], [
+		[           '012',  'zero prefixed',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# exclude start (and end)
+	grep_text(['-N', '-e=-1<:12', numbers], [
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# comparisons
+	grep_text(['-N', '>' + str(10**500), numbers], [
+		[str(10**500 + 1),         'bigger',  27     ],
+		[        'bigger', str(10**500 + 1),  27     ],
+	])
+	grep_text(['-N', '>=' + str(10**500), numbers], [
+		[    str(10**500),            'big',  27     ],
+		[           'big',     str(10**500),  27     ],
+		[str(10**500 + 1),         'bigger',  27     ],
+		[        'bigger', str(10**500 + 1),  27     ],
+	])
+	grep_text(['-N', '<=12', numbers], [
+		[      'negative',         'number',  -1     ],
+		[         '-0x2a',            'hex',  27     ],
+		[           '012',  'zero prefixed',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	grep_text(['-N', '<12', numbers], [
+		[      'negative',         'number',  -1     ],
+		[         '-0x2a',            'hex',  27     ],
+		[           '0.2',          'float',  27     ],
+		[       '\\n -.7',    'space float',  27     ],
+	])
+	# Try 0.. and hex in the pattern too.
+	grep_text(['-N', '0044<:=0x60', numbers], [
+		[         'small',          'float',  44.999 ],
+		[         'small',         'number',  45     ],
+		[         'space',        '\\n 96 ',  27     ],
+	])
