@@ -884,6 +884,13 @@ def synthesis(job, slices):
 		'\x1b[Kfoo\rbar', # no \e[K at end because of \r
 		'\x1b[Kba\x1b[47;31mz\x1b[39;42m' + SEP_EVEN + 'aaa\x1b[K\x1b[m',
 	], sep='')
+	# and also try it with --max-count
+	grep_text(['--lined', '--max-count=1', '--colour=always', '--format=raw', 'z', lined_silly], [
+		# the first (and only) line is three lines long.
+		'\x1b[32mfoo',
+		'foo\rbar',
+		'ba\x1b[47;31mz\x1b[32;49m' + SEP_ODD + 'aaa\x1b[m',
+	], sep='')
 
 	# test --numeric
 	numbers = mk_ds('numbers',
