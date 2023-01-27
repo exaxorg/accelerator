@@ -1005,3 +1005,14 @@ def synthesis(job, slices):
 		[         'small',         'number',  45     ],
 		[         'space',        '\\n 96 ',  27     ],
 	])
+	# And try it with highlighting too
+	with open('accelerator/config', 'w') as fh:
+		fh.write('''[colour]
+			grep/highlight = RED
+			grep/separator =
+		''')
+	grep_text(['--colour=always', '-N', '0044<:=0x60', numbers], [
+		[         'small',          'float',  '\x1b[31m44.999\x1b[39m' ],
+		[         'small',         'number',  '\x1b[31m45\x1b[39m'     ],
+		[         'space', '\\n \x1b[31m96\x1b[39m ',  27              ],
+	])
