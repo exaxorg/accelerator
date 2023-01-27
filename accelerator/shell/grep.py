@@ -130,7 +130,10 @@ class NumericMatcher:
 
 	def finditer(self, s):
 		if self.search(number_or_None(s)):
-			return (SpanWrap((0, len(s))),)
+			# Don't include whitespace in the match
+			l = s.lstrip()
+			r = s.rstrip()
+			return (SpanWrap((len(s) - len(l), len(r))),)
 		else:
 			return ()
 
