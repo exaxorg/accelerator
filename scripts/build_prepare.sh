@@ -48,7 +48,7 @@ cd /prepare
 tar zxf "/out/old_versions.$VERSION.$ENDIANNESS.tar.gz"
 
 # The numeric_comma test needs a locale which uses numeric comma.
-localedef -i da_DK -f UTF-8 da_DK.UTF-8
+command -v localedef && localedef -i da_DK -f UTF-8 da_DK.UTF-8
 
 
 ZLIB_PREFIX="/prepare/zlib-ng"
