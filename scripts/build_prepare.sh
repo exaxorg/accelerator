@@ -14,7 +14,7 @@ test -d /accelerator/.git || exit 1
 test -d /accelerator/accelerator || exit 1
 
 VERSION=5
-ENDIANNESS="$(python -c 'import sys; print(sys.byteorder)')"
+ENDIANNESS="$(/opt/python/cp39-cp39/bin/python3 -c 'import sys; print(sys.byteorder)')"
 
 if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
 	if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
