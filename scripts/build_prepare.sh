@@ -1,6 +1,5 @@
 #!/bin/bash
-# This is for running in a manylinux2010 docker image, so /bin/bash is fine.
-# (or manylinux2014 on non-x86 platforms)
+# This is for running in a manylinux or similar docker image, so /bin/bash is fine.
 #
 # docker run -it -v /some/where:/out:ro -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2010_x86_64:2021-02-06-c17986e /accelerator/scripts/build_prepare.sh
 #
@@ -57,18 +56,19 @@ ZLIB_PREFIX="/prepare/zlib-ng"
 
 cd /tmp
 
-# oldest deps we can use for <3.9, newest on >=3.9
 for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
 	V="${V/\/opt\/python\//}"
 	case "$V" in
 		cp27-*)
 			/opt/python/"$V"/bin/pip install virtualenv "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0" "configparser==3.5.0" "monotonic==1.0" "selectors2==2.0.0"
 			;;
-		cp3[5-8]-*)
-			/opt/python/"$V"/bin/pip install "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0"
-			;;
 		*)
-			/opt/python/"$V"/bin/pip install setproctitle 'bottle>=0.12.7, <0.13' waitress
+			# oldest deps we can use on manylinux2010, newest on others
+			if [ "${AUDITWHEEL_PLAT/%_*}" = "manylinux2010" ]; then
+				/opt/python/"$V"/bin/pip install "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0"
+			else
+				/opt/python/"$V"/bin/pip install setproctitle 'bottle>=0.12.7, <0.13' waitress
+			fi
 			;;
 	esac
 done
