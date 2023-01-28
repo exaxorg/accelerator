@@ -1,5 +1,5 @@
 #!/bin/bash
-# This is for running in a manylinux docker image, so /bin/bash is fine.
+# This is for running in a manylinux or similar docker image, so /bin/bash is fine.
 #
 # docker run -it --rm -v /some/where:/out:rw -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2014_x86_64 /accelerator/scripts/build_wheels.sh 20xx.xx.xx.dev1 commit/tag/branch
 # docker run -it --rm -v /some/where:/out:rw -v /path/to/accelerator:/accelerator:ro --tmpfs /tmp:exec,size=1G quay.io/pypa/manylinux2010_x86_64:2021-02-06-c17986e /accelerator/scripts/build_wheels.sh 20xx.xx.xx.dev1 commit/tag/branch
@@ -16,16 +16,17 @@ if [ -z "${AUDITWHEEL_ARCH-}" ]; then
 	exit 1
 fi
 
+X86glibc="false"
 if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
-	X86="true"
-else
-	X86="false"
+	if [ "${AUDITWHEEL_PLAT/%20*}" = "manylinux" ]; then
+		X86glibc="true"
+	fi
 fi
 
 if [ "$#" != "2" ]; then
 	echo "Usage: $0 ACCELERATOR_BUILD_VERSION commit/tag/branch"
 	echo
-	if [ "$X86" = "true" ]; then
+	if [ "$X86glibc" = "true" ]; then
 		echo "Run first in a recent manylinux2014 container,"
 		echo "then in manylinux2010:2021-02-06-c17986e or earlier."
 	else
@@ -84,7 +85,7 @@ if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	AUDITWHEEL_PLAT="manylinux1_$AUDITWHEEL_ARCH"
 else
 	BUILD_STEP="new"
-	if [ "$X86" = "true" ]; then
+	if [ "$X86glibc" = "true" ]; then
 		VERSIONS=(/opt/python/cp31[0-9]-*)
 	else
 		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
@@ -233,7 +234,7 @@ if [ "$BUILD_STEP" = "old" ]; then
 		/opt/python/cp27-cp27m/bin \
 		/opt/python/cp36-cp36m/bin \
 		/opt/python/cp39-cp39/bin
-elif [ "$X86" = "false" ]; then
+elif [ "$X86glibc" = "false" ]; then
 	# Test running 3.10 and 3.6 under a 3.8 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
 		/opt/python/cp38-cp38/bin \
@@ -260,7 +261,7 @@ echo "Built the following files:"
 for N in "${BUILT[@]}"; do
 	echo "${N/*\//}"
 done
-if [ "$BUILD_STEP" = "new" -a "$X86" = "true" ]; then
+if [ "$BUILD_STEP" = "new" -a "$X86glibc" = "true" ]; then
 	echo
 	echo "Remember to also build in an old manylinux2010 container."
 fi
