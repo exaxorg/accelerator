@@ -50,6 +50,8 @@ tar zxf "/out/old_versions.$VERSION.$ENDIANNESS.tar.gz"
 # The numeric_comma test needs a locale which uses numeric comma.
 command -v localedef && localedef -i da_DK -f UTF-8 da_DK.UTF-8
 
+# The Alpine based musl containers don't have tzdata installed
+test -d /usr/share/zoneinfo || apk add tzdata
 
 ZLIB_PREFIX="/prepare/zlib-ng"
 /accelerator/scripts/build_zlib-ng.sh "$ZLIB_PREFIX"
