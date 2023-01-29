@@ -77,8 +77,7 @@ ZLIB_PREFIX="/prepare/zlib-ng"
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
 	VERSIONS=(/opt/python/cp[23][5-9]-*)
-	CP310=("/out/wheelhouse/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl)
-	if [ "${#CP310[@]}" = 0 ]; then
+	if [ ! -e "/out/wheelhouse/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl ]; then
 		echo "First build in a manylinux2014 container"
 		exit 1
 	fi
