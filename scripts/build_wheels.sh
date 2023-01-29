@@ -72,14 +72,7 @@ BUILT=()
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
 ZLIB_PREFIX="/prepare/zlib-ng"
 
-if [ "$MANYLINUX_VERSION" = "manylinux2014" ]; then
-	BUILD_STEP="new"
-	if [ "$X86" = "true" ]; then
-		VERSIONS=(/opt/python/cp31[0-9]-*)
-	else
-		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
-	fi
-else
+if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
 	VERSIONS=(/opt/python/cp[23][5-9]-*)
 	CP310=("/out/wheelhouse/$NAME-cp310-cp310-"*_"$AUDITWHEEL_ARCH".whl)
@@ -89,6 +82,13 @@ else
 	fi
 	# The 2010 wheels are in our case 1-compatible
 	AUDITWHEEL_PLAT="manylinux1_$AUDITWHEEL_ARCH"
+else
+	BUILD_STEP="new"
+	if [ "$X86" = "true" ]; then
+		VERSIONS=(/opt/python/cp31[0-9]-*)
+	else
+		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
+	fi
 fi
 
 
