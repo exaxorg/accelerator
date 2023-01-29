@@ -30,6 +30,7 @@ from datetime import date, time, datetime, timedelta
 from math import isnan
 import json
 import random
+import struct
 import sys
 
 from accelerator import subjobs
@@ -450,6 +451,10 @@ def test_datetimes():
 	#    ffffff%f%d!    !  (%f doesn't accept leading spaces)
 	bad('999999%f%99', ' 30%f%30')
 
+	# Avoid testing "far off" dates with functions that might use time_t
+	# if long (the smallest type time_t is likely to be) is small.
+	time_t_is_probably_big_enough = (len(struct.pack("@l", 0)) > 4)
+
 	# "Unix" timestamps, seconds since 1970-01-01 00:00:00.
 	# Uses gmtime_r, so limited by the platform time_t.
 	pattern = '%s.%f'
@@ -479,84 +484,89 @@ def test_datetimes():
 	# Excel dates. First in the default Lotus 1-2-3 format used by MS Excel.
 	pattern = '%e'
 	epoch = datetime(1899, 12, 31)
-	good(datetime(1900,  1,  1            ), '1')
-	good(datetime(1900,  1,  2            ), '2')
-	good(datetime(1900,  1,  2, 18        ), '2.75')
-	good(datetime(1900,  2, 27            ), '58')
-	good(datetime(1900,  2, 28            ), '59')
-	good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
-	good(datetime(1900,  3,  1            ), '61') # same as 60
-	good(datetime(1900,  3,  2            ), '62')
+	if time_t_is_probably_big_enough:
+		good(datetime(1900,  1,  1            ), '1')
+		good(datetime(1900,  1,  2            ), '2')
+		good(datetime(1900,  1,  2, 18        ), '2.75')
+		good(datetime(1900,  2, 27            ), '58')
+		good(datetime(1900,  2, 28            ), '59')
+		good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
+		good(datetime(1900,  3,  1            ), '61') # same as 60
+		good(datetime(1900,  3,  2            ), '62')
 	assert datetime(1970, 1, 1) - epoch == timedelta(days=25568) # one off because of incorrect leap year 1900
 	good(datetime(1970,  1,  1            ), '25569')
-	assert datetime(1800, 1, 2) - epoch == timedelta(days=-36522)
-	good(datetime(1800,  1,  2            ), '-36522')
-	good(datetime(1800,  1,  1, 18        ), '-36522.25')
-	good(datetime(1800,  1,  1, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
-	good(datetime(1899, 12, 30            ), '-1')
-	good(datetime(1899, 12, 30,  6        ), '-0.75')
-	good(datetime(1899, 12, 31            ), '0')
-	good(datetime(1899, 12, 31, 18        ), '0.75')
-	assert datetime(9999, 12, 31) - epoch == timedelta(days=2958464) # one off because of incorrect leap year 1900
-	good(datetime(9999, 12, 31            ), '2958465')
-	good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
-	assert datetime(1, 1, 1) - epoch == timedelta(days=-693594)
-	good(datetime(   1,  1,  1            ), '-693594')
-	good(datetime(   1,  1,  1,  0,  0,  1), '-693593.99999')
-	good(datetime(1900,  1,  1, 23, 59, 59), '1.99999')
-	good(datetime(1900,  1,  1, 23, 59, 58), '1.99998')
-	good(datetime(1900,  1,  1, 23, 59, 57), '1.99997')
-	good(datetime(1900,  1,  1, 23, 59, 57), '1.99996') # also 57!
-	good(datetime(1900,  1,  1, 23, 59, 56), '1.99995')
+	if time_t_is_probably_big_enough:
+		assert datetime(1800, 1, 2) - epoch == timedelta(days=-36522)
+		good(datetime(1800,  1,  2            ), '-36522')
+		good(datetime(1800,  1,  1, 18        ), '-36522.25')
+		good(datetime(1800,  1,  1, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+		good(datetime(1899, 12, 30            ), '-1')
+		good(datetime(1899, 12, 30,  6        ), '-0.75')
+		good(datetime(1899, 12, 31            ), '0')
+		good(datetime(1899, 12, 31, 18        ), '0.75')
+		assert datetime(9999, 12, 31) - epoch == timedelta(days=2958464) # one off because of incorrect leap year 1900
+		good(datetime(9999, 12, 31            ), '2958465')
+		good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
+		assert datetime(1, 1, 1) - epoch == timedelta(days=-693594)
+		good(datetime(   1,  1,  1            ), '-693594')
+		good(datetime(   1,  1,  1,  0,  0,  1), '-693593.99999')
+		good(datetime(1900,  1,  1, 23, 59, 59), '1.99999')
+		good(datetime(1900,  1,  1, 23, 59, 58), '1.99998')
+		good(datetime(1900,  1,  1, 23, 59, 57), '1.99997')
+		good(datetime(1900,  1,  1, 23, 59, 57), '1.99996') # also 57!
+		good(datetime(1900,  1,  1, 23, 59, 56), '1.99995')
 	bad('-36522.-25')
 	bad('2958466', '2958466.00001') # > positive max
 	bad('-693595', '-693594.00001') # < negative max
 
 	# Since 1 is the default flag for e, this is the same as %e
 	pattern = '%1e'
-	good(datetime(1900,  1,  1            ), '1')
-	good(datetime(1900,  2, 27            ), '58')
-	good(datetime(1900,  2, 28            ), '59')
-	good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
-	good(datetime(1900,  3,  1            ), '61') # same as 60
-	good(datetime(1900,  3,  2            ), '62')
+	if time_t_is_probably_big_enough:
+		good(datetime(1900,  1,  1            ), '1')
+		good(datetime(1900,  2, 27            ), '58')
+		good(datetime(1900,  2, 28            ), '59')
+		good(datetime(1900,  3,  1            ), '60') # actually invalid (non-existant 1900-02-29)
+		good(datetime(1900,  3,  1            ), '61') # same as 60
+		good(datetime(1900,  3,  2            ), '62')
+		good(datetime(1899, 12, 30            ), '-1')
 	good(datetime(1970,  1,  1            ), '25569')
-	good(datetime(1899, 12, 30            ), '-1')
 	# That's enough re-testing.
 
 	# 0 is "Libre Office" dates, where 1900 is not a leap year.
 	# (Dates before 1900-03-01 are offset compared to Lotus 1-2-3.)
 	pattern = '%0e'
 	epoch = datetime(1899, 12, 30)
-	good(datetime(1899, 12,  31           ), '1')
-	good(datetime(1900,  1,  1            ), '2')
-	good(datetime(1900,  1,  1, 18        ), '2.75')
-	good(datetime(1900,  2, 26            ), '58')
-	good(datetime(1900,  2, 27            ), '59')
-	good(datetime(1900,  2, 28            ), '60')
-	good(datetime(1900,  3,  1            ), '61')
-	good(datetime(1900,  3,  2            ), '62')
+	if time_t_is_probably_big_enough:
+		good(datetime(1899, 12,  31           ), '1')
+		good(datetime(1900,  1,  1            ), '2')
+		good(datetime(1900,  1,  1, 18        ), '2.75')
+		good(datetime(1900,  2, 26            ), '58')
+		good(datetime(1900,  2, 27            ), '59')
+		good(datetime(1900,  2, 28            ), '60')
+		good(datetime(1900,  3,  1            ), '61')
+		good(datetime(1900,  3,  2            ), '62')
 	assert datetime(1970, 1, 1) - epoch == timedelta(days=25569)
 	good(datetime(1970,  1,  1            ), '25569')
-	assert datetime(1800, 1, 1) - epoch == timedelta(days=-36522)
-	good(datetime(1800,  1,  1            ), '-36522')
-	good(datetime(1799, 12, 31, 18        ), '-36522.25')
-	good(datetime(1799, 12, 31, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
-	good(datetime(1899, 12, 29            ), '-1')
-	good(datetime(1899, 12, 29,  6        ), '-0.75')
-	good(datetime(1899, 12, 30            ), '0')
-	good(datetime(1899, 12, 30, 18        ), '0.75')
-	assert datetime(9999, 12, 31) - epoch == timedelta(days=2958465)
-	good(datetime(9999, 12, 31            ), '2958465')
-	good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
-	assert datetime(1, 1, 1) - epoch == timedelta(days=-693593)
-	good(datetime(   1,  1,  1            ), '-693593')
-	good(datetime(   1,  1,  1,  0,  0,  1), '-693592.99999')
-	good(datetime(1899, 12 , 31, 23, 59, 59), '1.99999')
-	good(datetime(1899, 12 , 31, 23, 59, 58), '1.99998')
-	good(datetime(1899, 12 , 31, 23, 59, 57), '1.99997')
-	good(datetime(1899, 12 , 31, 23, 59, 57), '1.99996') # also 57!
-	good(datetime(1899, 12 , 31, 23, 59, 56), '1.99995')
+	if time_t_is_probably_big_enough:
+		assert datetime(1800, 1, 1) - epoch == timedelta(days=-36522)
+		good(datetime(1800,  1,  1            ), '-36522')
+		good(datetime(1799, 12, 31, 18        ), '-36522.25')
+		good(datetime(1799, 12, 31, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+		good(datetime(1899, 12, 29            ), '-1')
+		good(datetime(1899, 12, 29,  6        ), '-0.75')
+		good(datetime(1899, 12, 30            ), '0')
+		good(datetime(1899, 12, 30, 18        ), '0.75')
+		assert datetime(9999, 12, 31) - epoch == timedelta(days=2958465)
+		good(datetime(9999, 12, 31            ), '2958465')
+		good(datetime(9999, 12, 31, 23, 59, 58), '2958465.99998')
+		assert datetime(1, 1, 1) - epoch == timedelta(days=-693593)
+		good(datetime(   1,  1,  1            ), '-693593')
+		good(datetime(   1,  1,  1,  0,  0,  1), '-693592.99999')
+		good(datetime(1899, 12 , 31, 23, 59, 59), '1.99999')
+		good(datetime(1899, 12 , 31, 23, 59, 58), '1.99998')
+		good(datetime(1899, 12 , 31, 23, 59, 57), '1.99997')
+		good(datetime(1899, 12 , 31, 23, 59, 57), '1.99996') # also 57!
+		good(datetime(1899, 12 , 31, 23, 59, 56), '1.99995')
 	bad('-36522.-25')
 	bad('2958466', '2958466.00001') # > positive max
 	bad('-693594', '-693593.00001') # < negative max
@@ -574,20 +584,22 @@ def test_datetimes():
 	good(datetime(1904,  3,  3            ), '62')
 	assert datetime(1974, 1, 2) - epoch == timedelta(days=25569)
 	good(datetime(1974,  1,  2            ), '25569')
-	assert datetime(1804, 1, 3) - epoch == timedelta(days=-36522)
-	good(datetime(1804,  1,  3            ), '-36522')
-	good(datetime(1804,  1,  2, 18        ), '-36522.25')
-	good(datetime(1804,  1,  2, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
+	if time_t_is_probably_big_enough:
+		assert datetime(1804, 1, 3) - epoch == timedelta(days=-36522)
+		good(datetime(1804,  1,  3            ), '-36522')
+		good(datetime(1804,  1,  2, 18        ), '-36522.25')
+		good(datetime(1804,  1,  2, 18        ), '4294930773.75') # gnumeric can get confused and produce this kind of thing
 	good(datetime(1903, 12, 31            ), '-1')
 	good(datetime(1903, 12, 31,  6        ), '-0.75')
 	good(datetime(1904,  1,  1            ), '0')
 	good(datetime(1904,  1,  1, 18        ), '0.75')
-	assert datetime(9999, 12, 31) - epoch == timedelta(days=2957003)
-	good(datetime(9999, 12, 31            ), '2957003')
-	good(datetime(9999, 12, 31, 23, 59, 58), '2957003.99998')
-	assert datetime(1, 1, 1) - epoch == timedelta(days=-695055)
-	good(datetime(   1,  1,  1            ), '-695055')
-	good(datetime(   1,  1,  1,  0,  0,  1), '-695054.99999')
+	if time_t_is_probably_big_enough:
+		assert datetime(9999, 12, 31) - epoch == timedelta(days=2957003)
+		good(datetime(9999, 12, 31            ), '2957003')
+		good(datetime(9999, 12, 31, 23, 59, 58), '2957003.99998')
+		assert datetime(1, 1, 1) - epoch == timedelta(days=-695055)
+		good(datetime(   1,  1,  1            ), '-695055')
+		good(datetime(   1,  1,  1,  0,  0,  1), '-695054.99999')
 	good(datetime(1904,  1,  2, 23, 59, 59), '1.99999')
 	good(datetime(1904,  1,  2, 23, 59, 58), '1.99998')
 	good(datetime(1904,  1,  2, 23, 59, 57), '1.99997')
