@@ -461,6 +461,10 @@ def test_datetimes():
 	good(datetime(1970,  1,  1,  0,  0, 30, 300000), '30.30')
 	good(datetime(2019,  5, 24,  1, 54, 13, 847211), '1558662853.847211')
 	good(datetime(1970,  1,  1,  0,  0,  0, 100000), '0.1')
+	if time_t_is_probably_big_enough:
+		good(datetime(2286, 11, 20, 17, 46, 40, 234567), '10000000000.234567')
+		# Since %f is separate this is actually later than -10000000000, which is unfortunate
+		good(datetime(1653,  2, 10,  6, 13, 20, 111000), '-10000000000.111')
 	#    !   !      !   !     !           !          !  (%s accepts no spaces)
 	bad('', '.', '0.', '.1', ' 30.30', '30 .30', '30. 30')
 
@@ -471,6 +475,10 @@ def test_datetimes():
 	good(datetime(2019,  5, 24,  1, 54, 13, 847000), '1558662853847')
 	good(datetime(1970,  1,  1,  0,  0,  0,   1000), '1')
 	good(datetime(1969, 12, 31, 23, 59, 57, 995000), '-2005')
+	if time_t_is_probably_big_enough:
+		good(datetime(2286, 11, 20, 17, 46, 40, 234000), '10000000000234')
+		# With %J the ms part is in the same number, and thus negative numbers are correctly handled.
+		good(datetime(1653,  2, 10,  6, 13, 19, 889000), '-10000000000111')
 	#    !    !      !    !  (%J accepts no spaces)
 	bad('', '0x0', '0 ', ' 0')
 
