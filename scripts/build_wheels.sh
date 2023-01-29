@@ -71,12 +71,13 @@ BUILT=()
 /tmp/accelerator/scripts/build_prepare.sh
 
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
+WHEEL_WILDCARD="${MANYLINUX_VERSION/%20*}*_$AUDITWHEEL_ARCH"
 ZLIB_PREFIX="/prepare/zlib-ng"
 
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
 	VERSIONS=(/opt/python/cp[23][5-9]-*)
-	CP310=("/out/wheelhouse/$NAME-cp310-cp310-"*_"$AUDITWHEEL_ARCH".whl)
+	CP310=("/out/wheelhouse/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl)
 	if [ "${#CP310[@]}" = 0 ]; then
 		echo "First build in a manylinux2014 container"
 		exit 1
@@ -131,7 +132,7 @@ build_one_wheel() {
 	CPPFLAGS="-I$ZLIB_PREFIX/include" \
 	"/opt/python/$V/bin/pip" wheel "$SDIST" --no-deps -w /tmp/wheels/
 	auditwheel repair "$UNFIXED_NAME" -w /tmp/wheels/fixed/
-	"/opt/python/$V/bin/pip" install "/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl
+	"/opt/python/$V/bin/pip" install "/tmp/wheels/fixed/$NAME-$V-"$WHEEL_WILDCARD.whl
 }
 
 Vs=()
@@ -142,8 +143,8 @@ for V in "${VERSIONS[@]}"; do
 	V="${V/\/opt\/python\//}"
 	test -e "/opt/python/$V/bin/ax" && exit 1
 	UNFIXED_NAME="/tmp/wheels/$NAME-$V-linux_$AUDITWHEEL_ARCH.whl"
-	test -e "/out/wheelhouse/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl && continue
-	rm -f "$UNFIXED_NAME" "/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl
+	test -e "/out/wheelhouse/$NAME-$V-"$WHEEL_WILDCARD.whl && continue
+	rm -f "$UNFIXED_NAME" "/tmp/wheels/fixed/$NAME-$V-"$WHEEL_WILDCARD.whl
 	build_one_wheel &
 	Vs+=("$V")
 done
@@ -218,7 +219,7 @@ for V in "${Vs[@]}"; do
 		exit 1
 	fi
 	# The wheel passed the tests, copy it to the wheelhouse (later).
-	BUILT+=("/tmp/wheels/fixed/$NAME-$V-"*_"$AUDITWHEEL_ARCH".whl)
+	BUILT+=("/tmp/wheels/fixed/$NAME-$V-"$WHEEL_WILDCARD.whl)
 done
 
 
