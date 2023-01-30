@@ -617,6 +617,61 @@ def test_datetimes():
 	bad('2957004', '2957004.00001') # > positive max
 	bad('-695056', '-695056.00001') # < negative max
 
+	# Test wildcard characters.
+	# '% ' whitespace (exactly one, plain space is any number)
+	# '%.' any character except whitespace
+	# '%*' any character including whitespace
+	# '%#' any digit
+	# '%@' any non-digit character, excluding whitespace
+	# '%^' any non-digit character, including whitespace
+	pattern = '%Y% %m%.%d%*%H%#%M%@%S%^'
+	#                                         Y m.d*HH#M@S^    Y  mm.d*HH#M@S^
+	good(datetime(   1,  2,  3,  4,  5,  6), '1 2x3x 495x6x', '1\t02x3x 495x6x')
+	good(datetime(   1,  2,  3,  4,  5,  6), '1 2.3  495-6 ', '1\n02.3  495-6 ')
+	#                                          ? ?    ? ? ?    Y m!
+	bad(                                     '1.2.3  495-6 ', '1  02.3  495-6 ')
+	bad(                                     '1 2 3  495-6 ')
+	bad(                                     '1 2.3  4.5-6 ')
+	bad(                                     '1 2.3  495 6 ')
+	#                                         Y m.d*HH#M@SS!
+	bad(                                     '1 2.3  495-111')
+	#                                         Y m.d*H!
+	bad(                                     '1 2.3 495-6 ')
+	#                                         YYYY mm.dd*HH#M@S^
+	good(datetime(   1,  2,  3,  4,  5,  6), '0001  22 33 445/6/')
+
+	# Test separators with counts.
+	# Only test with %@, as the repeat logic is shared.
+	pattern = '%y%3@%m'
+	good(date(2003, 6, 1), '3abc6', '3...6', '3+-_6', '3/@\\6')
+	# Test with a range
+	pattern = '%y%2,5@%m'
+	good(date(2003, 6, 1), '3abcde6', '3..6', '3...6', '3....6')
+	bad('3abcdef6', '3.6')
+	# Test with a range that includes 0
+	pattern = '%y%0,2@%m'
+	good(date(2003, 6, 1), '03ab6', '03a6', '036')
+	bad('36', '3abc6')
+
+	# Let's generate an exhaustive search (within ASCII) for all separators
+	# (and no \0, strptime doesn't handle it.)
+	def negate_ascii(chars):
+		return {c for c in map(chr, range(1, 128)) if c not in chars}
+	for sep, allowed in (
+		('% ', '\t\n\v\f\r '),
+		('%.', negate_ascii('\t\n\v\f\r ')),
+		('%*', negate_ascii('')),
+		('%#', '0123456789'),
+		('%@', negate_ascii('0123456789\t\n\v\f\r ')),
+		('%^', negate_ascii('0123456789')),
+	):
+		pattern = '%Y' + sep + '%m'
+		for c in allowed:
+			good(date(3456, 12, 1), '3456' + c + '12')
+			bad('3456' + c + c + '12') # don't match several
+		for c in negate_ascii(allowed):
+			bad('3456' + c + '12')
+
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
 	#     One with only good values, with trailing garbage (typed with *i:)
