@@ -672,6 +672,74 @@ def test_datetimes():
 		for c in negate_ascii(allowed):
 			bad('3456' + c + '12')
 
+	# Test optional tails. %/ makes the rest of the pattern optional,
+	# but the whole string still has to match.
+	pattern = '%d%/%m%y'
+	#                             ddmmyy    ddmm    ddm    dd    d
+	good(datetime(1970,  1,  6), '060170', '0601', '061', '06', '6')
+	good(datetime(1970,  2,  3), '030270', '0302', '032')
+	#    ddmm!    d!
+	bad('0601x', '60170')
+
+	# Java timestamp with optional ms-fraction
+	# (which overrides the fractional part of the full timestamp when used)
+	pattern = '%J%/.%3f'
+	#                                                JJJJJ    JJJJJ.    JJJJJ.FFF    JJJJJ.FFF
+	good(datetime(1970,  1,  1,  0,  0, 30       ), '30000', '30000.', '30000.000', '30303.0  ')
+	good(datetime(1970,  1,  1,  0,  0, 30, 50000), '30050', '30050.', '30000.050', '30303.05 ')
+	#    JJJJJ!    JJJJJ.FFF!    !
+	bad('30050 ', '30000.05  ', ' 30050')
+
+	# Test %?, making the next field(s) optional.
+	# The way this works is that as long as it (all) matches it is used,
+	# there is no backtracking if fields after the optional part don't match.
+
+	# Test single optional values
+	pattern = '%Y%?%b%d'
+	#                             YYYYbbbd    YYYYbbbbbbbdd    YYYYd
+	good(datetime(2023,  1,  2), '2023jan2', '2023january02', '20232')
+	good(datetime(2023,  1,  2), '2023jAN2', '2023JanuarY02', '202302')
+	#    YYYY!   YYYYbbb!   YYYYbb! (and "jab2" isn't ok for d)
+	bad('2023', '2023jan', '2023jab2')
+
+	# Test optional values with a count (%H only applies if %b worked)
+	pattern = '%Y%2?%b%H%d'
+	#                                 YYYYbbbHHd    YYYYbbbbbbbHHdd
+	good(datetime(2023,  1,  3, 16), '2023jan163', '2023january1603')
+	#                                 YYYYdd
+	good(datetime(2023,  1, 16,  0), '202316')
+	#    YYYYdd!    YYYYbbbbbbbHH!
+	bad('2023163', '2023january03')
+
+	# %? doesn't have to match %-things, here it's also matching the ":"
+	pattern = '%Y-%m %3?%H:%M %d'
+	#                                     YYYY-mm HH:MM dd    YYYY-mm HH:MMd
+	good(datetime(2018, 10,  1, 12,  1), '2018-10 12:01 01', '2018-10 12: 11')
+	#                                     YYYY-mm dd    YYYY-mm HH:MM dd
+	good(datetime(2018, 10, 11,  0,  0), '2018-10 11', '2018-10 00:00 11')
+	#    YYYY-mm HH:MM!   YYYY-MM HH:MM!   YYYY-MM HH:!! (fails '  ' as MM, then fails with trailing ':  1' after the dd)
+	bad('2018-10 00:00', '2018-10 00: 1', '2018-10 05:  1')
+
+	# Make sure the spaces weren't important (except for readability)
+	pattern = '%Y-%m%3?%H:%M%d'
+	#                                     YYYY-mmHH:MMdd    YYYY-mmHH:MMd
+	good(datetime(2018, 10,  1, 12,  1), '2018-1012:0101', '2018-1012: 11')
+	#                                     YYYY-mmdd    YYYY-mmHH:MMdd
+	good(datetime(2018, 10, 11,  0,  0), '2018-1011', '2018-1000:0011')
+	#    YYYY-mmHH:MM!   YYYY-MMHH:MM!   YYYY-MMHH:!! (fails '  ' as MM, then fails with trailing ':  1' after the dd)
+	bad('2018-1000:00', '2018-1000: 1', '2018-1005:  1')
+
+	# Test optional values with a range (%H only applies if %b worked, and %M only if %H)
+	pattern = '%d%2,3?%b%H%M%Y'
+	#                                     ddbbbHHMMYYYY    dbbbHHMMYYYY
+	good(datetime(2023,  1,  3, 16,  4), '03jan16042023', '3jan16 42023')
+	#                                     ddbbbHHYYYY  (98 is not a possible M value)
+	good(datetime(9876,  1,  3, 16    ), '03jan169876')
+	#                                     ddYYYY
+	good(datetime(1604,  1,  3        ), '031604')
+	#    ddYYYY!       ddbbbH!  (99 is not a possible H value, so it fails there, and then on 'j' for Y)
+	bad('0316042023', '03jan9999')
+
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
 	#     One with only good values, with trailing garbage (typed with *i:)
