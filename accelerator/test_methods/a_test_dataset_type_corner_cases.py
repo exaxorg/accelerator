@@ -811,6 +811,33 @@ def test_datetimes():
 	#    yy-mm!   yy-bbb!      yy-bbb!    yy-bbb!
 	bad('78-11', '78-nov-01', '78-nov-', '78-nov')
 
+	# Test %I and %p.
+	pattern = '%I%p'
+	good(time( 0,  0), '12am')
+	good(time( 1,  0), '01Am', '1aM')
+	good(time(12,  0), '12pm')
+	good(time(13,  0), '01Pm', '1pM')
+	bad('0pm', '00pm', '13pm', '12', '13')
+
+	# In "wrong" order.
+	pattern = '%p%I'
+	good(time( 0,  0), 'AM12')
+	good(time( 1,  0), 'AM01', 'AM1')
+	good(time(12,  0), 'PM12')
+	good(time(13,  0), 'PM01', 'PM1')
+	bad('PM0', 'PM00', 'PM13', '12', 'PM')
+
+	# Test that %p works with %H. (Has to come after of course.)
+	pattern = '%H%p'
+	good(time( 2,  0), '14AM', '02AM', '2AM')
+	good(time(14,  0), '14PM', '02PM', '2PM')
+	bad('14')
+
+	# Test that %p does not affect %H when %p comes first
+	pattern = '%p%H'
+	good(time( 2,  0), 'AM02', 'PM02')
+	good(time(14,  0), 'AM14', 'PM14')
+
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
 	#     One with only good values, with trailing garbage (typed with *i:)
