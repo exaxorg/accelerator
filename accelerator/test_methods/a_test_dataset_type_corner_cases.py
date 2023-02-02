@@ -838,6 +838,48 @@ def test_datetimes():
 	good(time( 2,  0), 'AM02', 'PM02')
 	good(time(14,  0), 'AM14', 'PM14')
 
+	# Test %C
+	pattern = '%C%y'
+	good(date(   1, 1, 1), '0001')
+	good(date(1850, 1, 1), '1850')
+	good(date(2070, 1, 1), '2070')
+	good(date(9999, 1, 1), '9999')
+
+	# In "wrong" order
+	pattern = '%y%C'
+	good(date(   1, 1, 1), '0100')
+	good(date(1850, 1, 1), '5018')
+	good(date(2070, 1, 1), '7020')
+	good(date(9999, 1, 1), '9999')
+
+	# Test %C to override century from %Y
+	pattern = '%Y%C'
+	good(date(   1, 1, 1), '200100')
+	good(date(1850, 1, 1), '195018')
+	good(date(2070, 1, 1), '187020')
+	good(date(9999, 1, 1), '199999')
+
+	# Test %Y to override %C
+	pattern = '%C%Y'
+	good(date(   1, 1, 1), '200001')
+	good(date(1850, 1, 1), '191850')
+	good(date(2070, 1, 1), '182070')
+	good(date(9999, 1, 1), '199999')
+
+	# Test keeping century from %Y with %y
+	pattern = '%Y%y'
+	good(date(   1, 1, 1), '008801')
+	good(date(1850, 1, 1), '186850')
+	good(date(2070, 1, 1), '202370')
+	good(date(9999, 1, 1), '992299')
+
+	# A complete and totally idiotic format.
+	pattern = '%y%I%M%C%d%p%b%S'
+	#                                         yyIIMMCCDppbbbS    yyIIMMCCddppbbbbbbbSS
+	good(datetime(1956, 10,  5, 23, 34,  8), '561134195pmoct8', '56113419 5Pmoctober08')
+	#    yy!!MMCCDppbbbS    yyIIMMCCddppbbbbbb!     yyIIMMCCdppbbbS!
+	bad('562134195pmoct8', '56113419 5PMoctobe08', '561134195pmoct8 ')
+
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
 	#     One with only good values, with trailing garbage (typed with *i:)
