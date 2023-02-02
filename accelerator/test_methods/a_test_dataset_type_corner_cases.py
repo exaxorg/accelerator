@@ -776,6 +776,40 @@ def test_datetimes():
 	#        both years,  repeating everything in various orders
 	bad('', '85-dec-85', '24-12-8585-12-24', '24-12-8524-12-85', '85-12-2485-12-24', '85-12-2424-12-85')
 
+	# Combining %/ with %? and %:
+
+	# If there is a month name %/ starts applying, thus making the X optional,
+	# but the X still has to match to make the %3? happy!
+	# So in practice the %/ only applies to the -%d, and of course only
+	# if the %b matches.
+	pattern = '%y-%3?%b%/X%:%m-%d'
+	#                         yy-mm-dd    yy-bbbX-dd    yy-bbbX-    yy-bbbX
+	good(date(1978, 11,  1), '78-11-01', '78-novX-01', '78-novX-', '78-novX')
+	good(date(2008,  4, 14), '08-04-14', '08-aprX-14')
+	#    yy-mm!   yy-bbb!      yy-bbb!    yy-bbb!
+	bad('78-11', '78-nov-01', '78-nov-', '78-nov')
+
+	# Same thing, but put the %/ in the else.
+	# Does not match exactly the same things as above, because %: only
+	# cares about the count for skipping when the initial %? matched. In
+	# other words, the X does not have to match to make the %/ apply.
+	pattern = '%y-%?%m%3:%b%/X-%d'
+	#                         yy-mm-dd    yy-bbbX-dd    yy-bbbX-    yy-bbbX    yy-bbb
+	good(date(1978, 11,  1), '78-11-01', '78-novX-01', '78-novX-', '78-novX', '78-nov')
+	good(date(2008,  4, 14), '08-04-14', '08-aprX-14')
+	#    yy-mm!   yy-bbb!      yy-bbb!
+	bad('78-11', '78-nov-01', '78-nov-')
+
+	# Use %:%3? instead of %3: to almost match the same as in the first case,
+	# but not quite as that then makes both sides optional.
+	pattern = '%y-%?%m%:%3?%b%/X-%d'
+	#                         yy-mm-dd    yy-bbbX-dd    yy-bbbX-    yy-bbbX
+	good(date(1978, 11,  1), '78-11-01', '78-novX-01', '78-novX-', '78-novX')
+	good(date(2008,  4, 14), '08-04-14', '08-aprX-14')
+	#                         yy--dd
+	good(date(1978,  1, 23), '78--23')
+	#    yy-mm!   yy-bbb!      yy-bbb!    yy-bbb!
+	bad('78-11', '78-nov-01', '78-nov-', '78-nov')
 
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
