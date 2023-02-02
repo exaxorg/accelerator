@@ -740,6 +740,43 @@ def test_datetimes():
 	#    ddYYYY!       ddbbbH!  (99 is not a possible H value, so it fails there, and then on 'j' for Y)
 	bad('0316042023', '03jan9999')
 
+	# Recursive optional bits
+	# This is hard to read, maybe "(a(b%Y)c)(d(efg)h)(%Y)-%m (ABC[D%H%M]) %d" helps?
+	# A %? inside a %? counts as a single token, regardless of count.
+	pattern = '%3?a%2?b%Yc%3?d%3?efgh%?%Y-%m %3,6?ABCD%H%M %d'
+	#                                  abYYYYcdefghYYYY-mm ABCDHHMM d
+	good(datetime(2022, 11, 7, 1, 2), 'ab1998cdefgh2022-11 ABCD0102 7',)
+	#                                  abYYYYc-mm d    abYYYYc-mm ABCd
+	good(datetime(2023, 12, 8, 0, 0), 'ab2023c-12 8', 'ab2023c-12 ABC8')
+	#    abYYYYcdefghYYYY-mm !            abYYYYcdefghYYYY-mm AB!
+	bad('ab1998cdefgh2022-11 BCD0102 7', 'ab1998cdefgh2022-11 AB 7')
+
+	# Test the else function %:
+	# Accept YYYYmmdd if that fits, otherwise an Excel date
+	pattern = '%3?%Y%m%d%:%e'
+	#                       eeeee    YYYYmmdd
+	good(date(1997, 5, 5), '35555', '19970505')
+	bad('')
+
+	# A plausable date thing, accepting both name and number for the month.
+	# Try it in both orders.
+	for pattern in ('%d-%?%b%:%m-%y', '%d-%?%m%:%b-%y'):
+		#                         dd-mm-yy,   dd-m-yy,   dd-bbb-yy,   dd-bbbbb-yy
+		good(date(1997,  3, 31), '31-03-97', '31-3-97', '31-mar-97', '31-march-97')
+		#    dd-bbb!        dd-bbb!       dd-bbb-yy!      dd-mm!         dd-m!
+		bad('31-mar03-97', '31-mar3-97', '31-mar-03-97', '31-03mar-97', '31-3mar-97', '31--97')
+
+	# Test %: recursively too.
+	# This is either the same as above or the same in opposite order.
+	# I.e. it's one of those terrible things that guesses which end the
+	# year is in depending on if the first number if valid as a day or not.
+	#             11233334444566   11233334444566
+	pattern = '%6?%d-%?%b%:%m-%y%6:%y-%?%b%:%m-%d'
+	good(date(1985, 12, 24), '24-dec-85', '24-12-85', '85-12-24', '85-dec-24')
+	#        both years,  repeating everything in various orders
+	bad('', '85-dec-85', '24-12-8585-12-24', '24-12-8524-12-85', '85-12-2485-12-24', '85-12-2424-12-85')
+
+
 	# Save all of these in three datasets with one column per pattern.
 	#     One with only good values
 	#     One with only good values, with trailing garbage (typed with *i:)
