@@ -5,10 +5,7 @@ def analysis(sliceno, job):
 	# save one file per analysis process...
 	filename = 'myfile1'
 	data = 'This is job %s analysis slice %d.' % (job, sliceno,)
-	# We need "temp=False" for the files written in analysis
-	# to be kept permanently.
-	# If not set, the files will be erased at job completion.
-	job.save(data, filename, sliceno=sliceno, temp=False)
+	job.save(data, filename, sliceno=sliceno)
 
 
 def synthesis(job):

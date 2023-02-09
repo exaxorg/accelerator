@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -204,26 +204,17 @@ def stackup():
 saved_files = {}
 
 class FileWriteMove(object):
-	"""with FileWriteMove(name, temp=None) as fh: ...
+	"""with FileWriteMove(name) as fh: ...
 	Opens file with a temp name and renames it in place on exit if no
 	exception occured. Tries to remove temp file if exception occured.
-
-	The temp-level of the file is recorded in saved_files.
 	"""
 
 	__slots__ = ('filename', 'tmp_filename', 'temp', '_hidden', '_status', 'close', '_open')
 
 	def __init__(self, filename, temp=None, _hidden=False):
-		from accelerator.g import running
 		self.filename = filename
 		self.tmp_filename = '%s.%dtmp' % (filename, os.getpid(),)
-		if temp is None: # unspecified
-			if running == 'analysis':
-				print('WARNING: Should specify file permanence on %s line %d' % stackup(), file=sys.stderr)
 		self.temp = temp
-		if temp:
-			if running != 'analysis':
-				print('WARNING: Only analysis should make temp files (%s line %d).' % stackup(), file=sys.stderr)
 		self._hidden = _hidden
 
 	def __enter__(self):
