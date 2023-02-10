@@ -127,7 +127,12 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				else:
 					return d
 			def save(item, name):
-				blob.save(fixup(item), name, sliceno=sliceno_, temp=True)
+				from accelerator import extras
+				try:
+					extras._SavedFile_allow_pickle = True
+					blob.save(fixup(item), name, sliceno=sliceno_, temp=True)
+				finally:
+					extras._SavedFile_allow_pickle = False
 			if isinstance(res, tuple):
 				if sliceno_ == 0:
 					blob.save(len(res), "Analysis.tuple", temp=True)

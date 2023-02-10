@@ -60,6 +60,10 @@ def _job_params(jobid):
 	return d
 
 
+# _SavedFile isn't really intended to pickle safely, so only allow it
+# in the automatic pickling of analysis results.
+_SavedFile_allow_pickle = False
+
 class _SavedFile(object):
 	__slots__ = ('_filename', '_sliceno', '_loader',)
 
@@ -87,6 +91,15 @@ class _SavedFile(object):
 	def jobwithfile(self, extra=None):
 		from accelerator import g
 		return JobWithFile(g.job, self._filename, self._sliceno is not None, extra)
+
+	def __getstate__(self):
+		if _SavedFile_allow_pickle:
+			return self._filename, self._sliceno, self._loader
+		else:
+			raise TypeError('Cannot pickle _SavedFile')
+
+	def __setstate__(self, state):
+		self._filename, self._sliceno, self._loader = state
 
 
 def job_params(jobid=None, default_empty=False):
