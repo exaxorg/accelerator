@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -300,6 +300,7 @@ def main(urd):
 	print("Test various utility functions")
 	urd.build("test_optionenum")
 	urd.build("test_json")
+	urd.build("test_job_save")
 	urd.build("test_jobwithfile")
 	urd.build("test_jobchain")
 
