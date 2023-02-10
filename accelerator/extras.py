@@ -59,6 +59,36 @@ def _job_params(jobid):
 	_apply_typing(d.options, d.get('_typing', ()))
 	return d
 
+
+class _SavedFile(object):
+	__slots__ = ('_filename', '_sliceno', '_loader',)
+
+	def __init__(self, filename, sliceno, loader):
+		self._filename = filename
+		self._sliceno = sliceno
+		self._loader = loader
+
+	def load(self):
+		return self._loader(self._filename, sliceno=self._sliceno)
+
+	@property
+	def filename(self):
+		return _fn(self._filename, None, self._sliceno)
+
+	@property
+	def path(self):
+		if self._filename.startswith('/'):
+			job = None
+		else:
+			from accelerator import g
+			job = g.job
+		return _fn(self._filename, job, self._sliceno)
+
+	def jobwithfile(self, extra=None):
+		from accelerator import g
+		return JobWithFile(g.job, self._filename, self._sliceno is not None, extra)
+
+
 def job_params(jobid=None, default_empty=False):
 	if default_empty and not jobid:
 		return DotDict(
@@ -88,10 +118,12 @@ def job_post(jobid):
 	return d
 
 def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, _hidden=False):
+	res = _SavedFile(filename, sliceno, pickle_load)
 	filename = _fn(filename, None, sliceno)
 	with FileWriteMove(filename, temp, _hidden=_hidden) as fh:
 		# use protocol version 2 so python2 can read the pickles too.
 		pickle.dump(variable, fh, 2)
+	return res
 
 # default to encoding='bytes' because datetime.* (and probably other types
 # too) saved in python 2 fail to unpickle in python 3 otherwise. (Official
@@ -135,10 +167,12 @@ def json_encode(variable, sort_keys=True, as_str=False):
 	return res
 
 def json_save(variable, filename='result.json', sliceno=None, sort_keys=True, _encoder=json_encode, temp=False):
+	res = _SavedFile(filename, sliceno, json_load)
 	filename = _fn(filename, None, sliceno)
 	with FileWriteMove(filename, temp) as fh:
 		fh.write(_encoder(variable, sort_keys=sort_keys))
 		fh.write(b'\n')
+	return res
 
 def _unicode_as_utf8bytes(obj):
 	if isinstance(obj, unicode):

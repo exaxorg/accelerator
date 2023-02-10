@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -252,11 +252,11 @@ class CurrentJob(Job):
 
 	def save(self, obj, filename='result.pickle', sliceno=None, temp=None):
 		from accelerator.extras import pickle_save
-		pickle_save(obj, filename, sliceno, temp=temp)
+		return pickle_save(obj, filename, sliceno, temp=temp)
 
 	def json_save(self, obj, filename='result.json', sliceno=None, sort_keys=True, temp=None):
 		from accelerator.extras import json_save
-		json_save(obj, filename, sliceno, sort_keys=sort_keys, temp=temp)
+		return json_save(obj, filename, sliceno, sort_keys=sort_keys, temp=temp)
 
 	def datasetwriter(self, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
 		from accelerator.dataset import DatasetWriter
