@@ -26,6 +26,7 @@ import datetime
 import json
 from traceback import print_exc
 from collections import OrderedDict
+from functools import partial
 import sys
 
 from accelerator.compat import PY2, PY3, pickle, izip, iteritems, first_value
@@ -72,7 +73,11 @@ class _SavedFile(object):
 		self._sliceno = sliceno
 		self._loader = loader
 
+	def wait(self):
+		pass
+
 	def load(self):
+		self.wait()
 		return self._loader(self._filename, sliceno=self._sliceno)
 
 	@property
@@ -100,6 +105,52 @@ class _SavedFile(object):
 
 	def __setstate__(self, state):
 		self._filename, self._sliceno, self._loader = state
+
+
+_backgrounded = []
+
+class _BackgroundSavedFile(_SavedFile):
+	__slots__ = ('_ok', '_process',)
+
+	def __init__(self, filename, sliceno, loader, saver, args, temp, hidden=False):
+		_SavedFile.__init__(self, filename, sliceno, loader)
+		if hidden:
+			self._ok = bool # dummy function
+		else:
+			self._ok = partial(saved_files.__setitem__, self.filename, temp)
+		from accelerator.mp import SimplifiedProcess
+		self._process = SimplifiedProcess(target=self._run, args=(saver, args,))
+		_backgrounded.append(self)
+
+	def _run(self, func, args):
+		from accelerator import g
+		g.running = 'server' # Hack to disable status messages from this process
+		func(*args)
+
+	def wait(self):
+		if self._process:
+			with status("Waiting for background save of " + self.filename):
+				self._wait()
+
+	def _wait(self):
+		if self._process:
+			self._process.join()
+			rc = self._process.exitcode
+			self._process = None
+			if rc:
+				raise IOError('Failed to save ' + self.filename)
+			self._ok()
+
+	def __setstate__(self, state):
+		_SavedFile.__setstate__(self, state)
+		self._process = None
+
+def _backgrounded_wait():
+	if _backgrounded:
+		with status("Waiting for background save(s)"):
+			for bs in _backgrounded:
+				bs._wait()
+			_backgrounded[:] = ()
 
 
 def job_params(jobid=None, default_empty=False):
@@ -130,13 +181,18 @@ def job_post(jobid):
 		raise AcceleratorError("Don't know how to load post.json version %d (in %s)" % (d.version, jobid,))
 	return d
 
-def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, _hidden=False):
-	res = _SavedFile(filename, sliceno, pickle_load)
-	filename = _fn(filename, None, sliceno)
+def _pickle_save(variable, filename, temp, _hidden):
 	with FileWriteMove(filename, temp, _hidden=_hidden) as fh:
 		# use protocol version 2 so python2 can read the pickles too.
 		pickle.dump(variable, fh, 2)
-	return res
+
+def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, background=False, _hidden=False):
+	args = (variable, _fn(filename, None, sliceno), temp, _hidden)
+	if background:
+		return _BackgroundSavedFile(filename, sliceno, pickle_load, _pickle_save, args, temp, _hidden)
+	else:
+		_pickle_save(*args)
+		return _SavedFile(filename, sliceno, pickle_load)
 
 # default to encoding='bytes' because datetime.* (and probably other types
 # too) saved in python 2 fail to unpickle in python 3 otherwise. (Official
@@ -179,13 +235,18 @@ def json_encode(variable, sort_keys=True, as_str=False):
 		res = res.encode('ascii')
 	return res
 
-def json_save(variable, filename='result.json', sliceno=None, sort_keys=True, _encoder=json_encode, temp=False):
-	res = _SavedFile(filename, sliceno, json_load)
-	filename = _fn(filename, None, sliceno)
+def _json_save(variable, filename, sort_keys, _encoder, temp):
 	with FileWriteMove(filename, temp) as fh:
 		fh.write(_encoder(variable, sort_keys=sort_keys))
 		fh.write(b'\n')
-	return res
+
+def json_save(variable, filename='result.json', sliceno=None, sort_keys=True, _encoder=json_encode, temp=False, background=False):
+	args = (variable, _fn(filename, None, sliceno), sort_keys, _encoder, temp)
+	if background:
+		return _BackgroundSavedFile(filename, sliceno, json_load, _json_save, args, temp)
+	else:
+		_json_save(*args)
+		return _SavedFile(filename, sliceno, json_load)
 
 def _unicode_as_utf8bytes(obj):
 	if isinstance(obj, unicode):

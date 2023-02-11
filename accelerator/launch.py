@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -142,7 +142,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				if sliceno_ == 0:
 					blob.save(False, "Analysis.tuple", temp=True)
 				save(res, "Analysis.")
-		from accelerator.extras import saved_files
+		from accelerator.extras import saved_files, _backgrounded_wait
 		dw_lens = {}
 		dw_minmax = {}
 		dw_compressions = {}
@@ -154,6 +154,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				dw_lens[name] = dw._lens
 				dw_minmax[name] = dw._minmax
 		c_fflush()
+		_backgrounded_wait()
 		q.put((sliceno_, monotonic(), saved_files, dw_lens, dw_minmax, dw_compressions, None, finishjob,))
 		q.close()
 	except:
@@ -291,6 +292,8 @@ def fmt_tb(skip_level):
 
 
 def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0):
+	from accelerator.extras import _backgrounded_wait
+
 	WORKDIRS.update(workdirs)
 
 	g.job = jobid
@@ -381,6 +384,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 					for name in sorted(to_finish, key=dw_sortnum):
 						dataset._datasetwriters[name].finish()
 		c_fflush()
+		_backgrounded_wait()
 		prof['prepare'] = monotonic() - t
 	switch_output()
 	setproctitle('launch')
@@ -418,6 +422,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 	if dataset._datasets_written:
 		blob.save(dataset._datasets_written, 'DS/LIST', temp=False, _hidden=True)
 	c_fflush()
+	_backgrounded_wait()
 	t = monotonic() - t
 	prof['synthesis'] = t
 

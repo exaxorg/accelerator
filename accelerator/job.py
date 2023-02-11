@@ -250,13 +250,13 @@ class CurrentJob(Job):
 		from accelerator.launch import _FinishJob
 		raise _FinishJob(result)
 
-	def save(self, obj, filename='result.pickle', sliceno=None, temp=None):
+	def save(self, obj, filename='result.pickle', sliceno=None, temp=None, background=False):
 		from accelerator.extras import pickle_save
-		return pickle_save(obj, filename, sliceno, temp=temp)
+		return pickle_save(obj, filename, sliceno, temp=temp, background=background)
 
-	def json_save(self, obj, filename='result.json', sliceno=None, sort_keys=True, temp=None):
+	def json_save(self, obj, filename='result.json', sliceno=None, sort_keys=True, temp=None, background=False):
 		from accelerator.extras import json_save
-		return json_save(obj, filename, sliceno, sort_keys=sort_keys, temp=temp)
+		return json_save(obj, filename, sliceno, sort_keys=sort_keys, temp=temp, background=background)
 
 	def datasetwriter(self, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
 		from accelerator.dataset import DatasetWriter
