@@ -102,6 +102,21 @@ def check(job, name, sliceno, p, j, bp, bj, do_background=True, do_wait=False):
 def prepare(job):
 	res = save(job, 'prepare', None)
 	check(job, 'prepare', None, *res, do_background=False)
+
+	# Test that the slowdowns work. (While the stuff we saved above is waiting)
+	# Use sleeptime / 2.5 so this takes no extra time.
+	checktime = options.sleeptime / 2.5
+	before = monotonic()
+	p = job.save(SlowToPickle('', checktime), 'test.pickle', background=True)
+	p.wait()
+	pickle_time = monotonic() - before
+	assert pickle_time > checktime, "Saving a slow pickle took %s seconds, should have taken more than %s" % (pickle_time, checktime,)
+	before = monotonic()
+	j = job.json_save({}, 'test.json', sort_keys=SlowTrue(checktime), background=True)
+	j.wait()
+	json_time = monotonic() - before
+	assert json_time > checktime, "Saving a slow json took %s seconds, should have taken more than %s" % (json_time, checktime,)
+
 	return res
 
 def analysis(sliceno, job, prepare_res):
