@@ -216,6 +216,8 @@ def json_encode(variable, sort_keys=True, as_str=False):
 	If you set sort_keys=False you can use OrderedDict to get whatever
 	order you like.
 	"""
+	# make sure to evaluate sort_keys only once, for test_job_save_background
+	sort_keys = bool(sort_keys)
 	if sort_keys:
 		dict_type = dict
 	else:

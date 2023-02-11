@@ -301,6 +301,8 @@ def main(urd):
 	urd.build("test_optionenum")
 	urd.build("test_json")
 	urd.build("test_job_save")
+	bgsave = urd.build("test_job_save_background")
+	assert len(bgsave.files()) == 8 + 4 * urd.info.slices
 	urd.build("test_jobwithfile")
 	urd.build("test_jobchain")
 
