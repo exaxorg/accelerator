@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2022 Carl Drougge                                     #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -73,7 +73,7 @@ def synthesis(job):
 	chk('\twarning = <FOO >BAR', 'FOO', 'BAR')
 	# combining literals with named attributes, and escapes
 	chk(
-		'\twarning = <FOO >BAR\n\tjob/warning = BOLD BLUE <\\x18\\\\\\eFOO\T >\\?\\\\eBAR\E UNDERLINE',
+		'\twarning = <FOO >BAR\n\tjob/warning = BOLD BLUE <\\x18\\\\\\eFOO\\T >\\?\\\\eBAR\\E UNDERLINE',
 		'\x1b[1;34m\x18\\\x1bFOO\t\x1b[4m',
 		'\x1b[22;24;39m\\?\\eBAR\x1b',
 	)
