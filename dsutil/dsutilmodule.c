@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2017 eBay Inc.
- * Modifications copyright (c) 2018-2022 Carl Drougge
+ * Modifications copyright (c) 2018-2023 Carl Drougge
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,6 +62,14 @@
 #define MAX_COMPRESSORS 16
 
 #define err1(v) if (v) goto err
+
+// Py_FileSystemDefaultEncoding is deprecated in Python 3.12.
+// For consistency we use NULL (utf-8) on all python3 versions.
+#if PY_MAJOR_VERSION < 3
+#  define DEFAULT_ENCODING Py_FileSystemDefaultEncoding
+#else
+#  define DEFAULT_ENCODING NULL
+#endif
 
 static inline void add_extra_to_exc_msg(const char *extra) {
 	if (*extra) {
@@ -368,7 +376,7 @@ static int Read_init(PyObject *self_, PyObject *args, PyObject *kwds)
 	};
 	if (!PyArg_ParseTupleAndKeywords(
 		args, kwds, "et|OLLOOLLi", kwlist,
-		Py_FileSystemDefaultEncoding, &name,
+		DEFAULT_ENCODING, &name,
 		&compression,
 		&seek,
 		&self->want_count,
@@ -1068,11 +1076,11 @@ static int init_WriteBlob(PyObject *self_, PyObject *args, PyObject *kwds)
 	};
 	if (!PyArg_ParseTupleAndKeywords(
 		args, kwds, "et|OOOeti", kwlist,
-		Py_FileSystemDefaultEncoding, &name,
+		DEFAULT_ENCODING, &name,
 		&compression,
 		&default_obj,
 		&hashfilter,
-		Py_FileSystemDefaultEncoding, &error_extra,
+		DEFAULT_ENCODING, &error_extra,
 		&self->none_support
 	)) return -1;
 	self->name = name;
@@ -1415,11 +1423,11 @@ MK_MINMAX_SET(Time    , unfmt_time((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)
 		}                                                                        	\
 		if (!PyArg_ParseTupleAndKeywords(                                        	\
 			args, kwds, "et|OOOeti", kwlist,                                 	\
-			Py_FileSystemDefaultEncoding, &name,                             	\
+			DEFAULT_ENCODING, &name,                                         	\
 			&compression,                                                    	\
 			&default_obj,                                                    	\
 			&hashfilter,                                                     	\
-			Py_FileSystemDefaultEncoding, &error_extra,                      	\
+			DEFAULT_ENCODING, &error_extra,                                  	\
 			&self->none_support                                              	\
 		)) return -1;                                                            	\
 		if (!withnone && self->none_support) {                                   	\
@@ -1686,11 +1694,11 @@ static int init_WriteNumber(PyObject *self_, PyObject *args, PyObject *kwds)
 	}
 	if (!PyArg_ParseTupleAndKeywords(
 		args, kwds, "et|OOOeti", kwlist,
-		Py_FileSystemDefaultEncoding, &name,
+		DEFAULT_ENCODING, &name,
 		&compression,
 		&default_obj,
 		&hashfilter,
-		Py_FileSystemDefaultEncoding, &error_extra,
+		DEFAULT_ENCODING, &error_extra,
 		&self->none_support
 	)) return -1;
 	self->name = name;

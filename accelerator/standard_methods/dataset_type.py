@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -1464,6 +1464,14 @@ all_c_functions = r'''
 #define err2(v, msg) if (v) { err = msg; goto err; }
 #define Z (128 * 1024)
 
+// Py_FileSystemDefaultEncoding is deprecated in Python 3.12.
+// For consistency we use NULL (utf-8) on all python3 versions.
+#if PY_MAJOR_VERSION < 3
+#  define DEFAULT_ENCODING Py_FileSystemDefaultEncoding
+#else
+#  define DEFAULT_ENCODING NULL
+#endif
+
 typedef struct {
 	gzFile fh;
 	int len;
@@ -2222,8 +2230,8 @@ static PyObject *_py_strptime(PyObject *args, PyObject *kwds, const char **r_p)
 	};
 	if (!PyArg_ParseTupleAndKeywords(
 		args, kwds, "etet|O", kwlist,
-		Py_FileSystemDefaultEncoding, &value,
-		Py_FileSystemDefaultEncoding, &format,
+		DEFAULT_ENCODING, &value,
+		DEFAULT_ENCODING, &format,
 		&default_obj
 	)) return 0;
 	struct tm tm;
@@ -2313,8 +2321,8 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 		&o_in_msgnames,
 		&in_count,
 		&o_out_fns,
-		Py_FileSystemDefaultEncoding, &gzip_mode,
-		Py_FileSystemDefaultEncoding, &minmax_fn,
+		DEFAULT_ENCODING, &gzip_mode,
+		DEFAULT_ENCODING, &minmax_fn,
 		&o_default_value,
 		&default_len,
 		&default_value_is_None,

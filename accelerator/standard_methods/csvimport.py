@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -36,6 +36,14 @@ all_c_functions = r'''
 #define err1(v) if (v) { if (errno) perror("ERROR"); fprintf(stderr, "ERROR on %s line %d\n", __FILE__, __LINE__); goto err; }
 #define BIG_Z (1024 * 1024 * 16 - 64)
 #define SMALL_Z (1024 * 64)
+
+// Py_FileSystemDefaultEncoding is deprecated in Python 3.12.
+// For consistency we use NULL (utf-8) on all python3 versions.
+#if PY_MAJOR_VERSION < 3
+#  define DEFAULT_ENCODING Py_FileSystemDefaultEncoding
+#else
+#  define DEFAULT_ENCODING NULL
+#endif
 
 // OS X has no pthread_barrier support, so we get to do this instead.
 static struct {
@@ -603,7 +611,7 @@ static PyObject *py_reader(PyObject *self, PyObject *args)
 	int comment_char;
 	int lf_char;
 	if (!PyArg_ParseTuple(args, "etiLiOiiii",
-		Py_FileSystemDefaultEncoding, &fn,
+		DEFAULT_ENCODING, &fn,
 		&slices,
 		&skip_lines,
 		&skip_empty_lines,
@@ -658,7 +666,7 @@ static PyObject *py_import_slice(PyObject *self, PyObject *args)
 		&slices,
 		&field_count,
 		&o_out_fns,
-		Py_FileSystemDefaultEncoding, &gzip_mode,
+		DEFAULT_ENCODING, &gzip_mode,
 		&separator,
 		&o_r_num,
 		&quote_char,
