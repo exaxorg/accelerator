@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -100,6 +100,14 @@ def load_config(filename):
 			raise _E('%r does not exist' % (val,))
 	def check_workdirs(val):
 		name, path = val
+		if val in cfg['workdirs']:
+			# The exact same thing was repeated.
+			# This is allowed, because you want to be able to have something like
+			#    ${USER} /workdirs/${USER}
+			#    foo     /workdirs/foo
+			#    bar     /workdirs/bar
+			# in your config, and have it still work for the foo and bar users.
+			return
 		if name in (v[0] for v in cfg['workdirs']):
 			raise _E('Workdir %s redefined' % (name,))
 		if path in (v[1] for v in cfg['workdirs']):
