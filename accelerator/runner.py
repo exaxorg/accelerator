@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -42,7 +42,9 @@ import tarfile
 import resource
 import gc
 import re
-from threading import Thread, Lock
+from threading import Thread, Lock as TLock
+from multiprocessing import Lock as MPLock
+from accelerator.mp import SimplifiedProcess
 
 archives = {}
 
@@ -400,7 +402,7 @@ class Runner(object):
 		self.python = python
 		self.cookie = 0
 		self._waiters = {}
-		self._lock = Lock()
+		self._lock = TLock()
 		self._thread = Thread(
 			target=self._receiver,
 			name="%d receiver" % (pid,),
@@ -538,7 +540,7 @@ if __name__ == "__main__":
 	sys.stdout = AutoFlush(sys.stdout)
 	sys.stderr = AutoFlush(sys.stderr)
 	sock = socket.fromfd(int(sys.argv[1]), socket.AF_UNIX, socket.SOCK_STREAM)
-	sock_lock = Lock()
+	sock_lock = MPLock()
 	update_valid_fds()
 
 	# Set the highest open file limit we can.
@@ -571,12 +573,13 @@ if __name__ == "__main__":
 				res = launch_start(data)
 				respond(cookie, res)
 			elif op == b'f':
-				# waits until job is done, so must run on a separate thread
-				Thread(
+				# waits until job is done, so must run in a separate process
+				SimplifiedProcess(
 					target=launch_finish,
 					args=(cookie, data,),
 					name=data[3], # jobid
-				).start()
+				)
+				os.close(data[1]) # close prof_r in the parent
 			elif op == b'w':
 				# It would be nice to be able to just ignore children
 				# (set SIGCHLD to SIG_IGN), but the server might want to
