@@ -113,13 +113,13 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 				break
 			if server_name == 'server' and e.code != 503 and resp:
 				return fmt(resp)
-		except URLError:
+		except URLError as e:
 			# Don't say anything the first times, because the output
 			# tests get messed up if this happens during them.
 			if attempt < retries - 1:
 				msg = None
 			else:
-				msg = 'error contacting ' + server_name
+				msg = 'error contacting %s: %s' % (server_name, e.reason)
 		except ValueError as e:
 			msg = 'Bad data from %s, %s: %s' % (server_name, type(e).__name__, e,)
 		if msg and not quiet:
