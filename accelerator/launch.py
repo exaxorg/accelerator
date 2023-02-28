@@ -86,6 +86,8 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		os.close(_prof_fd)
 		slicename = 'analysis(%d)' % (sliceno_,)
 		setproctitle(slicename)
+		from accelerator.extras import saved_files, _backgrounded_wait
+		saved_files.clear() # don't inherit (and then return) the files from prepare
 		if delayed_start:
 			os.close(delayed_start[1])
 			update = statmsg._start('waiting for concurrency limit (%d)' % (sliceno_,), parent_pid, True)
@@ -142,7 +144,6 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				if sliceno_ == 0:
 					blob.save(False, "Analysis.tuple", temp=True)
 				save(res, "Analysis.")
-		from accelerator.extras import saved_files, _backgrounded_wait
 		dw_lens = {}
 		dw_minmax = {}
 		dw_compressions = {}

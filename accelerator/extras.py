@@ -97,6 +97,10 @@ class _SavedFile(object):
 		from accelerator import g
 		return JobWithFile(g.job, self._filename, self._sliceno is not None, extra)
 
+	def remove(self):
+		# mark file as temp, so it will be deleted later (unless --keep-temp-files)
+		saved_files[self.filename] = True
+
 	def __getstate__(self):
 		if _SavedFile_allow_pickle:
 			return self._filename, self._sliceno, self._loader
