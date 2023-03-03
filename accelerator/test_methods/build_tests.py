@@ -183,6 +183,7 @@ def main(urd):
 	urd.build('test_dataset_parsing_writer')
 	urd.build('test_dataset_overwrite')
 	urd.build('test_dataset_rename_columns')
+	urd.build('test_dataset_concat')
 
 	print()
 	print("Testing order preservation in dicts in options")
