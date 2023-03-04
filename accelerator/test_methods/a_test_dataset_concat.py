@@ -75,18 +75,23 @@ def synthesis(job):
 		return {k: v for k, v in d.items() if k in types}
 
 	# default to hashlabel='b' so that only two slices get data
-	def mk_ds(name, num, hashlabel='b', **kw):
+	def mk_ds(name, num, hashlabel='b', empty=False, **kw):
 		dw = job.datasetwriter(name=name, columns=types, hashlabel=hashlabel, **kw)
 		write = dw.get_split_write()
-		for ix in range(100 * num, 100 * num + 100):
-			write(**data(ix))
+		if not empty:
+			for ix in range(100 * num, 100 * num + 100):
+				write(**data(ix))
 		return dw.finish()
 
 	previous = None
 	for num in range(8):
 		previous = mk_ds(str(num), num, previous=previous)
-	numbered = previous.chain()
-	assert len(numbered) == 8
+	# we want one empty to make sure nothing breaks from that
+	empty = mk_ds('empty', 0, empty=True, previous=previous)
+	assert len(list(empty.iterate(None))) == 0
+	last = mk_ds('8', 8, previous=empty)
+	numbered = last.chain()
+	assert len(numbered) == 10
 
 	# Verify contents, chaining and types (including none_support)
 	def chk(source, previous, want_in_chain, want, do_sort=True, none_support=()):
@@ -107,6 +112,14 @@ def synthesis(job):
 	b = chk(numbered[6], a, [a], numbered[4:7])
 	# c uses just one dataset, so order should not change from source
 	c = chk(numbered[7], b, [a, b], [numbered[7]], do_sort=False)
+	# make sure an empty dataset alone is fine
+	chk(empty, c, [a, b, c], [empty])
+	# and that an empty dataset as part of the chain is fine
+	chk(last, b, [a, b], numbered[7:])
+	# empty last in chain, equivalent to c above
+	chk(empty, b, [a, b], [numbered[7]], do_sort=False)
+	# empty first in chain
+	chk(last, c, [a, b, c], numbered[8:], do_sort=False)
 
 	# Test some things that should fail
 	def want_fail(why, **kw):
