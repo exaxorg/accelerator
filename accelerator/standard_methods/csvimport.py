@@ -180,7 +180,7 @@ struct __attribute__ ((__packed__)) line_data {
 	int32_t  len; // negative for comments
 };
 
-static int reader(const char *fn, const int slices, uint64_t skip_lines, const int skip_empty_lines, const int outfds[], int labels_fd, int status_fd, const int comment_char, const int lf_char)
+static int reader(const char *fn, const int slices, uint64_t skip_lines, const int skip_empty_lines, const int outfds[], int labels_fd, int label_lines, int status_fd, const int comment_char, const int lf_char)
 {
 	int res = 1;
 	int normal_sliceno = 0;
@@ -294,6 +294,7 @@ static int reader(const char *fn, const int slices, uint64_t skip_lines, const i
 		} else {
 			memcpy(ptr - sizeof(line_data), &line_data, sizeof(line_data));
 			err1(writeall(labels_fd, ptr - sizeof(line_data), len + sizeof(line_data)));
+			if (--label_lines) continue;
 			close(labels_fd);
 			labels_fd = -1;
 			// Presumably there are not all that many of these, so one write each it is.
@@ -541,7 +542,10 @@ buf_prefilled:
 				}
 			}
 		}
-		if (!parsing_labels) {
+		if (parsing_labels) {
+			// Write None after each line
+			err1(gzwrite(outfh[field], "\xff\x00\x00\x00\x00", 5) != 5);
+		} else {
 			if (field == real_field_count - 1) {
 				// The last field was empty (we can't reach here if it was totally missing)
 				field_lens[field] = 0;
@@ -613,16 +617,18 @@ static PyObject *py_reader(PyObject *self, PyObject *args)
 	PyObject *o_outfds;
 	int *outfds = 0;
 	int labels_fd;
+	int label_lines;
 	int status_fd;
 	int comment_char;
 	int lf_char;
-	if (!PyArg_ParseTuple(args, "etiLiOiiii",
+	if (!PyArg_ParseTuple(args, "etiLiOiiiii",
 		DEFAULT_ENCODING, &fn,
 		&slices,
 		&skip_lines,
 		&skip_empty_lines,
 		&o_outfds,
 		&labels_fd,
+		&label_lines,
 		&status_fd,
 		&comment_char,
 		&lf_char
@@ -641,7 +647,7 @@ static PyObject *py_reader(PyObject *self, PyObject *args)
 			return 0;
 		}
 	}
-	fail = reader(fn, slices, skip_lines, skip_empty_lines, outfds, labels_fd, status_fd, comment_char, lf_char);
+	fail = reader(fn, slices, skip_lines, skip_empty_lines, outfds, labels_fd, label_lines, status_fd, comment_char, lf_char);
 	fflush(stderr);
 err:
 	if (outfds) free(outfds);
@@ -726,7 +732,7 @@ c_module_code, c_module_hash = c_backend_support.make_source('csvimport', all_c_
 
 def init():
 	protos = [
-		'static int reader(const char *fn, const int slices, uint64_t skip_lines, const int skip_empty_lines, const int outfds[], int labels_fd, int status_fd, const int comment_char, const int lf_char);',
+		'static int reader(const char *fn, const int slices, uint64_t skip_lines, const int skip_empty_lines, const int outfds[], int labels_fd, int label_lines, int status_fd, const int comment_char, const int lf_char);',
 		'static int import_slice(const int fd, const int sliceno, const int slices, const int field_count, const char *out_fns[], const char *gzip_mode, const int separator, uint64_t *r_num, const int quote_char, const int lf_char, const int allow_bad, const int allow_extra_empty);',
 		'static int char2int(const char c);',
 	]

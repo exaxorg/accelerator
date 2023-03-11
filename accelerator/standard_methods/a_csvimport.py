@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -61,8 +61,8 @@ options = dict(
 	comment           = '',    # Single iso-8859-1 character or empty, lines beginning with this character are ignored.
 	newline           = '',    # Empty means \n or \r\n, or you can specify any single iso-8859-1 character.
 	quotes            = '',    # Empty or False means no quotes, True means both ' and ", any other character means itself.
-	labelsonfirstline = True,
-	labels            = [],    # Mandatory if not labelsonfirstline, always sets labels if set.
+	label_lines       = 1,     # Number of lines with labels on them. Multi-line labels are space-separated.
+	labels            = [],    # Mandatory if label_lines = 0, always sets labels if set.
 	strip_labels      = False, # Do .strip() on all labels (happens before rename).
 	rename            = {},    # Labels to replace (if they are in the file) (happens before discard).
 	discard           = set(), # Labels to not include (if they are in the file)
@@ -113,7 +113,7 @@ def reader_process(slices, filename, write_fds, labels_fd, success_fd, status_fd
 	os.dup2(success_fd, 2) # reader writes errors to stderr
 	os.close(success_fd)
 	success_fd = 2
-	res = cstuff.backend.reader(filename.encode("utf-8"), slices, options.skip_lines, options.skip_empty_lines, write_fds, labels_fd, status_fd, comment_char, lf_char)
+	res = cstuff.backend.reader(filename.encode("utf-8"), slices, options.skip_lines, options.skip_empty_lines, write_fds, labels_fd, options.label_lines, status_fd, comment_char, lf_char)
 	if not res:
 		os.write(success_fd, b"\0")
 	os.close(success_fd)
@@ -173,7 +173,8 @@ def prepare(job, slices):
 	read_fds = [t[0] for t in fds]
 	write_fds = [t[1] for t in fds]
 
-	if options.labelsonfirstline:
+	if options.label_lines:
+		assert options.label_lines > 0
 		labels_rfd, labels_wfd = os.pipe()
 	else:
 		labels_wfd = -1
@@ -186,7 +187,7 @@ def prepare(job, slices):
 		os.close(fd)
 	os.close(status_wfd)
 
-	if options.labelsonfirstline:
+	if options.label_lines:
 		os.close(labels_wfd)
 		# re-use import logic
 		out_fns = ["labels"]
@@ -195,12 +196,21 @@ def prepare(job, slices):
 			import_slice("c backend failed in label parsing", labels_rfd, -1, -1, -1, out_fns, b"wb1", separator, r_num, quote_char, lf_char, 0, 0)
 		finally:
 			os.close(labels_rfd)
+		labels_from_file = []
 		if os.path.exists("labels"):
+			# This is one item per field with lines separated with None
 			with typed_reader("bytes")("labels") as fh:
-				labels_from_file = [lab.decode("utf-8", "backslashreplace") for lab in fh]
+				labels = list(fh)
+			while None in labels:
+				ix = labels.index(None)
+				labels_from_file.append([lab.decode("utf-8", "backslashreplace") for lab in labels[:ix]])
+				labels = labels[ix + 1:]
+			assert labels == []
+			assert len(labels_from_file) == r_num[0]
+			if len(set(len(labs) for labs in labels_from_file)) != 1:
+				raise Exception("Not all label lines had the same number of fields")
+			labels_from_file = [' '.join(labs) for labs in zip(*labels_from_file)]
 			os.unlink("labels")
-		else:
-			labels_from_file = []
 	else:
 		labels_from_file = None
 

@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -59,7 +59,7 @@ def verify(zipname, inside_filenames, want_ds, **kw):
 def verify_order(want_order, namemap={}, **kw):
 	opts=dict(
 		filename=g.job.filename('many files.zip'),
-		labelsonfirstline=False,
+		label_lines=0,
 		labels=['0'],
 	)
 	opts.update(kw)
@@ -119,7 +119,7 @@ def synthesis():
 	verify('both, b compressed.zip', {}, {'a': list_a, 'b': list_b})
 	verify('both called a.zip', {}, {'a': list_a, 'a_': list_b})
 	verify('both called a, first compressed.zip', {}, {'a': list_a, 'a_': list_b})
-	verify('many files.zip', {}, manyfiles, labelsonfirstline=False, labels=['0'])
+	verify('many files.zip', {}, manyfiles, label_lines=0, labels=['0'])
 	verify('named default.zip', {}, {'default': list_b})
 	# Use inside_filenames to test this again in a different way.
 	verify('a.zip', {'a': 'default'}, {'default': list_a})
