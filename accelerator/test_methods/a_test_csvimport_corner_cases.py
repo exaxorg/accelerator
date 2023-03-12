@@ -57,16 +57,18 @@ def check_array(job, lines, filename, bad_lines=(), **options):
 	)
 	verify_ds(options, d, d_bad, {}, filename)
 
-def verify_ds(options, d, d_bad, d_skipped, filename):
+def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 	jid = subjobs.build("csvimport", options=options)
 	ds = Dataset(jid)
-	expected_columns = {"ix", "0", "1"}
+	if not d_columns:
+		d_columns = ["ix", "0", "1"]
+	expected_columns = set(d_columns)
 	if options.get("lineno_label"):
 		expected_columns.add(options["lineno_label"])
-		lineno_want = {ix: int(ix) for ix in ds.iterate(None, "ix")}
+		lineno_want = {ix: int(ix) for ix in ds.iterate(None, d_columns[0])}
 	assert set(ds.columns) == expected_columns
 	# Order varies depending on slice count, so we use a dict {ix: data}
-	for ix, a, b in ds.iterate(None, ["ix", "0", "1"]):
+	for ix, a, b in ds.iterate(None, d_columns):
 		try:
 			ix = int(ix)
 		except ValueError:
@@ -95,7 +97,7 @@ def verify_ds(options, d, d_bad, d_skipped, filename):
 	assert not d_skipped, "Not all bad lines returned from %r (%s), %r missing" % (filename, jid, set(d_skipped.keys()),)
 
 	if options.get("lineno_label"):
-		lineno_got = dict(ds.iterate(None, ["ix", options.get("lineno_label")]))
+		lineno_got = dict(ds.iterate(None, [d_columns[0], options.get("lineno_label")]))
 		assert lineno_got == lineno_want, "%r != %r" % (lineno_got, lineno_want,)
 		verify_minmax(ds, options["lineno_label"])
 
@@ -170,14 +172,14 @@ def check_no_separator(job):
 			got_c = Counter(Dataset(jid).iterate(None, "data"))
 			assert got_c == wrote_c, "Importing %r (%s) gave wrong contents" % (filename, jid,)
 
-def check_good_file(job, name, data, d, d_bad={}, d_skipped={}, **options):
+def check_good_file(job, name, data, d, d_bad={}, d_skipped={}, d_columns=None, **options):
 	filename = name + ".txt"
 	with openx(filename) as fh:
 		fh.write(data)
 	options.update(
 		filename=job.filename(filename),
 	)
-	verify_ds(options, d, d_bad, d_skipped, filename)
+	verify_ds(options, d, d_bad, d_skipped, filename, d_columns)
 
 def synthesis(job):
 	check_good_file(job, "mixed line endings", b"ix,0,1\r\n1,a,a\n2,b,b\r\n3,c,c", {1: b"a", 2: b"b", 3: b"c"})
@@ -207,6 +209,8 @@ def synthesis(job):
 	check_good_file(job, "skip empty lines", b"\nix,0,1\n\n\n1,a,a\n", {1: b"a"}, skip_empty_lines=True)
 	check_good_file(job, "skip empty lines and comments", b"\r\nix,0,1\n\n\n5,a,a\n#6,b,b\n7,c,c\n#", {5: b"a", 7: b"c"}, skip_empty_lines=True, comment="#", d_skipped={1: b"", 3: b"", 4: b"", 6: b"#6,b,b", 8: b"#"}, lineno_label="line")
 	check_good_file(job, "skip empty lines and bad", b"\n\nix,0,1\n4,a,a\n \n6,b,b\n\r\n", {4: b"a", 6: b"b"}, skip_empty_lines=True, comment="#", d_skipped={1: b"", 2: b"", 7: b""}, d_bad={5: b" "}, allow_bad=True, lineno_label="line")
+	check_good_file(job, "two label lines", b"a,b,c\nx,y,z\n3,a,a\n4,b,b\n", {3: b"a", 4: b"b"}, label_lines=2, lineno_label="line", d_columns=["a x", "b y", "c z"])
+	check_good_file(job, "three label lines with comments between", b"a,b,c\n#2,2,2\nfoo,bar,blutti\n#4,4,4\nd,e,f\n6,a,a\n#7,7,7\n8,b,b\n", {6: b"a", 8: b"b"}, label_lines=3, lineno_label="line", comment="#", d_skipped={2: b"#2,2,2", 4: b"#4,4,4", 7: b"#7,7,7"}, d_columns=["a foo d", "b bar e", "c blutti f"])
 
 	bad_lines = [
 		b"bad,bad",
