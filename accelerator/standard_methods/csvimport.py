@@ -175,13 +175,18 @@ err:
 	} \
 } while(0)
 
-// smallest int32
-#define LABELS_DONE_MARKER -2147483648
+struct __attribute__ ((__packed__)) line_data {
+	uint64_t lineno;
+	int32_t  len; // negative for comments
+};
 
 static int reader(const char *fn, const int slices, uint64_t skip_lines, const int skip_empty_lines, const int outfds[], int labels_fd, int status_fd, const int comment_char, const int lf_char)
 {
 	int res = 1;
-	int sliceno = 0;
+	int normal_sliceno = 0;
+	int comment_sliceno = 0;
+	int sliceno;
+	int *sliceno_ptr;
 	pthread_t thread;
 	read_fh = 0;
 	char *slicebufs[slices];
@@ -192,6 +197,14 @@ static int reader(const char *fn, const int slices, uint64_t skip_lines, const i
 	uint64_t comments_capacity = 0;
 	char **comments = 0;
 	int32_t *comment_lens = 0;
+
+	if (sizeof(struct line_data) != 12) {
+		// errors on stderr get propagated to an exception, but unfortunately
+		// this doesn't work before the labels have been read.
+		FILE *err_fd = (labels_fd == -1 ? stderr : stdout);
+		fprintf(err_fd, "struct line_data should be 12 bytes, not %ld bytes. What happened?\n", (long) sizeof(struct line_data));
+		exit(1);
+	}
 
 	for (int i = 0; i < slices; i++) {
 		slicebufs[i] = 0;
@@ -238,31 +251,36 @@ static int reader(const char *fn, const int slices, uint64_t skip_lines, const i
 		if (skip_lines || *ptr == comment_char || (skip_empty_lines && len == 0)) {
 			if (skip_lines) skip_lines--;
 			claim_len = -len - 1;
+			sliceno_ptr = &comment_sliceno;
+			sliceno = comment_sliceno;
 		} else {
 			claim_len = len;
+			sliceno_ptr = &normal_sliceno;
+			sliceno = normal_sliceno;
 		}
+		struct line_data line_data = {linecnt, claim_len};
 		if (labels_fd == -1) {
 			if (len > SLICEBUF_THRESH) {
 				FLUSH_WRITES(sliceno);
-				memcpy(ptr - 4, &claim_len, 4);
-				err1(writeall(outfds[sliceno], ptr - 4, len + 4));
+				memcpy(ptr - sizeof(line_data), &line_data, sizeof(line_data));
+				err1(writeall(outfds[sliceno], ptr - sizeof(line_data), len + sizeof(line_data)));
 			} else {
-				if (slicebuf_lens[sliceno] + len + 4 > SLICEBUF_Z) {
+				if (slicebuf_lens[sliceno] + len + sizeof(line_data) > SLICEBUF_Z) {
 					FLUSH_WRITES(sliceno);
 				}
 				char *sptr = slicebufs[sliceno] + slicebuf_lens[sliceno];
-				memcpy(sptr, &claim_len, 4);
-				memcpy(sptr + 4, ptr, len);
-				slicebuf_lens[sliceno] += len + 4;
+				memcpy(sptr, &line_data, sizeof(line_data));
+				memcpy(sptr + sizeof(line_data), ptr, len);
+				slicebuf_lens[sliceno] += len + sizeof(line_data);
 			}
-			sliceno = (sliceno + 1) % slices;
+			*sliceno_ptr = (*sliceno_ptr + 1) % slices;
 		} else if (claim_len < 0) {
 			// No writers yet, so trying to write to the outfd might block forever.
-			const int32_t tmp_len = len + 4;
+			const int32_t tmp_len = len + sizeof(line_data);
 			char *tmp = malloc(tmp_len);
 			err1(!tmp);
-			memcpy(tmp, &claim_len, 4);
-			memcpy(tmp + 4, ptr, len);
+			memcpy(tmp, &line_data, sizeof(line_data));
+			memcpy(tmp + sizeof(line_data), ptr, len);
 			if (comments_before_labels == comments_capacity) {
 				comments_capacity = (comments_capacity + 10) * 2;
 				comments = realloc(comments, comments_capacity * sizeof(*comments));
@@ -274,26 +292,19 @@ static int reader(const char *fn, const int slices, uint64_t skip_lines, const i
 			comment_lens[comments_before_labels] = tmp_len;
 			comments_before_labels++;
 		} else {
-			// Only happens once anyway, so no need to optimize
-			err1(writeall(labels_fd, &len, 4));
-			err1(writeall(labels_fd, ptr, len));
+			memcpy(ptr - sizeof(line_data), &line_data, sizeof(line_data));
+			err1(writeall(labels_fd, ptr - sizeof(line_data), len + sizeof(line_data)));
 			close(labels_fd);
 			labels_fd = -1;
 			// Presumably there are not all that many of these, so one write each it is.
 			if (comments_before_labels) {
 				for (uint64_t i = 0; i < comments_before_labels; i++) {
-					err1(writeall(outfds[sliceno], comments[i], comment_lens[i]));
-					sliceno = (sliceno + 1) % slices;
+					err1(writeall(outfds[comment_sliceno], comments[i], comment_lens[i]));
 					free(comments[i]);
+					comment_sliceno = (comment_sliceno + 1) % slices;
 				}
 				free(comments);
 				free(comment_lens);
-			}
-			// Let all slices know the labels are done so they can add 1 to lineno.
-			const int32_t labels_done_marker = LABELS_DONE_MARKER;
-			for (int i = 0; i < slices; i++) {
-				memcpy(slicebufs[i], &labels_done_marker, 4);
-				slicebuf_lens[i] = 4;
 			}
 		}
 	}
@@ -393,12 +404,13 @@ static int import_slice(const int fd, const int sliceno, const int slices, int f
 	}
 	int eof = 0;
 	int32_t len;
-	uint64_t lineno = sliceno + 1;
+	uint64_t lineno;
 	int field;
 	int skip_line = 0;
 	char *bufptr;
+	struct line_data line_data;
 	// Do this first so we can skip opening output files if we are empty.
-	if (bufread(fd, buf, 4, &eof, &bufptr)) {
+	if (bufread(fd, buf, sizeof(line_data), &eof, &bufptr)) {
 		if (eof) goto done;
 		goto err;
 	}
@@ -411,18 +423,15 @@ static int import_slice(const int fd, const int sliceno, const int slices, int f
 	goto buf_prefilled;
 keep_going:
 	while (1) {
-		if (bufread(fd, buf, 4, &eof, &bufptr)) {
+		if (bufread(fd, buf, sizeof(line_data), &eof, &bufptr)) {
 			if (eof) break;
 			goto err;
 		}
 buf_prefilled:
-		memcpy(&len, bufptr, 4);
+		memcpy(&line_data, bufptr, sizeof(line_data));
+		lineno = line_data.lineno;
+		len = line_data.len;
 		if (len < 0) {
-			if (len == LABELS_DONE_MARKER) {
-				// labels are done, so we are now offset one line
-				lineno++;
-				continue;
-			}
 			len = -(len + 1);
 			skip_line = 1;
 		}
@@ -433,7 +442,6 @@ buf_prefilled:
 			err1(field_write(outfh[real_field_count + 3], bufptr, len));
 			r_num[2]++;
 			skip_line = 0;
-			lineno += slices;
 			continue;
 		}
 		int32_t pos = 0;
@@ -552,7 +560,6 @@ buf_prefilled:
 			}
 		}
 		num++;
-		lineno += slices;
 	}
 done:
 	*r_num = num;
@@ -581,7 +588,6 @@ bad_line:
 			err1(gzwrite(outfh[real_field_count], &lineno, 8) != 8);
 			err1(field_write(outfh[real_field_count + 1], bufptr, len));
 		}
-		lineno += slices;
 		goto keep_going;
 	} else {
 		goto err;
