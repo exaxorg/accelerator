@@ -61,7 +61,8 @@ options = dict(
 	comment           = '',    # Single iso-8859-1 character or empty, lines beginning with this character are ignored.
 	newline           = '',    # Empty means \n or \r\n, or you can specify any single iso-8859-1 character.
 	quotes            = '',    # Empty or False means no quotes, True means both ' and ", any other character means itself.
-	label_lines       = 1,     # Number of lines with labels on them. Multi-line labels are space-separated.
+	label_lines       = int,   # Number of lines with labels on them. Multi-line labels are space-separated.
+	                           # Defaults to 1 unless labels is set.
 	labels            = [],    # Mandatory if label_lines = 0, always sets labels if set.
 	strip_labels      = False, # Do .strip() on all labels (happens before rename).
 	rename            = {},    # Labels to replace (if they are in the file) (happens before discard).
@@ -94,7 +95,7 @@ def reader_status(status_fd, update):
 			break
 		count = struct.unpack("=Q", data)[0]
 
-def reader_process(slices, filename, write_fds, labels_fd, success_fd, status_fd, comment_char, lf_char):
+def reader_process(slices, filename, write_fds, labels_fd, success_fd, status_fd, comment_char, lf_char, label_lines):
 	# Terrible hack - try to close FDs we didn't want in this process.
 	# (This is important, if the main process dies this won't be
 	# detected if we still have these open.)
@@ -113,7 +114,7 @@ def reader_process(slices, filename, write_fds, labels_fd, success_fd, status_fd
 	os.dup2(success_fd, 2) # reader writes errors to stderr
 	os.close(success_fd)
 	success_fd = 2
-	res = cstuff.backend.reader(filename.encode("utf-8"), slices, options.skip_lines, options.skip_empty_lines, write_fds, labels_fd, options.label_lines, status_fd, comment_char, lf_char)
+	res = cstuff.backend.reader(filename.encode("utf-8"), slices, options.skip_lines, options.skip_empty_lines, write_fds, labels_fd, label_lines, status_fd, comment_char, lf_char)
 	if not res:
 		os.write(success_fd, b"\0")
 	os.close(success_fd)
@@ -173,21 +174,25 @@ def prepare(job, slices):
 	read_fds = [t[0] for t in fds]
 	write_fds = [t[1] for t in fds]
 
-	if options.label_lines:
-		assert options.label_lines > 0
+	label_lines = options.label_lines
+	if label_lines is None:
+		label_lines = 0 if options.labels else 1
+
+	if label_lines:
+		assert label_lines > 0
 		labels_rfd, labels_wfd = os.pipe()
 	else:
 		labels_wfd = -1
 	success_fh = open("reader.success", "wb+")
 	status_rfd, status_wfd = os.pipe()
 
-	p = Process(target=reader_process, name="reader", args=(slices, filename, write_fds, labels_wfd, success_fh.fileno(), status_wfd, comment_char, lf_char))
+	p = Process(target=reader_process, name="reader", args=(slices, filename, write_fds, labels_wfd, success_fh.fileno(), status_wfd, comment_char, lf_char, label_lines))
 	p.start()
 	for fd in write_fds:
 		os.close(fd)
 	os.close(status_wfd)
 
-	if options.label_lines:
+	if label_lines:
 		os.close(labels_wfd)
 		# re-use import logic
 		out_fns = ["labels"]
