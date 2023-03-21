@@ -78,7 +78,8 @@
 			} else {
 				waitingEl.style.display = 'block';
 			}
-			items.sort((a, b) => b[1].ts - a[1].ts);
+			// sort files on ts, but fall back to (link) name for files with the same time
+			items.sort((a, b) => b[1].ts - a[1].ts || a[0].localeCompare(b[0]));
 			let prev = waitingEl;
 			for (const [name, data] of items) {
 				const oldEl = existing[name];
