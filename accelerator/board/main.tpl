@@ -55,7 +55,7 @@
 		});
 	};
 	const update = function (try_num) {
-		fetch('/results', {headers: {Accept: 'application/json'}})
+		fetch('{{ url_path }}', {headers: {Accept: 'application/json'}})
 		.then(res => {
 			if (res.ok) return res.json();
 			throw new Error('error response');
@@ -180,7 +180,7 @@
 		return ext;
 	}
 	const load = function (name, data, size) {
-		const fileUrl = '/results/' + encodeURIComponent(name) + '?ts=' + data.ts;
+		const fileUrl = '{{ url_path }}/' + encodeURIComponent(name) + '?ts=' + data.ts;
 		const ext = name2ext(name);
 		const container = document.createElement('DIV');
 		const spinner = document.createElement('DIV');

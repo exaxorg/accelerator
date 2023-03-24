@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2022 Carl Drougge                                     #
+# Copyright (c) 2020-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -231,27 +231,23 @@ def run(cfg, from_shell=False):
 
 	@bottle.get('/')
 	@view('main')
-	def main_page():
+	def main_page(path='/results'):
 		return dict(
 			project=project,
 			workdirs=cfg.workdirs,
+			path=path,
+			url_path=url_quote(path),
 		)
 
-	@bottle.get('/results')
-	def results():
+	def results_contents(path):
 		files = {}
 		res = {'files': files}
-		filenames = ()
-		try:
-			filenames = os.listdir(cfg.result_directory)
-		except KeyError:
-			res['missing'] = 'result directory not configured'
-		except OSError:
-			res['missing'] = 'result directory %r missing' % (cfg.result_directory,)
+		prefix = os.path.join(cfg.result_directory, path)
+		filenames = os.listdir(prefix)
 		for fn in filenames:
 			if fn.endswith('_'):
 				continue
-			ffn = os.path.join(cfg.result_directory, fn)
+			ffn = os.path.join(prefix, fn)
 			try:
 				jobid, name = os.readlink(ffn).split('/')[-2:]
 				files[fn] = dict(
@@ -262,13 +258,25 @@ def run(cfg, from_shell=False):
 				)
 			except OSError:
 				continue
-		bottle.response.content_type = 'application/json; charset=UTF-8'
-		bottle.response.set_header('Cache-Control', 'no-cache')
-		return json.dumps(res)
+		return res
 
-	@bottle.get('/results/<name>')
-	def file(name):
-		return bottle.static_file(name, root=cfg.result_directory)
+	@bottle.get('/results')
+	@bottle.get('/results/')
+	@bottle.get('/results/<path:path>')
+	def results(path=''):
+		path = path.strip('/')
+		if os.path.isdir(os.path.join(cfg.result_directory, path)):
+			accept = get_best_accept('text/html', 'application/json', 'text/json')
+			if accept == 'text/html':
+				return main_page(path=os.path.join('/results', path).rstrip('/'))
+			else:
+				bottle.response.content_type = accept + '; charset=UTF-8'
+				bottle.response.set_header('Cache-Control', 'no-cache')
+				return json.dumps(results_contents(path))
+		elif path:
+			return bottle.static_file(path, root=cfg.result_directory)
+		else:
+			return {'missing': 'result directory %r missing' % (cfg.result_directory,)}
 
 	@bottle.get('/status')
 	@view('status')
