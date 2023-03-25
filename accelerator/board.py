@@ -24,6 +24,7 @@ import tarfile
 import itertools
 import collections
 import functools
+from stat import S_ISDIR, S_ISLNK
 
 from accelerator.job import Job, JobWithFile
 from accelerator.dataset import Dataset
@@ -241,7 +242,8 @@ def run(cfg, from_shell=False):
 
 	def results_contents(path):
 		files = {}
-		res = {'files': files}
+		dirs = {}
+		res = {'files': files, 'dirs': dirs}
 		prefix = os.path.join(cfg.result_directory, path)
 		filenames = os.listdir(prefix)
 		for fn in filenames:
@@ -249,15 +251,22 @@ def run(cfg, from_shell=False):
 				continue
 			ffn = os.path.join(prefix, fn)
 			try:
-				jobid, name = os.readlink(ffn).split('/')[-2:]
-				files[fn] = dict(
-					jobid=jobid,
-					name=name,
-					ts=os.lstat(ffn).st_mtime,
-					size=os.stat(ffn).st_size,
-				)
+				lstat = os.lstat(ffn)
+				if S_ISLNK(lstat.st_mode):
+					jobid, name = os.readlink(ffn).split('/')[-2:]
+					files[fn] = dict(
+						jobid=jobid,
+						name=name,
+						ts=lstat.st_mtime,
+						size=os.stat(ffn).st_size,
+					)
+				elif S_ISDIR(lstat.st_mode):
+					dirs[fn] = os.path.join('/results', path, fn, '')
 			except OSError:
 				continue
+		if path:
+			a, b = os.path.split(path)
+			dirs['..'] = os.path.join('/results', a, '') if a else '/'
 		return res
 
 	@bottle.get('/results')

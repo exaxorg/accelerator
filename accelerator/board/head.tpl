@@ -18,6 +18,7 @@
 			--fg-a-v: #529;
 			--fg-a-a: #c16;
 			--fg-weak: #988890;
+			--fg-weakish: #79736c;
 			--checkmark: #193;
 			--border0: #e4e1d0;
 			--border1: #e7e5d6;
@@ -39,6 +40,7 @@
 				--fg-a-v: #caf;
 				--fg-a-a: #f9b;
 				--fg-weak: #877;
+				--fg-weakish: #988;
 				--checkmark: #9eb;
 				--border0: #764;
 				--border1: #875;
@@ -111,6 +113,11 @@
 		#header {
 			float: left;
 		}
+		#path {
+			font-family: monospace;
+			font-size: 75%;
+			color: var(--fg-weakish);
+		}
 		#missing {
 			visibility: hidden;
 		}
@@ -173,6 +180,17 @@
 		}
 		#workdirs td {
 			padding-right: 1em;
+		}
+		#dirs {
+			clear: both;
+		}
+		#dirs ul {
+			list-style-type: "\1F4C1";
+		}
+		#dirs a {
+			padding-left: 0.3em;
+			font-family: monospace;
+			font-size: 150%;
 		}
 		.textfile {
 			max-height: var(--max-height);

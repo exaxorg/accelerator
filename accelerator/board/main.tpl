@@ -18,10 +18,14 @@
 		</ul>
 		<input type="submit" value="show all" id="show-all" disabled>
 	</div>
-	<h1 id="header">ax board: {{ project }}</h1>
+	<h1 id="header">
+		ax board: {{ project }}
+		<span id="path">{{ path[8:] }}</span>
+	</h1>
 	<div id="status">
 		<a target="_blank" href="/status">status</a>: <span></span>
 	</div>
+	<div id="dirs"><ul></ul></div>
 	<div id="missing"></div>
 	<div id="waiting"><div class="spinner"></div></div>
 <script language="javascript">
@@ -72,6 +76,27 @@
 			for (const el of document.querySelectorAll('.result')) {
 				if (el.dataset.name) existing[el.dataset.name] = el;
 			};
+
+			const dirs_ul = document.querySelector('#dirs ul');
+			const dirs_els = {};
+			for (const el of dirs_ul.querySelectorAll('li')) {
+				dirs_els[el.dataset.name] = el;
+				el.remove();
+			}
+			const dirs = Object.entries(res.dirs).sort();
+			for (const [name, href] of dirs) {
+				let el = dirs_els[name];
+				if (!el) {
+					el = document.createElement('LI');
+					el.dataset.name = name;
+					const a = document.createElement('A');
+					a.innerText = name;
+					a.href = encodeURI(href);
+					el.appendChild(a);
+				}
+				dirs_ul.appendChild(el);
+			}
+
 			const items = Object.entries(res.files);
 			if (items.length) {
 				waitingEl.style.display = 'none';
