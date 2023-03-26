@@ -133,9 +133,17 @@
 				resultEl.className = 'result';
 				resultEl.dataset.name = name;
 				resultEl.dataset.ts = data.ts;
-				a(name, data.jobid, data.name);
-				txt(' from ');
-				a(data.jobid, data.jobid);
+				if (data.jobid) {
+					a(name, data.jobid, data.name);
+					txt(' from ');
+					a(data.jobid, data.jobid);
+				} else {
+					txt(name + ' ');
+					const el = document.createElement('SPAN');
+					el.className = 'unknown';
+					el.appendChild(document.createTextNode('from UNKNOWN'));
+					resultEl.appendChild(el);
+				}
 				txt(' (');
 				const dateEl = document.createElement('SPAN');
 				dateEl.className = 'date';

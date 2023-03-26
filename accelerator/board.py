@@ -250,20 +250,32 @@ def run(cfg, from_shell=False):
 			if fn.endswith('_'):
 				continue
 			ffn = os.path.join(prefix, fn)
+			name = fn
 			try:
 				lstat = os.lstat(ffn)
 				if S_ISLNK(lstat.st_mode):
-					jobid, name = os.readlink(ffn).split('/')[-2:]
-					files[fn] = dict(
-						jobid=jobid,
-						name=name,
-						ts=lstat.st_mtime,
-						size=os.stat(ffn).st_size,
-					)
-				elif S_ISDIR(lstat.st_mode):
-					dirs[fn] = os.path.join('/results', path, fn, '')
+					link_dest = os.readlink(ffn)
+					stat = os.stat(link_dest)
+					try:
+						a = link_dest.split('/')
+						jobid = Job(a[-2])
+						name = a[-1]
+					except (IndexError, NoSuchWhateverError):
+						jobid = None
+				else:
+					stat = lstat
+					jobid = None
 			except OSError:
 				continue
+			if S_ISDIR(stat.st_mode):
+				dirs[fn] = os.path.join('/results', path, fn, '')
+			else:
+				files[fn] = dict(
+					jobid=jobid,
+					name=name,
+					ts=lstat.st_mtime,
+					size=stat.st_size,
+				)
 		if path:
 			a, b = os.path.split(path)
 			dirs['..'] = os.path.join('/results', a, '') if a else '/'

@@ -109,6 +109,9 @@
 			font-weight: bold;
 			padding: 3px;
 		}
+		.unknown {
+			background: var(--bgwarn);
+		}
 
 		#header {
 			float: left;
