@@ -240,6 +240,26 @@ def run(cfg, from_shell=False):
 			url_path=url_quote(path),
 		)
 
+	# Look for actual workdirs, so things like /workdirs/foo/foo-37/foo-1/bar
+	# resolves to ('foo-37', 'foo-1/bar') and not ('foo-1', 'bar').
+	path2wd = {v: k for k, v in cfg.workdirs.items()}
+	def job_and_file(path, default_name):
+		wd = ''
+		path = iter(path.split('/'))
+		for name in path:
+			if not name:
+				continue
+			wd = wd + '/' + name
+			if wd in path2wd:
+				break
+		else:
+			return None, default_name
+		try:
+			jobid = Job(next(path))
+		except (StopIteration, NoSuchWhateverError):
+			return None, default_name
+		return jobid, '/'.join(path) or default_name
+
 	def results_contents(path):
 		files = {}
 		dirs = {}
@@ -250,21 +270,16 @@ def run(cfg, from_shell=False):
 			if fn.endswith('_'):
 				continue
 			ffn = os.path.join(prefix, fn)
-			name = fn
 			try:
 				lstat = os.lstat(ffn)
 				if S_ISLNK(lstat.st_mode):
 					link_dest = os.readlink(ffn)
 					stat = os.stat(link_dest)
-					try:
-						a = link_dest.split('/')
-						jobid = Job(a[-2])
-						name = a[-1]
-					except (IndexError, NoSuchWhateverError):
-						jobid = None
+					jobid, name = job_and_file(link_dest, fn)
 				else:
 					stat = lstat
 					jobid = None
+					name = fn
 			except OSError:
 				continue
 			if S_ISDIR(stat.st_mode):
