@@ -264,7 +264,20 @@ def run(cfg, from_shell=False):
 		files = {}
 		dirs = {}
 		res = {'files': files, 'dirs': dirs}
-		prefix = os.path.join(cfg.result_directory, path)
+		default_jobid = None
+		default_prefix = ''
+		prefix = cfg.result_directory
+		for part in path.strip('/').split('/'):
+			prefix = os.path.join(prefix, part)
+			if not default_jobid:
+				try:
+					default_jobid, default_prefix = job_and_file(os.readlink(prefix), '')
+					if default_jobid and default_prefix:
+						default_prefix += '/'
+				except OSError:
+					pass
+			elif default_prefix:
+				default_prefix += part + '/'
 		filenames = os.listdir(prefix)
 		for fn in filenames:
 			if fn.endswith('_'):
@@ -278,8 +291,8 @@ def run(cfg, from_shell=False):
 					jobid, name = job_and_file(link_dest, fn)
 				else:
 					stat = lstat
-					jobid = None
-					name = fn
+					jobid = default_jobid
+					name = default_prefix + fn
 			except OSError:
 				continue
 			if S_ISDIR(stat.st_mode):
