@@ -25,7 +25,7 @@ from collections import namedtuple
 from functools import wraps
 
 from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
-from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError
+from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 
 # WORKDIRS should live in the Automata class, but only for callers
@@ -200,9 +200,17 @@ class Job(unicode):
 		assert running == 'build', "Only link_result from a build script"
 		from accelerator.shell import cfg
 		if linkname is None:
-			linkname = filename
+			linkname = os.path.basename(filename.rstrip('/'))
+		if linkname.endswith('/'):
+			linkname += os.path.basename(filename.rstrip('/'))
 		result_directory = cfg['result_directory']
-		dest_fn = os.path.join(result_directory, linkname)
+		dest_fn = result_directory
+		for part in linkname.split('/'):
+			if not os.path.exists(dest_fn):
+				os.mkdir(dest_fn)
+			elif dest_fn != result_directory and os.path.islink(dest_fn):
+				raise AcceleratorError("Refusing to create link %r: %r is a symlink" % (linkname, dest_fn))
+			dest_fn = os.path.join(dest_fn, part)
 		try:
 			os.remove(dest_fn + '_')
 		except OSError:
