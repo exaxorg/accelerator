@@ -10,6 +10,7 @@
 	--bg0-odd: #f8f4f1;
 	--bg-click: #fbb;
 	--fg0: #222;
+	--fg1: #245;
 	--fg-a: #11f;
 	--fg-a-v: #529;
 	--fg-a-a: #c16;
@@ -32,6 +33,7 @@
 		--bg0-odd: #4e3d2f;
 		--bg-click: #944;
 		--fg0: #ddc;
+		--fg1: #cde;
 		--fg-a: #8cf;
 		--fg-a-v: #caf;
 		--fg-a-a: #f9b;
@@ -195,6 +197,7 @@ input:disabled {
 	max-height: var(--max-height);
 	overflow: auto;
 	background: var(--bg1);
+	color: var(--fg1);
 	border: 2px solid var(--border1);
 	padding-left: 1em;
 }
