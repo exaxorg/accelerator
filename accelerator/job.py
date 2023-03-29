@@ -216,6 +216,8 @@ class Job(unicode):
 				linkname = linkname.rstrip('/')
 			else:
 				linkname += os.path.basename(filename)
+		source_fn = os.path.join(self.path, filename)
+		assert os.path.exists(source_fn), "Filename \"%s\" does not exist in jobdir \"%s\"!" % (filename, self.path)
 		result_directory = cfg['result_directory']
 		dest_fn = result_directory
 		for part in linkname.split('/'):
@@ -228,8 +230,6 @@ class Job(unicode):
 			os.remove(dest_fn + '_')
 		except OSError:
 			pass
-		source_fn = os.path.join(self.path, filename)
-		assert os.path.exists(source_fn), "Filename \"%s\" does not exist in jobdir \"%s\"!" % (filename, self.path)
 		os.symlink(source_fn, dest_fn + '_')
 		os.rename(dest_fn + '_', dest_fn)
 
