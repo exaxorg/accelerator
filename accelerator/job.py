@@ -38,6 +38,14 @@ def dirnamematcher(name):
 	return re.compile(re.escape(name) + r'-[0-9]+$').match
 
 
+def _assert_is_normrelpath(path, dirtype):
+	norm = os.path.normpath(path)
+	if (norm != path and norm + '/' != path) or norm.startswith('/'):
+		raise AcceleratorError('%r is not a normalised relative path' % (path,))
+	if norm == '..' or norm.startswith('../'):
+		raise AcceleratorError('%r is above the %s dir' % (path, dirtype))
+
+
 def _cachedprop(meth):
 	@property
 	@wraps(meth)
@@ -199,10 +207,15 @@ class Job(unicode):
 		from accelerator.g import running
 		assert running == 'build', "Only link_result from a build script"
 		from accelerator.shell import cfg
+		_assert_is_normrelpath(filename, 'job')
 		if linkname is None:
 			linkname = os.path.basename(filename.rstrip('/'))
+		_assert_is_normrelpath(linkname, 'result')
 		if linkname.endswith('/'):
-			linkname += os.path.basename(filename.rstrip('/'))
+			if filename.endswith('/'):
+				linkname = linkname.rstrip('/')
+			else:
+				linkname += os.path.basename(filename)
 		result_directory = cfg['result_directory']
 		dest_fn = result_directory
 		for part in linkname.split('/'):
