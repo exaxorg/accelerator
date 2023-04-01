@@ -224,6 +224,7 @@ def main(urd):
 	print("Testing csvimport with more difficult files")
 	urd.build("test_csvimport_corner_cases")
 	urd.build("test_csvimport_separators")
+	urd.build("test_csvimport_slicing")
 
 	print()
 	print("Testing csvexport with all column types, strange separators, ...")
