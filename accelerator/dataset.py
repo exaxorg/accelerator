@@ -3,7 +3,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -813,7 +813,7 @@ class Dataset(unicode):
 			def update_status(ix, d, sliceno, rehash):
 				update('%s, %d/%d (%s)' % (msg_head, ix, len(to_iter), fmt_dsname(d, sliceno, rehash)))
 		with status(msg_head) as update:
-			update_status._line_report = update._line_report
+			update_status._line_report = getattr(update, '_line_report', None)
 			yield update_status
 
 	@staticmethod
