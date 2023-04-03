@@ -26,6 +26,7 @@ import errno
 import os
 from os.path import dirname, basename, realpath, join
 import locale
+from collections import namedtuple
 from glob import glob
 import re
 import shlex
@@ -130,22 +131,34 @@ def setup(config_fn=None, debug_cmd=False):
 		# as working directory.
 		os.chdir(cfg['project_directory'])
 
-def cmd_grep(argv):
-	from accelerator.shell.grep import main
-	return main(argv, cfg)
-cmd_grep.help = '''search for a pattern in one or more datasets'''
-cmd_grep.is_debug = True
 
-def cmd_ds(argv):
-	from accelerator.shell.ds import main
-	return main(argv, cfg)
-cmd_ds.help = '''display information about datasets'''
-cmd_ds.is_debug = True
+class Command(namedtuple('Command', 'name help is_debug modname')):
+	def __call__(self, argv):
+		from importlib import import_module
+		mod = import_module(self.modname)
+		return mod.main(argv, cfg)
 
-def cmd_run(argv):
-	from accelerator.build import main
-	return main(argv, cfg)
-cmd_run.help = '''run a build script'''
+_COMMANDS = {}
+
+def add_command(name, help, is_debug=False, modname=None):
+	if not modname:
+		modname = 'accelerator.shell.' + name.replace('-', '_')
+	assert name not in _COMMANDS, name
+	_COMMANDS[name] = Command(name, help, is_debug, modname)
+
+add_command('board-server', '''runs a webserver for displaying results''',      modname='accelerator.board')
+add_command('ds',           '''display information about datasets''',           is_debug=True)
+add_command('grep',         '''search for a pattern in one or more datasets''', is_debug=True)
+add_command('init',         '''create a project directory''')
+add_command('job',          '''information about a job''',                      is_debug=True)
+add_command('method',       '''information about methods''')
+add_command('run',          '''run a build script''',                           modname='accelerator.build')
+add_command('script',       '''information about build scripts''')
+add_command('status',       '''server status (like ^T when building)''')
+add_command('urd',          '''inspect urd contents''')
+add_command('urd-server',   '''run the urd server''',                           modname='accelerator.urd')
+add_command('workdir',      '''information about workdirs''', is_debug=True)
+
 
 def cmd_abort(argv):
 	parser = ArgumentParser(prog=argv.pop(0))
@@ -183,53 +196,6 @@ def cmd_server(argv):
 	except MethodLoadException as e:
 		print(e)
 cmd_server.help = '''run the main server'''
-
-def cmd_script(argv):
-	from accelerator.shell.script import main
-	return main(argv, cfg)
-cmd_script.help = '''information about build scripts'''
-
-def cmd_status(argv):
-	from accelerator.shell.status import main
-	return main(argv, cfg)
-cmd_status.help = '''server status (like ^T when building)'''
-
-def cmd_init(argv):
-	from accelerator.shell.init import main
-	main(argv)
-cmd_init.help = '''create a project directory'''
-
-def cmd_urd(argv):
-	from accelerator.shell.urd import main
-	return main(argv, cfg)
-cmd_urd.help = '''inspect urd contents'''
-
-def cmd_urd_server(argv):
-	from accelerator.urd import main
-	main(argv, cfg)
-cmd_urd_server.help = '''run the urd server'''
-
-def cmd_method(argv):
-	from accelerator.shell.method import main
-	main(argv, cfg)
-cmd_method.help = '''information about methods'''
-
-def cmd_workdir(argv):
-	from accelerator.shell.workdir import main
-	main(argv, cfg)
-cmd_workdir.help = '''information about workdirs'''
-cmd_workdir.is_debug = True
-
-def cmd_job(argv):
-	from accelerator.shell.job import main
-	return main(argv, cfg)
-cmd_job.help = '''information about a job'''
-cmd_job.is_debug = True
-
-def cmd_board_server(argv):
-	from accelerator.board import main
-	main(argv, cfg)
-cmd_board_server.help = '''runs a webserver for displaying results'''
 
 def cmd_intro(argv):
 	parser = ArgumentParser(prog=argv.pop(0))
@@ -485,6 +451,9 @@ def main():
 		for k, v in globals().items()
 		if k.startswith('cmd_') and callable(v)
 	}
+	# as is anything in _COMMANDS (i.e. from add_command)
+	assert not set(COMMANDS).intersection(_COMMANDS)
+	COMMANDS.update(_COMMANDS)
 
 	epilog = ['commands:', '']
 	cmdlen = max(len(cmd) for cmd in COMMANDS)

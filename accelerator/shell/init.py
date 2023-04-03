@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -152,7 +152,7 @@ def git(method_dir):
 	check_call(['git', 'add', '--', 'accelerator.conf', '.gitignore', method_dir])
 
 
-def main(argv):
+def main(argv, cfg):
 	from os import makedirs, listdir, chdir
 	from os.path import exists, join, realpath, dirname
 	from sys import version_info
