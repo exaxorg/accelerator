@@ -76,6 +76,7 @@ def synthesis(job):
 	chk(['alias', 'cat'], want_in_help=['shows all aliases'], want_in_call=["grep -e ''"])
 	chk(['board-server'], want_in_help=['localhost:8520'])
 	chk(['ds', '--', ds], want_in_help=['--list'], want_in_call=['Columns:', 'this is a column'])
+	chk(['gc'], want_in_help=['--dry-run'])
 	chk(['grep', '--', '', ds], want_in_help=['--tab-length'], want_in_call=['this is a value'])
 	chk(['init', '--no-git', job.filename('projdir')], want_in_help=['--no-git'], want_in_call=[''])
 	assert os.path.isdir('projdir/workdirs')
