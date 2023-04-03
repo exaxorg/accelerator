@@ -288,25 +288,6 @@ def cmd_version(argv, as_command=True):
 		print('Running on ' + py_version + suffix)
 cmd_version.help = '''show installed accelerator version'''
 
-COMMANDS = {
-	'abort': cmd_abort,
-	'alias': cmd_alias,
-	'board-server': cmd_board_server,
-	'ds': cmd_ds,
-	'grep': cmd_grep,
-	'init': cmd_init,
-	'intro': cmd_intro,
-	'job': cmd_job,
-	'method': cmd_method,
-	'run': cmd_run,
-	'server': cmd_server,
-	'script': cmd_script,
-	'status': cmd_status,
-	'urd': cmd_urd,
-	'urd-server': cmd_urd_server,
-	'version': cmd_version,
-	'workdir': cmd_workdir,
-}
 
 def split_args(argv):
 	prev = None
@@ -497,6 +478,13 @@ def main():
 	colour._names.update(colour_d)
 
 	main_argv, argv = expand_aliases(main_argv, argv)
+
+	# any function cmd_* in this file is a command
+	COMMANDS = {
+		k[4:].replace('_', '-'): v
+		for k, v in globals().items()
+		if k.startswith('cmd_') and callable(v)
+	}
 
 	epilog = ['commands:', '']
 	cmdlen = max(len(cmd) for cmd in COMMANDS)
