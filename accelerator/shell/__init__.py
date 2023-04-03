@@ -189,6 +189,11 @@ def cmd_script(argv):
 	return main(argv, cfg)
 cmd_script.help = '''information about build scripts'''
 
+def cmd_status(argv):
+	from accelerator.shell.status import main
+	return main(argv, cfg)
+cmd_status.help = '''server status (like ^T when building)'''
+
 def cmd_init(argv):
 	from accelerator.shell.init import main
 	main(argv)
@@ -296,6 +301,7 @@ COMMANDS = {
 	'run': cmd_run,
 	'server': cmd_server,
 	'script': cmd_script,
+	'status': cmd_status,
 	'urd': cmd_urd,
 	'urd-server': cmd_urd_server,
 	'version': cmd_version,

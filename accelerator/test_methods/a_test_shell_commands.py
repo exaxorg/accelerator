@@ -92,6 +92,8 @@ def synthesis(job):
 	chk(['run'], want_in_help=['[script]', 'WORKDIR'])
 	chk(['script', 'build_tests'], want_in_help=['describes build scripts'], want_in_call=['Needs at least 3 slices to work.'])
 	chk(['server'], want_in_help=['--debuggable'])
+	chk(['status'], want_in_help=['--short'], want_in_call=['test_shell_commands (', 'synthesis (', 'TAIL OF OUTPUT:'])
+	chk(['status', '--short'], want_in_call=['test_shell_commands synthesis ('])
 	chk(['urd'], want_in_help=[':urdlist:[entry]'], want_in_call=['/tests_urd'])
 	chk(['urd', 'tests_urd/'], want_in_call=['2021-09-27T03:14'])
 	chk(['urd', 'tests_urd/2021-09-27T03:14'], want_in_call=['test_shell_data'])
