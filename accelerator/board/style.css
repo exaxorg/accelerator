@@ -8,6 +8,7 @@
 	--fgerr: #fce;
 	--not-loaded: #dcb;
 	--bg0-odd: #f8f4f1;
+	--bg1-odd: #f0e6fa;
 	--bg-click: #fbb;
 	--fg0: #222;
 	--fg1: #245;
@@ -31,6 +32,7 @@
 		--bgwarn: #a41;
 		--not-loaded: #654;
 		--bg0-odd: #4e3d2f;
+		--bg1-odd: #4b396a;
 		--bg-click: #944;
 		--fg0: #ddc;
 		--fg1: #cde;
@@ -200,6 +202,15 @@ input:disabled {
 	color: var(--fg1);
 	border: 2px solid var(--border1);
 	padding-left: 1em;
+	padding-right: 1em;
+}
+.textfile pre {
+	min-width: fit-content;
+	padding-left: 0.5em;
+	margin-left: -0.5em;
+	line-height: 1.25em;
+	background-image: repeating-linear-gradient(top, var(--bg1-odd) 0, var(--bg1-odd) 1.25em, var(--bg1) 1.25em, var(--bg1) 2.5em);
+	background-image: -webkit-repeating-linear-gradient(top, var(--bg1-odd) 0, var(--bg1-odd) 1.25em, var(--bg1) 1.25em, var(--bg1) 2.5em);
 }
 .result {
 	clear: both;
