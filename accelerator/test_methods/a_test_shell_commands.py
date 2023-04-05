@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2022 Carl Drougge                                          #
+# Copyright (c) 2022-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -106,3 +106,6 @@ def synthesis(job):
 	missed = cmd_list - all_checked
 	if missed:
 		raise Exception("Didn't check the following commands: " + ' '.join(sorted(missed)))
+	not_in_help = all_checked - cmd_list - {'-h', '--help'}
+	if not_in_help:
+		raise Exception("Missing in help output: " + ' '.join(sorted(not_in_help)))
