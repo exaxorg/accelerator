@@ -217,6 +217,9 @@ input:disabled {
 	overflow: hidden;
 	animation: result 0.25s forwards linear;
 }
+.result .method {
+	font-size: 95%;
+}
 @keyframes result {
 	0% {
 		transform: scale(0.5);

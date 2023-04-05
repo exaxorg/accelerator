@@ -137,6 +137,23 @@
 					a(name, data.jobid, data.name);
 					txt(' from ');
 					a(data.jobid, data.jobid);
+					txt(' (');
+					const methodEl = document.createElement('SPAN')
+					methodEl.className = 'method'
+					resultEl.appendChild(methodEl);
+					txt(')');
+					fetch('/job/' + encodeURIComponent(data.jobid), {headers: {Accept: 'application/json'}})
+					.then(res => {
+						if (res.ok) return res.json();
+						throw new Error('error response');
+					})
+					.then(res => {
+						const a = document.createElement('A');
+						a.innerText = res.params.method;
+						a.href = '/method/' + encodeURIComponent(res.params.method);
+						a.target = '_blank';
+						methodEl.appendChild(a);
+					});
 				} else {
 					txt(name + ' ');
 					const el = document.createElement('SPAN');
@@ -144,11 +161,10 @@
 					el.appendChild(document.createTextNode('from UNKNOWN'));
 					resultEl.appendChild(el);
 				}
-				txt(' (');
+				txt(' ');
 				const dateEl = document.createElement('SPAN');
 				dateEl.className = 'date';
 				resultEl.appendChild(dateEl)
-				txt(')');
 				update_date(resultEl);
 				const size = document.createElement('INPUT');
 				size.type = 'submit';
