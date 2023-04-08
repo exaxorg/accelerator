@@ -142,6 +142,7 @@ def populate_hashed():
 	dirname = os.path.join(os.path.dirname(__file__), 'board')
 	for filename, ctype in [
 		('style.css', 'text/css; charset=UTF-8'),
+		('script.js', 'text/javascript; charset=UTF-8'),
 	]:
 		try:
 			with open(os.path.join(dirname, filename), 'rb') as fh:

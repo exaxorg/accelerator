@@ -130,7 +130,7 @@
 					})
 					.then(text => {
 						el.appendChild(h3);
-						pre.innerText = text;
+						parseANSI(pre, text);
 						el.appendChild(pre);
 						el.className = '';
 					})

@@ -301,7 +301,7 @@
 				if (ext === 'html') {
 					fileEl.innerHTML = res;
 				} else {
-					pre.innerText = res;
+					parseANSI(pre, res);
 				}
 				spinner.remove();
 			})

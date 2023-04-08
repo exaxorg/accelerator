@@ -22,6 +22,24 @@
 	--border1: #e7e5d6;
 	--border2: #aad;
 	--max-height: 300px;
+	--ansi-0: #000;
+	--ansi-1: #c00;
+	--ansi-2: #080;
+	--ansi-3: #ca0;
+	--ansi-4: #33f;
+	--ansi-5: #b1d;
+	--ansi-6: #0aa;
+	--ansi-7: #ddd;
+	--ansi-8: #555;
+	--ansi-9: #f22;
+	--ansi-10: #0c0;
+	--ansi-11: #fe2;
+	--ansi-12: #67f;
+	--ansi-13: #e3f;
+	--ansi-14: #1cd;
+	--ansi-15: #fff;
+	--ansi-invert-fg: #f5f8ef;
+	--ansi-invert-bg: #245;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -45,6 +63,23 @@
 		--border0: #764;
 		--border1: #875;
 		--border2: #549;
+		--ansi-0: #000;
+		--ansi-1: #e00;
+		--ansi-2: #1b1;
+		--ansi-3: #cb0;
+		--ansi-4: #34f;
+		--ansi-5: #b2d;
+		--ansi-6: #1bb;
+		--ansi-7: #ddd;
+		--ansi-8: #555;
+		--ansi-9: #f34;
+		--ansi-10: #1e1;
+		--ansi-12: #77f;
+		--ansi-13: #e7f;
+		--ansi-14: #2de;
+		--ansi-15: #fff;
+		--ansi-invert-fg: #3a2b1a;
+		--ansi-invert-bg: #cde;
 	}
 }
 
@@ -470,4 +505,45 @@ table.job-table tr.old {
 td .spinner {
 	position: absolute;
 	margin: 0;
+}
+
+.ansi-bold {
+	font-weight: bold;
+}
+.ansi-faint {
+	font-weight: lighter;
+	opacity: 0.75;
+}
+.ansi-italic {
+	font-style: italic;
+}
+.ansi-underline {
+	text-decoration: underline;
+}
+@keyframes ansi-blink {
+	0%   { opacity: 1; }
+	50%  { opacity: 1; }
+	60%  { opacity: 0.4; }
+	100% { opacity: 0.4; }
+}
+@keyframes ansi-blink-faint {
+	0%   { opacity: 0.75; }
+	50%  { opacity: 0.75; }
+	60%  { opacity: 0.3; }
+	100% { opacity: 0.3; }
+}
+.ansi-blink-slow {
+	animation: ansi-blink 1.6s linear alternate infinite;
+}
+.ansi-blink-fast {
+	animation: ansi-blink 0.4s linear alternate infinite;
+}
+.ansi-blink-slow.ansi-faint, .ansi-blink-fast.ansi-faint {
+	animation-name: ansi-blink-faint;
+}
+.ansi-hide {
+	opacity: 0;
+}
+.ansi-strike {
+	text-decoration: line-through;
 }

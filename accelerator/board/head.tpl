@@ -2,6 +2,7 @@
 <head>
 	<title>ax board{{ title and ' - ' + title }}</title>
 	<link href="{{ name2hashed['style.css'] }}" rel="stylesheet" />
+	<script language="javascript" src="{{ name2hashed['script.js'] }}"></script>
 </head>
 <body{{ ! get('bodyclass', '') and ' class="' + bodyclass + '"' }}>
 	<div id="ax-version">version {{ ax_version }}</div>
