@@ -204,7 +204,7 @@ input:disabled {
 	padding-left: 1em;
 	padding-right: 1em;
 }
-.textfile pre {
+.textfile pre, #output pre {
 	min-width: fit-content;
 	padding-left: 0.5em;
 	margin-left: -0.5em;
