@@ -307,7 +307,7 @@ def run(cfg, from_shell=False):
 				default_prefix += part + '/'
 		filenames = os.listdir(prefix)
 		for fn in filenames:
-			if fn.endswith('_'):
+			if fn.startswith('.') or fn.endswith('_'):
 				continue
 			ffn = os.path.join(prefix, fn)
 			try:
