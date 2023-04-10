@@ -29,4 +29,11 @@
 			{{ datetime.fromtimestamp(last_error_time).replace(microsecond=0) }}
 		</a></p>
 	% end
+<script language="javascript">
+(function() {
+	for (const el of document.querySelectorAll('.output pre')) {
+		parseANSI(el, el.innerText);
+	}
+})();
+</script>
 </body>
