@@ -353,6 +353,12 @@ form {
 #other-params table {
 	padding-left: 0;
 }
+.prevnext h1 {
+	display: inline-block;
+}
+.prevnext a {
+	padding-right: 0.5em;
+}
 
 th {
 	text-align: left;

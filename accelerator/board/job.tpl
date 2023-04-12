@@ -19,7 +19,14 @@
 	% end
 % end
 
-	<h1>{{ job }}</h1>
+	<div class="prevnext">
+		<h1>{{ job }}</h1>
+		% if job.number > 0:
+			<a accesskey="p" href="/job/{{ '%s-%d' % (job.workdir, job.number - 1,) }}">⇦ prev</a>
+		% end
+		<a accesskey="n" href="/job/{{ '%s-%d' % (job.workdir, job.number + 1,) }}">next ⇨</a>
+		<a accesskey="l" href="/job/{{ '%s-LATEST' % (job.workdir,) }}">LATEST ⇉</a>
+	</div>
 	% if aborted:
 		<div class="warning">WARNING: Job didn't finish, information may be incomplete.</div>
 	% elif not current:
