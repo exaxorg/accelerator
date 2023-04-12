@@ -42,7 +42,10 @@
 		}
 	}
 	const status = function () {
-		if (document.body.className === 'error') return;
+		if (document.body.className === 'error') {
+			setTimeout(status, 1500);
+			return;
+		}
 		fetch('/status?short', {headers: {Accept: 'text/plain'}})
 		.then(res => {
 			if (res.ok) return res.text();
@@ -205,7 +208,6 @@
 					waitingEl.style.display = 'block';
 					header.innerHTML = goodHTML;
 					update();
-					setTimeout(status, 1500);
 				};
 				header.appendChild(btn);
 			} else {
