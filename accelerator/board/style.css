@@ -179,6 +179,10 @@ input:disabled {
 	width: 100%;
 	z-index: 1;
 }
+#restart {
+	font-size: 100%;
+	margin-left: 1em;
+}
 #ax-version {
 	pointer-events: none;
 	color: var(--fg-weak);

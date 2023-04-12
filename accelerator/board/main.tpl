@@ -194,7 +194,20 @@
 				document.body.className = 'error';
 				waitingEl.style.display = 'none';
 				const header = document.getElementById('header');
+				const goodHTML = header.innerHTML;
 				header.innerText = 'ERROR - updates stopped at ' + fmtdate();
+				const btn = document.createElement('INPUT');
+				btn.type = 'button';
+				btn.value = 'restart';
+				btn.id = 'restart';
+				btn.onclick = function () {
+					document.body.className = '';
+					waitingEl.style.display = 'block';
+					header.innerHTML = goodHTML;
+					update();
+					setTimeout(status, 1500);
+				};
+				header.appendChild(btn);
 			} else {
 				waitingEl.style.display = 'block';
 				setTimeout(() => update((try_num || 0) + 1), 1500);
