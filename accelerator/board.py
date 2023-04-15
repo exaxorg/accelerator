@@ -34,16 +34,10 @@ from accelerator.unixhttp import call, WaitressServer
 from accelerator.build import fmttime
 from accelerator.configfile import resolve_listen
 from accelerator.error import NoSuchWhateverError
-from accelerator.shell.parser import ArgumentParser
+from accelerator.shell.parser import ArgumentParser, name2job, name2ds
 from accelerator.shell.workdir import job_data, workdir_jids
 from accelerator.compat import setproctitle, url_quote, urlencode
 from accelerator import __version__ as ax_version
-
-def get_job(jobid):
-	if jobid.endswith('-LATEST'):
-		base = jobid.rsplit('-', 1)[0]
-		jobid = os.readlink(Job(base + '-0').path[:-2] + '-LATEST')
-	return Job(jobid)
 
 # why wasn't Accept specified in a sane manner (like sending it in preference order)?
 def get_best_accept(*want):
@@ -377,7 +371,7 @@ def run(cfg, from_shell=False):
 	@bottle.get('/job/<jobid>/method.tar.gz/')
 	@bottle.get('/job/<jobid>/method.tar.gz/<name:path>')
 	def job_method(jobid, name=None):
-		job = get_job(jobid)
+		job = name2job(cfg, jobid)
 		with tarfile.open(job.filename('method.tar.gz'), 'r:gz') as tar:
 			if name:
 				info = tar.getmember(name)
@@ -392,7 +386,7 @@ def run(cfg, from_shell=False):
 
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
-		job = get_job(jobid)
+		job = name2job(cfg, jobid)
 		res = bottle.static_file(name, root=job.path)
 		if not res.content_type and res.status_code < 400:
 			# bottle default is text/html, which is probably wrong.
@@ -403,7 +397,7 @@ def run(cfg, from_shell=False):
 	@bottle.get('/job/<jobid>/')
 	@view('job')
 	def job(jobid):
-		job = get_job(jobid)
+		job = name2job(cfg, jobid)
 		try:
 			post = job.post
 		except IOError:
@@ -435,7 +429,7 @@ def run(cfg, from_shell=False):
 	@bottle.get('/dataset/<dsid:path>')
 	@view('dataset', ds_json)
 	def dataset(dsid):
-		ds = Dataset(dsid.rstrip('/'))
+		ds = name2ds(cfg, dsid.rstrip('/'))
 		q = bottle.request.query
 		if q.column:
 			lines = int(q.lines or 10)
