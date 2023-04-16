@@ -17,6 +17,11 @@
 	</table>
 </div>
 <table class="job-table">
+	<tr>
+		<th>jobid</th>
+		<th>method</th>
+		<th>time</th>
+	</tr>
 	% for job, data in jobs.items():
 		<tr class="{{ data.klass }}">
 			<td><a href="/job/{{ job }}">{{ job }}</a></td>
@@ -50,7 +55,7 @@
 			const method = el.querySelector('td ~ td').innerHTML.toLowerCase();
 			return !want.some(re => re.test(method));
 		}
-		for (const el of document.querySelectorAll('.job-table tr')) {
+		for (const el of document.querySelectorAll('.job-table tr[class]')) {
 			if (filtered(el)) {
 				el.classList.add('filtered');
 			} else {

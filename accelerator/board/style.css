@@ -436,7 +436,7 @@ table.job-table {
 	border-spacing: 0 2px;
 	clear: both;
 }
-table.job-table td:nth-child(2) {
+table.job-table td:nth-child(2), table.job-table th:nth-child(2) {
 	padding: 0 1em;
 	min-width: 13em;
 }
