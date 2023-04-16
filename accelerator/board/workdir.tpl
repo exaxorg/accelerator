@@ -18,11 +18,11 @@
 </div>
 <table class="job-table">
 	<tr>
-		<th>jobid</th>
+		<th data-reverse="t">jobid</th>
 		<th>method</th>
 		<th>time</th>
 	</tr>
-	% for job, data in jobs.items():
+	% for job, data in reversed(jobs.items()):
 		<tr class="{{ data.klass }}">
 			<td data-jid="{{ job }}"><a href="/job/{{ job }}">{{ job }}</a></td>
 			<td>{{ data.method }}</td>
