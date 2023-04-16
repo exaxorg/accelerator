@@ -448,17 +448,8 @@ def run(cfg, from_shell=False):
 
 	def load_workdir(jobs, name):
 		known = call_s('workdir', name)
-		jobs[name + '-LATEST'] = None # Sorts first
-		try:
-			latest = os.readlink(os.path.join(cfg.workdirs[name], name + '-LATEST'))
-		except OSError:
-			latest = None
 		for jid in workdir_jids(cfg, name):
 			jobs[jid] = job_data(known, jid)
-		if latest in jobs:
-			jobs[name + '-LATEST'] = jobs[latest]
-		else:
-			del jobs[name + '-LATEST']
 		return jobs
 
 	@bottle.get('/workdir/<name>')
