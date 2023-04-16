@@ -24,8 +24,13 @@
 	</tr>
 	% for job, data in jobs.items():
 		<tr class="{{ data.klass }}">
-			<td><a href="/job/{{ job }}">{{ job }}</a></td>
-			<td>{{ data.method }}</td><td>{{ data.totaltime or 'DID NOT FINISH' }}</td>
+			<td data-jid="{{ job }}"><a href="/job/{{ job }}">{{ job }}</a></td>
+			<td>{{ data.method }}</td>
+			% if data.totaltime is None:
+				<td data-s="-1">DID NOT FINISH</td>
+			% else:
+				<td data-s="{{ data.totaltime }}">{{ data.humantime }}</td>
+			% end
 		</tr>
 	% end
 </table>
@@ -71,6 +76,42 @@
 	}
 	f_method.oninput = filter_change;
 	f_method.disabled = false;
+
+	const split_job = function (jid) {
+		const a = jid.split('-');
+		return [a.slice(0, -1).join('-'), a[a.length - 1]];
+	}
+	const cmp_jobid = function (a, b) {
+		const [a_wd, a_n] = split_job(a.dataset.jid);
+		const [b_wd, b_n] = split_job(b.dataset.jid);
+		return a_wd.localeCompare(b_wd) || parseInt(b_n) - parseInt(a_n);
+	};
+	const cmp_method = function (a, b) {
+		return a.innerHTML.localeCompare(b.innerHTML);
+	}
+	const cmp_time = function (a, b) {
+		return parseFloat(b.dataset.s) - parseFloat(a.dataset.s);
+	}
+	const comparers = [null, cmp_jobid, cmp_method, cmp_time];
+	const job_table = document.querySelector('.job-table');
+	const sort = function () {
+		const tds = Array.from(job_table.querySelectorAll('tr[class] td:nth-child(' + this.dataset.ix + ')'));
+		tds.sort(comparers[this.dataset.ix]);
+		if (this.dataset.reverse) {
+			tds.reverse();
+			this.dataset.reverse = '';
+		} else {
+			this.dataset.reverse = 't';
+		}
+		for (const el of tds) {
+			job_table.appendChild(el.parentNode);
+		}
+	};
+	job_table.querySelectorAll('th').forEach((el, ix) => {
+		el.dataset.ix = ix + 1;
+		el.onclick = sort;
+		el.accessKey = el.innerText.slice(0, 1);
+	});
 })();
 </script>
 </body>

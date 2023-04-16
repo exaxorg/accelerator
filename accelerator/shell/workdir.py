@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2022 Carl Drougge                                     #
+# Copyright (c) 2020-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -44,7 +44,9 @@ def job_data(known, jid, full_path=False):
 		except Exception:
 			pass
 	if isinstance(data.totaltime, (float, int)):
-		data.totaltime = fmttime(data.totaltime)
+		data.humantime = fmttime(data.totaltime)
+	else:
+		data.humantime = ''
 	if data.totaltime is None:
 		data.klass = 'unfinished'
 	elif data.current:
@@ -63,7 +65,7 @@ def show_job(args, known, jid, as_latest=False):
 	path = data.path
 	if as_latest:
 		path = path.rsplit('-', 1)[0] + '-LATEST'
-	print('\t'.join((path, data.klass, data.method, data.totaltime or '')))
+	print('\t'.join((path, data.klass, data.method, data.humantime)))
 
 def workdir_jids(cfg, name):
 	jidlist = []
