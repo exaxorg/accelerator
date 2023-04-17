@@ -2,7 +2,7 @@
 
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -142,7 +142,7 @@ setup(
 	ext_modules=[dsutilmodule, dataset_typemodule, csvimportmodule],
 
 	package_data={
-		'': ['*.txt', 'methods.conf', 'board/*.tpl', 'examples/*.csv'],
+		'': ['*.txt', 'methods.conf', 'board/*.tpl', 'board/*.css', 'examples/*.csv'],
 	},
 
 	author="Carl Drougge",

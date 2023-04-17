@@ -16,6 +16,8 @@
 #                                                                          #
 ############################################################################
 
+from __future__ import print_function
+
 import bottle
 import json
 import sys
@@ -130,12 +132,35 @@ def ax_link(v):
 	else:
 		return ''
 
+name2hashed = {}
+hashed = {}
+
+# Make contents-based names so that the files can be cached forever
+def populate_hashed():
+	from hashlib import sha1
+	from base64 import b64encode
+	dirname = os.path.join(os.path.dirname(__file__), 'board')
+	for filename, ctype in [
+		('style.css', 'text/css; charset=UTF-8'),
+	]:
+		try:
+			with open(os.path.join(dirname, filename), 'rb') as fh:
+				data = fh.read()
+			h = b64encode(sha1(data).digest(), b'_-').rstrip(b'=').decode('ascii')
+			h_name = h + '/' + filename
+			name2hashed[filename] = '/h/' + h_name
+			hashed[h_name] = (data, ctype,)
+		except OSError as e:
+			name2hashed[filename] = '/h/ERROR'
+			print(e, file=sys.stderr)
+
 def template(tpl_name, **kw):
 	return bottle.template(
 		tpl_name,
 		ax_repr=ax_repr,
 		ax_link=ax_link,
 		ax_version=ax_version,
+		name2hashed=name2hashed,
 		template=template,
 		**kw
 	)
@@ -216,6 +241,8 @@ def main(argv, cfg):
 def run(cfg, from_shell=False):
 	project = os.path.split(cfg.project_directory)[1]
 	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
+
+	populate_hashed()
 
 	def call_s(*path, **kw):
 		if kw:
@@ -496,6 +523,15 @@ def run(cfg, from_shell=False):
 		key = user + '/' + build + '/' + ts
 		d = call_u(key)
 		return dict(key=key, entry=d)
+
+	@bottle.get('/h/<name:path>')
+	def hashed_file(name):
+		if name not in hashed:
+			return bottle.HTTPError(404, 'Not Found')
+		data, ctype = hashed[name]
+		bottle.response.content_type = ctype
+		bottle.response.set_header('Cache-Control', 'max-age=604800, immutable')
+		return data
 
 	@bottle.error(500)
 	def error(e):
