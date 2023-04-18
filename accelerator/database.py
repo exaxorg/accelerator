@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -22,7 +22,6 @@ from __future__ import print_function
 from __future__ import division
 
 from collections import defaultdict
-from operator import attrgetter
 from collections import namedtuple
 from traceback import print_exc
 import sys
@@ -97,7 +96,8 @@ class DataBase:
 	def add_single_jobid(self, jobid):
 		setup = _paramsdict[jobid][0]
 		job = _mkjob(setup)
-		self.db_by_method[job.method].insert(0, job)
+		self.db[job.id] = job
+		self.db_by_method[job.method].insert(0, job.id)
 		self.db_by_workdir[job.id.rsplit('-', 1)[0]][job.id] = _mklistinfo(setup)
 		return job
 
@@ -154,14 +154,17 @@ class DataBase:
 				if jid not in job_candidates:
 					li['current'] = False
 
+		# {jobid: Job} (the local Job tuple type, not the user-visible one)
+		self.db = {}
 		# Keep lists of jobs per method, only with valid hashes and subjobs.
 		self.db_by_method = defaultdict(list)
 		for setup, _ in itervalues(job_candidates):
 			job = _mkjob(setup)
-			self.db_by_method[job.method].append(job)
+			self.db[job.id] = job
+			self.db_by_method[job.method].append(job.id)
 		# Newest first
 		for l in itervalues(self.db_by_method):
-			l.sort(key=attrgetter('time'), reverse=True)
+			l.sort(key=lambda jid: self.db[jid].time, reverse=True)
 		if verbose:
 			if discarded_due_to_hash_list:
 				print("DATABASE:  discarding due to unknown hash: %s" % ', '.join(discarded_due_to_hash_list))
@@ -171,6 +174,7 @@ class DataBase:
 		for method, uid, opttuple in reqlist:
 			# These are already sorted newest to oldest.
 			for job in self.db_by_method[method]:
+				job = self.db[job]
 				if opttuple.issubset(job.optset):
 					yield uid, job
 					break
@@ -179,6 +183,7 @@ class DataBase:
 		for method, uid, opttuple in reqlist:
 			# These are already sorted newest to oldest.
 			for job in self.db_by_method[method]:
+				job = self.db[job]
 				if opttuple == job.optset:
 					yield uid, job
 					break

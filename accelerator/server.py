@@ -163,10 +163,9 @@ class XtdHandler(BaseWebHandler):
 			start_ix = 0
 			start_from = args.get('start_from')
 			if start_from:
-				for start_ix, job in enumerate(jobs):
-					if job.id == start_from:
-						break
-				else:
+				try:
+					start_ix = jobs.index(start_from)
+				except ValueError:
 					start_ix = None
 			if start_ix is None:
 				res = {'error': '%s is not a current %s job' % (start_from, method,)}
@@ -175,9 +174,9 @@ class XtdHandler(BaseWebHandler):
 				if not jobs:
 					res = {'error': 'no current jobs with method %s available' % (method,)}
 				elif num + start_ix >= len(jobs):
-					res = {'error': 'tried to go %d jobs back from %s, but only %d earlier (current) jobs available' % (num, jobs[start_ix].id, len(jobs) - start_ix - 1,)}
+					res = {'error': 'tried to go %d jobs back from %s, but only %d earlier (current) jobs available' % (num, jobs[start_ix], len(jobs) - start_ix - 1,)}
 				else:
-					res = {'id': jobs[num + start_ix].id}
+					res = {'id': jobs[num + start_ix]}
 			self.do_response(200, 'text/json', res)
 
 		elif path[0] == 'job_is_current':
