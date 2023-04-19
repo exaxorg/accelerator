@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2022 Carl Drougge                                     #
+# Copyright (c) 2020-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -178,12 +178,11 @@ def main(argv, cfg):
 		help='jobid is just a jobid.\n' +
 		     'you can also use path, method or :urdlist:[entry].\n' +
 		     'path is to a jobdir (with setup.json in it).\n' +
-		     'method is the latest (current) job with that method (i.e\n' +
-		     'the latest finished job with current source code).\n' +
+		     'method is the latest job with that method.\n' +
 		     ':urdlist:[entry] looks up jobs in urd. details are in the\n' +
 		     'urd help, except here entry defaults to -1 and you can\'t\n' +
 		     'list things (no .../ or .../since/x).\n' +
-		     'you can use spec~ or spec~N to go back N current jobs\n' +
+		     'you can use spec~ or spec~N to go back N jobs\n' +
 		     'with that method or spec^ or spec^N to follow .previous'
 	)
 	args = parser.parse_intermixed_args(argv)

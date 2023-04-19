@@ -98,6 +98,7 @@ class DataBase:
 		job = _mkjob(setup)
 		self.db[job.id] = job
 		self.db_by_method[job.method].insert(0, job.id)
+		self.all_by_method[job.method].insert(0, job.id)
 		self.db_by_workdir[job.id.rsplit('-', 1)[0]][job.id] = _mklistinfo(setup)
 		return job
 
@@ -129,12 +130,16 @@ class DataBase:
 
 		# Keep only jobs with valid hashes.
 		job_candidates = {}
+		# Keep separate lists per method of just jobids for all (finished) jobs,
+		# to support the relative job-specs ("method~" and such).
+		self.all_by_method = defaultdict(list)
 		for setup, subjobs in itervalues(_paramsdict):
 			if setup.hash in dict_of_hashes.get(setup.method, ()):
 				job_candidates[setup.jobid] = (setup, subjobs)
 			else:
 				discarded_due_to_hash_list.append(setup.jobid)
 			self.db_by_workdir[setup.jobid.rsplit('-', 1)[0]][setup.jobid] = _mklistinfo(setup)
+			self.all_by_method[setup.method].append(setup.jobid)
 
 		# Keep only jobs where all subjobs are kept.
 		discarded_due_to_subjobs = []
@@ -165,6 +170,8 @@ class DataBase:
 		# Newest first
 		for l in itervalues(self.db_by_method):
 			l.sort(key=lambda jid: self.db[jid].time, reverse=True)
+		for l in itervalues(self.all_by_method):
+			l.sort(key=lambda jid: _paramsdict[jid][0].starttime, reverse=True)
 		if verbose:
 			if discarded_due_to_hash_list:
 				print("DATABASE:  discarding due to unknown hash: %s" % ', '.join(discarded_due_to_hash_list))

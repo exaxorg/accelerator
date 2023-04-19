@@ -159,7 +159,8 @@ class XtdHandler(BaseWebHandler):
 
 		elif path[0] == 'method2job':
 			method, num = path[1:]
-			jobs = self.ctrl.DataBase.db_by_method.get(method, ())
+			jobs = self.ctrl.DataBase.all_by_method.get(method, ())
+			typ = 'known'
 			start_ix = 0
 			start_from = args.get('start_from')
 			if start_from:
@@ -168,13 +169,13 @@ class XtdHandler(BaseWebHandler):
 				except ValueError:
 					start_ix = None
 			if start_ix is None:
-				res = {'error': '%s is not a current %s job' % (start_from, method,)}
+				res = {'error': '%s is not a %s %s job' % (start_from, typ, method,)}
 			else:
 				num = int(num)
 				if not jobs:
-					res = {'error': 'no current jobs with method %s available' % (method,)}
+					res = {'error': 'no %s jobs with method %s available' % (typ, method,)}
 				elif num + start_ix >= len(jobs):
-					res = {'error': 'tried to go %d jobs back from %s, but only %d earlier (current) jobs available' % (num, jobs[start_ix], len(jobs) - start_ix - 1,)}
+					res = {'error': 'tried to go %d jobs back from %s, but only %d earlier %s jobs available' % (num, jobs[start_ix], len(jobs) - start_ix - 1, typ,)}
 				else:
 					res = {'id': jobs[num + start_ix]}
 			self.do_response(200, 'text/json', res)
