@@ -33,7 +33,7 @@ from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote, PY3
+from accelerator.compat import url_quote, urlencode, PY3
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -67,13 +67,9 @@ def split_tildes(n, allow_empty=False):
 	assert n or allow_empty, "empty job id"
 	return n, lst
 
-def method2job(cfg, method, count=0, start_from=None):
-	def get(count):
-		url ='%s/method2job/%s/%s' % (cfg.url, url_quote(method), count)
-		if start_from:
-			url += '?start_from=' + url_quote(start_from)
-		return call(url)
-	found = get(count)
+def method2job(cfg, method, **kw):
+	url ='%s/method2job/%s?%s' % (cfg.url, url_quote(method), urlencode(kw))
+	found = call(url)
 	if 'error' in found:
 		raise JobNotFound(found.error)
 	return Job(found.id)
@@ -109,17 +105,23 @@ def urd_call_w_tildes(cfg, path, tildes):
 
 def name2job(cfg, n):
 	n, tildes = split_tildes(n)
-	job = _name2job(cfg, n)
+	if n.endswith('!'):
+		current = True
+		n = n[:-1]
+		assert n, "empty job id"
+	else:
+		current = False
+	job = _name2job(cfg, n, current)
 	for char, count in tildes:
 		if char == '~':
-			job = method2job(cfg, job.method, count, start_from=job)
+			job = method2job(cfg, job.method, offset=count, start_from=job, current=current)
 		else:
 			job = job_up(job, count)
 	if not exists(job.filename('setup.json')):
 		raise JobNotFound('Job resolved to %r but that job does not exist' % (job,))
 	return job
 
-def _name2job(cfg, n):
+def _name2job(cfg, n, current):
 	if n.startswith(':'):
 		# resolve through urd
 		assert cfg.urd, 'No urd configured'
@@ -168,7 +170,7 @@ def _name2job(cfg, n):
 		return Job(n)
 	if n not in ('.', '..') and '/' not in n:
 		# Must be a method then
-		return method2job(cfg, n)
+		return method2job(cfg, n, current=current)
 	if exists(join(n, 'setup.json')):
 		# Looks like the path to a jobdir
 		path, jid = split(realpath(n))

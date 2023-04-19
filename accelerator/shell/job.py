@@ -183,7 +183,8 @@ def main(argv, cfg):
 		     'urd help, except here entry defaults to -1 and you can\'t\n' +
 		     'list things (no .../ or .../since/x).\n' +
 		     'you can use spec~ or spec~N to go back N jobs\n' +
-		     'with that method or spec^ or spec^N to follow .previous'
+		     'with that method or spec^ or spec^N to follow .previous\n' +
+		     'use spec! to only consider current jobs.'
 	)
 	args = parser.parse_intermixed_args(argv)
 	res = 0

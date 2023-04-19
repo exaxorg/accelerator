@@ -158,9 +158,13 @@ class XtdHandler(BaseWebHandler):
 			self.do_response(200, 'text/json', {'killed': len(tokill)})
 
 		elif path[0] == 'method2job':
-			method, num = path[1:]
-			jobs = self.ctrl.DataBase.all_by_method.get(method, ())
-			typ = 'known'
+			method = path[1]
+			if args.get('current', 'False') != 'False':
+				jobs = self.ctrl.DataBase.db_by_method.get(method, ())
+				typ = 'current'
+			else:
+				jobs = self.ctrl.DataBase.all_by_method.get(method, ())
+				typ = 'known'
 			start_ix = 0
 			start_from = args.get('start_from')
 			if start_from:
@@ -171,7 +175,7 @@ class XtdHandler(BaseWebHandler):
 			if start_ix is None:
 				res = {'error': '%s is not a %s %s job' % (start_from, typ, method,)}
 			else:
-				num = int(num)
+				num = int(args.get('offset', 0))
 				if not jobs:
 					res = {'error': 'no %s jobs with method %s available' % (typ, method,)}
 				elif num + start_ix >= len(jobs):
