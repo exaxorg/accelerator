@@ -43,13 +43,13 @@ class DatasetNotFound(NoSuchDatasetError):
 
 def _groups(tildes):
 	def char_and_count(buf):
-		char, count = re.match(r'([~+^]+)(\d*)$', ''.join(buf)).groups()
+		char, count = re.match(r'([~+<>^]+)(\d*)$', ''.join(buf)).groups()
 		count = int(count or 1) - 1
 		return char[0], len(char) + count
 	i = iter(tildes)
 	buf = [next(i)]
 	for c in i:
-		if c in '~+^' and buf[-1] != c:
+		if c in '~+<>^' and buf[-1] != c:
 			yield char_and_count(buf)
 			buf = [c]
 		else:
@@ -59,7 +59,7 @@ def _groups(tildes):
 # "foo~~^3" -> "foo", [("~", 2), ("^", 3)]
 def split_tildes(n, allow_empty=False, extended=False):
 	if extended:
-		m = re.match(r'(.*?)([~+^][~+^\d]*)$', n)
+		m = re.match(r'(.*?)([~+<>^][~+<>^\d]*)$', n)
 	else:
 		m = re.match(r'(.*?)([~^][~^\d]*)$', n)
 	if m:
@@ -120,8 +120,16 @@ def name2job(cfg, n):
 			job = method2job(cfg, job.method, offset=-count, start_from=job, current=current)
 		elif char == '+':
 			job = method2job(cfg, job.method, offset=count, start_from=job, current=current)
-		else:
+		elif char == '^':
 			job = job_up(job, count)
+		elif char == '<':
+			if count > job.number:
+				raise JobNotFound('Tried to go %d jobs back from %s.' % (count, job,))
+			job = Job._create(job.workdir, job.number - count)
+		elif char == '>':
+			job = Job._create(job.workdir, job.number + count)
+		else:
+			raise Exception("BUG: split_tildes should not give %r as a char" % (char,))
 	if not exists(job.filename('setup.json')):
 		raise JobNotFound('Job resolved to %r but that job does not exist' % (job,))
 	return job
