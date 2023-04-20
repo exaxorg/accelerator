@@ -43,13 +43,13 @@ class DatasetNotFound(NoSuchDatasetError):
 
 def _groups(tildes):
 	def char_and_count(buf):
-		char, count = re.match(r'([~^]+)(\d*)$', ''.join(buf)).groups()
+		char, count = re.match(r'([~+^]+)(\d*)$', ''.join(buf)).groups()
 		count = int(count or 1) - 1
 		return char[0], len(char) + count
 	i = iter(tildes)
 	buf = [next(i)]
 	for c in i:
-		if c in '~^' and buf[-1] != c:
+		if c in '~+^' and buf[-1] != c:
 			yield char_and_count(buf)
 			buf = [c]
 		else:
@@ -57,8 +57,11 @@ def _groups(tildes):
 	yield char_and_count(buf)
 
 # "foo~~^3" -> "foo", [("~", 2), ("^", 3)]
-def split_tildes(n, allow_empty=False):
-	m = re.match(r'(.*?)([~^][~^\d]*)$', n)
+def split_tildes(n, allow_empty=False, extended=False):
+	if extended:
+		m = re.match(r'(.*?)([~+^][~+^\d]*)$', n)
+	else:
+		m = re.match(r'(.*?)([~^][~^\d]*)$', n)
 	if m:
 		n, tildes = m.groups()
 		lst = list(_groups(tildes))
@@ -104,7 +107,7 @@ def urd_call_w_tildes(cfg, path, tildes):
 	return res
 
 def name2job(cfg, n):
-	n, tildes = split_tildes(n)
+	n, tildes = split_tildes(n, extended=True)
 	if n.endswith('!'):
 		current = True
 		n = n[:-1]
@@ -114,6 +117,8 @@ def name2job(cfg, n):
 	job = _name2job(cfg, n, current)
 	for char, count in tildes:
 		if char == '~':
+			job = method2job(cfg, job.method, offset=-count, start_from=job, current=current)
+		elif char == '+':
 			job = method2job(cfg, job.method, offset=count, start_from=job, current=current)
 		else:
 			job = job_up(job, count)

@@ -179,10 +179,16 @@ class XtdHandler(BaseWebHandler):
 				num = int(args.get('offset', 0))
 				if not jobs:
 					res = {'error': 'no %s jobs with method %s available' % (typ, method,)}
-				elif start_ix - num < 0:
-					res = {'error': 'tried to go %d jobs back from %s, but only %d earlier %s jobs available' % (num, jobs[start_ix], len(jobs) - start_ix - 1, typ,)}
+				elif 0 <= start_ix + num < len(jobs):
+					res = {'id': jobs[start_ix + num]}
 				else:
-					res = {'id': jobs[start_ix - num]}
+					if num < 0:
+						direction, kind = 'back', 'earlier'
+						available = start_ix
+					else:
+						direction, kind = 'forward', 'later'
+						available = len(jobs) - start_ix - 1
+					res = {'error': 'tried to go %d jobs %s from %s, but only %d %s %s %s jobs available' % (abs(num), direction, jobs[start_ix], available, kind, typ, method,)}
 			self.do_response(200, 'text/json', res)
 
 		elif path[0] == 'job_is_current':
