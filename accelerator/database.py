@@ -97,8 +97,8 @@ class DataBase:
 		setup = _paramsdict[jobid][0]
 		job = _mkjob(setup)
 		self.db[job.id] = job
-		self.db_by_method[job.method].insert(0, job.id)
-		self.all_by_method[job.method].insert(0, job.id)
+		self.db_by_method[job.method].append(job.id)
+		self.all_by_method[job.method].append(job.id)
 		self.db_by_workdir[job.id.rsplit('-', 1)[0]][job.id] = _mklistinfo(setup)
 		return job
 
@@ -169,9 +169,9 @@ class DataBase:
 			self.db_by_method[job.method].append(job.id)
 		# Newest first
 		for l in itervalues(self.db_by_method):
-			l.sort(key=lambda jid: self.db[jid].time, reverse=True)
+			l.sort(key=lambda jid: self.db[jid].time)
 		for l in itervalues(self.all_by_method):
-			l.sort(key=lambda jid: _paramsdict[jid][0].starttime, reverse=True)
+			l.sort(key=lambda jid: _paramsdict[jid][0].starttime)
 		if verbose:
 			if discarded_due_to_hash_list:
 				print("DATABASE:  discarding due to unknown hash: %s" % ', '.join(discarded_due_to_hash_list))
@@ -180,7 +180,7 @@ class DataBase:
 	def match_complex(self, reqlist):
 		for method, uid, opttuple in reqlist:
 			# These are already sorted newest to oldest.
-			for job in self.db_by_method[method]:
+			for job in reversed(self.db_by_method[method]):
 				job = self.db[job]
 				if opttuple.issubset(job.optset):
 					yield uid, job
@@ -189,7 +189,7 @@ class DataBase:
 	def match_exact(self, reqlist):
 		for method, uid, opttuple in reqlist:
 			# These are already sorted newest to oldest.
-			for job in self.db_by_method[method]:
+			for job in reversed(self.db_by_method[method]):
 				job = self.db[job]
 				if opttuple == job.optset:
 					yield uid, job
