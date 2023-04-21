@@ -184,7 +184,8 @@ def main(argv, cfg):
 		     'list things (no .../ or .../since/x).\n' +
 		     'you can use spec~ or spec~N to go back N jobs\n' +
 		     'with that method or spec^ or spec^N to follow .previous\n' +
-		     'use spec! to only consider current jobs.'
+		     'use spec! to only consider current jobs.\n' +
+		     'you can also do things like spec.source.'
 	)
 	args = parser.parse_intermixed_args(argv)
 	res = 0

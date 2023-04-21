@@ -29,6 +29,7 @@ from os.path import join, exists, realpath, split
 from os import readlink, environ
 import re
 
+from accelerator.dataset import Dataset
 from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
@@ -107,14 +108,59 @@ def urd_call_w_tildes(cfg, path, tildes):
 	return res
 
 def name2job(cfg, n):
-	n, tildes = split_tildes(n, extended=True)
-	if n.endswith('!'):
-		current = True
-		n = n[:-1]
-		assert n, "empty job id"
+	if '.' in n:
+		n, dotted = n.split('.', 1)
+		dotted = iter(dotted.split('.'))
 	else:
-		current = False
+		dotted = None
+	def split(n, what):
+		n, tildes = split_tildes(n, extended=True, allow_empty=True)
+		if n.endswith('!'):
+			current = True
+			n = n[:-1]
+		else:
+			current = False
+		assert n, "empty " + what
+		return n, current, tildes
+	n, current, tildes = split(n, "job id")
 	job = _name2job(cfg, n, current)
+	job = _name2job_do_tildes(cfg, job, current, tildes)
+	if dotted:
+		for n in dotted:
+			n, current, tildes = split(n, "param")
+			p = job.params
+			k = None
+			if n in ('jobs', 'datasets'):
+				k = n
+				try:
+					n = next(dotted)
+				except StopIteration:
+					raise JobNotFound("%s.%s.what?" % (job, k,))
+			elif n in p.jobs and n in p.datasets:
+				raise JobNotFound("Job %s (%s) has %s in both .jobs and .datasets, please specify." % (job, job.method, n,))
+			if k:
+				if n not in p[k]:
+					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, k + '.' + n,))
+			else:
+				if n in p.jobs:
+					k = 'jobs'
+				elif n in p.datasets:
+					k = 'datasets'
+				else:
+					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, n,))
+			if not p[k][n]:
+				raise JobNotFound("%s.%s.%s is None" % (job, k, n,))
+			job = p[k][n]
+			if isinstance(job, list):
+				if len(job) != 1:
+					raise JobNotFound("Job %s (%s) has %d %s in %r." % (job, job.method, len(job), k, n,))
+				job = job[0]
+			if isinstance(job, Dataset):
+				job = job.job
+			job = _name2job_do_tildes(cfg, job, current, tildes)
+	return job
+
+def _name2job_do_tildes(cfg, job, current, tildes):
 	for char, count in tildes:
 		if char == '~':
 			job = method2job(cfg, job.method, offset=-count, start_from=job, current=current)
