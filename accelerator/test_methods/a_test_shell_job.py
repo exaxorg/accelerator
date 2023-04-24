@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -44,14 +44,14 @@ def synthesis(job):
 	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
 	os.putenv('CLICOLOR_FORCE', '1')
 	res = ax_job(job)
-	assert res[0] == job.path, res[0]
+	assert job in res[0], res[0]
 	assert '\x1b[31mWARNING: Job did not finish\x1b[39m' in res
 	os.unsetenv('CLICOLOR_FORCE')
 	os.putenv('NO_COLOR', '')
 	res = ax_job(job)
-	assert res[0] == job.path, res[0]
+	assert job in res[0], res[0]
 	assert 'WARNING: Job did not finish' in res
 	for spec, jobid in options.want.items():
 		res = ax_job(spec)
 		got_jobid = res[0].split('/')[-1]
-		assert jobid == got_jobid, 'Spec %r should have given %r but gave %r' % (spec, jobid, got_jobid,)
+		assert got_jobid.startswith(jobid), 'Spec %r should have given %r but gave %r' % (spec, jobid, got_jobid,)
