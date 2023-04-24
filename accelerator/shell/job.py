@@ -67,31 +67,37 @@ def show(url, job, verbose, show_output):
 		opt_thing('jobs')
 		for k, v in things:
 			print('    %s: %s' % (k, v,))
-	if job.datasets:
+	def list_of_things(name, things):
+		total = len(things)
+		if total > 5 and not verbose:
+			things = things[:3]
 		print()
-		print('datasets:')
-		for ds in job.datasets:
-			print('   ', ds.quoted)
+		print(colour('%s:' % (name,), 'job/header'))
+		for thing in things:
+			print('   ', thing)
+		if total > len(things):
+			print('    ... and %d more' % (total - len(things),))
+	if job.datasets:
+		list_of_things('datasets', [ds.quoted for ds in job.datasets])
 	try:
 		post = job.json_load('post.json')
 	except FileNotFoundError:
 		print(colour('WARNING: Job did not finish', 'job/warning'))
 		post = None
 	if post and post.subjobs:
-		print()
-		print('subjobs:')
 		postdata = urlencode({'jobs': '\0'.join(post.subjobs)}).encode('utf-8')
 		subjobs = call(url + '/jobs_are_current', data=postdata)
+		fmted_subjobs = []
 		for sj, is_current in sorted(subjobs.items()):
-			print('   ', sj, end='')
 			if not is_current:
-				print('', colour('(not current)', 'job/info'), end='')
-			print()
+				sj += ' ' + colour('(not current)', 'job/info')
+			fmted_subjobs.append(sj)
+		list_of_things('subjobs', fmted_subjobs)
 	if post and post.files:
-		print()
-		print('files:')
-		for fn in sorted(post.files):
-			print('   ', job.filename(fn))
+		files = sorted(post.files)
+		if verbose:
+			files = [job.filename(fn) for fn in files]
+		list_of_things('files', files)
 	if post and not call(url + '/job_is_current/' + url_quote(job)):
 		print(colour('Job is not current', 'job/info'))
 	print()
