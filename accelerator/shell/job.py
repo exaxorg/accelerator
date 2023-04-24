@@ -23,10 +23,12 @@ from __future__ import unicode_literals
 from traceback import print_exc
 from datetime import datetime
 import errno
+import json
 from argparse import RawTextHelpFormatter
 import os
 import sys
 
+from accelerator.build import fmttime
 from accelerator.colourwrapper import colour
 from accelerator.error import NoSuchJobError
 from accelerator.setupfile import encode_setup
@@ -34,15 +36,37 @@ from accelerator.compat import FileNotFoundError, url_quote, urlencode
 from accelerator.unixhttp import call
 from .parser import name2job, ArgumentParser
 
-def show(url, job, show_output):
-	print(job.path)
-	print('=' * len(job.path))
+def show(url, job, verbose, show_output):
 	setup = job.json_load('setup.json')
-	setup.pop('_typing', None)
-	setup.starttime = str(datetime.fromtimestamp(setup.starttime))
-	if 'endtime' in setup:
-		setup.endtime = str(datetime.fromtimestamp(setup.endtime))
-	print(encode_setup(setup, as_str=True))
+	if verbose:
+		print(colour(job.path, 'job/header'))
+		print(colour('=' * len(job.path), 'job/header'))
+		setup.pop('_typing', None)
+		setup.starttime = str(datetime.fromtimestamp(setup.starttime))
+		if 'endtime' in setup:
+			setup.endtime = str(datetime.fromtimestamp(setup.endtime))
+		print(encode_setup(setup, as_str=True))
+	else:
+		starttime = datetime.fromtimestamp(setup.starttime).replace(microsecond=0)
+		hdr = '%s (%s) at %s' % (job, job.method, starttime,)
+		if 'exectime' in setup:
+			hdr = '%s in %s' % (hdr, fmttime(setup.exectime.total),)
+		print(colour(hdr, 'job/header'))
+		things = []
+		def opt_thing(name):
+			value = setup[name]
+			if value:
+				if isinstance(value, dict) and len(value) > 1:
+					value = json.dumps(value, indent=4, sort_keys=True).replace('\n', '\n    ')
+				else:
+					value = json.dumps(value)
+				things.append((name, value,))
+		opt_thing('caption')
+		opt_thing('options')
+		opt_thing('datasets')
+		opt_thing('jobs')
+		for k, v in things:
+			print('    %s: %s' % (k, v,))
 	if job.datasets:
 		print()
 		print('datasets:')
@@ -165,6 +189,7 @@ def main(argv, cfg):
 		description=descr,
 		formatter_class=RawTextHelpFormatter,
 	)
+	parser.add_argument('-v', '--verbose', action='store_true', negation='not', help='more output (e.g the whole setup.json)')
 	group = parser.add_mutually_exclusive_group()
 	group.add_argument('-o', '--output', action='store_true', help='show job output')
 	group.add_argument('-O', '--just-output', action='store_true', help='show only job output')
@@ -205,7 +230,7 @@ def main(argv, cfg):
 			elif args.file is not None:
 				res |= show_file(job, args.file)
 			else:
-				show(cfg.url, job, args.output)
+				show(cfg.url, job, args.verbose, args.output)
 		except NoSuchJobError as e:
 			print(e)
 			res = 1
