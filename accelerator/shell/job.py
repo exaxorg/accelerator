@@ -95,18 +95,15 @@ def show(url, job, verbose, show_output):
 	if post and not call(url + '/job_is_current/' + url_quote(job)):
 		print(colour('Job is not current', 'job/info'))
 	print()
-	out = job.output()
+	out = job.output('parts')
 	if show_output:
 		if out:
-			print('output (use --just-output/-O to see only the output):')
-			print(out)
-			if not out.endswith('\n'):
-				print()
+			show_output_d(out, verbose)
 		else:
 			print(job, 'produced no output')
 			print()
 	elif out:
-		print('%s produced %d bytes of output, use --output/-o to see it' % (job, len(out),))
+		print('%s produced %d bytes of output, use --output/-o to see it' % (job, sum(len(v) for v in out.values()),))
 		print()
 
 def show_source(job, pattern='*'):
@@ -182,6 +179,21 @@ def show_file(job, pattern):
 			os.write(1, b'\n')
 	return 0
 
+def show_output_d(d, verbose):
+	first = True
+	for k, out in d.items():
+		if out:
+			if verbose:
+				if first:
+					first = False
+				else:
+					print()
+				if isinstance(k, int):
+					k = 'analysis(%d)' % (k,)
+				print(colour(k, 'job/header'))
+				print(colour('=' * len(k), 'job/header'))
+			print(out, end='' if out.endswith('\n') else '\n')
+
 def main(argv, cfg):
 	descr = 'show setup.json, dataset list, etc for jobs'
 	parser = ArgumentParser(
@@ -218,9 +230,7 @@ def main(argv, cfg):
 		try:
 			job = name2job(cfg, path)
 			if args.just_output:
-				out = job.output()
-				if out:
-					print(out, end='' if out.endswith('\n') else '\n')
+				show_output_d(job.output('parts'), args.verbose)
 			elif args.just_path:
 				print(job.path)
 			elif args.source:
