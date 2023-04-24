@@ -21,7 +21,7 @@
 import os
 import re
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from functools import wraps
 
 from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
@@ -183,23 +183,31 @@ class Job(unicode):
 		return job_datasets(self)
 
 	def output(self, what=None):
+		if what == 'parts':
+			as_parts = True
+			what = None
+		else:
+			as_parts = False
 		if isinstance(what, int):
-			fns = [str(what)]
+			fns = [what]
 		else:
 			assert what in (None, 'prepare', 'analysis', 'synthesis'), 'Unknown output %r' % (what,)
 			if what in (None, 'analysis'):
-				fns = [str(sliceno) for sliceno in range(self.params.slices)]
+				fns = list(range(self.params.slices))
 				if what is None:
 					fns = ['prepare'] + fns + ['synthesis']
 			else:
 				fns = [what]
-		res = []
-		for fn in fns:
-			fn = self.filename('OUTPUT/' + fn)
+		res = OrderedDict()
+		for k in fns:
+			fn = self.filename('OUTPUT/' + str(k))
 			if os.path.exists(fn):
 				with open(fn, 'rt', encoding='utf-8', errors='backslashreplace') as fh:
-					res.append(fh.read())
-		return ''.join(res)
+					res[k] = fh.read()
+		if as_parts:
+			return res
+		else:
+			return ''.join(res.values())
 
 	def link_result(self, filename='result.pickle', linkname=None):
 		"""Put a symlink to filename in result_directory
