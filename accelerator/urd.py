@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -43,7 +43,7 @@ from accelerator.extras import DotDict, PY3
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
 
-LOGFILEVERSION = '3'
+LOGFILEVERSION = '4'
 
 lock = Lock()
 
@@ -175,10 +175,18 @@ class DB:
 		self._initialised = True
 
 	def _parse(self, line):
-		line = line.rstrip('\n').split('|')
+		line = line.rstrip('\n')
+		if line[:2] == '3|':
+			line = line.split('|')
+		else:
+			line = line.split('\t')
 		logfileversion, writets = line[:2]
-		assert logfileversion == '3'
 		assert writets not in self._parsed
+		if logfileversion == '3':
+			if line[2] == 'add':
+				line[-1] = json.dumps(line[-1]) # caption is json encoded in v4
+		else:
+			assert logfileversion == '4', logfileversion
 		self._parsed[writets] = line[2:]
 
 	def _playback_parsed(self):
@@ -202,7 +210,7 @@ class DB:
 			deps=json.loads(line[2]),
 			joblist=json.loads(line[3]),
 			flags=flags,
-			caption=line[5],
+			caption=json.loads(line[5]),
 		)
 		self.add(data)
 
@@ -231,11 +239,13 @@ class DB:
 			self._validate_data(data)
 			json_deps = json.dumps(data.deps)
 			json_joblist = json.dumps(data.joblist)
+			json_caption = json.dumps(data.caption)
 			key = '%s/%s' % (data.user, data.build,)
 			flags = ','.join(data.flags)
-			for s in json_deps, json_joblist, data.caption, data.user, data.build, data.timestamp, flags:
-				assert '|' not in s, s
-			logdata = [json_deps, json_joblist, flags, data.caption,]
+			for s in key, json_deps, json_joblist, json_caption, data.user, data.build, data.timestamp, flags:
+				assert '\t' not in s, s
+				assert '\n' not in s, s
+			logdata = [json_deps, json_joblist, flags, json_caption,]
 		elif action == 'truncate':
 			key = data.key
 			logdata = []
@@ -246,7 +256,7 @@ class DB:
 			now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")
 			if now != self._lasttime: break
 		self._lasttime = now
-		s = '|'.join([LOGFILEVERSION, now, action, data.timestamp, key,] + logdata)
+		s = '\t'.join([LOGFILEVERSION, now, action, data.timestamp, key,] + logdata)
 		return s
 
 	def _is_ghost(self, data):
