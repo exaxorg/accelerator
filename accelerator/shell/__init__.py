@@ -107,7 +107,24 @@ def unpath(path):
 	while path in sys.path:
 		sys.path.pop(sys.path.index(path))
 
+# This is used as "cfg" when no config is found (or parsing fails).
+# Once the command tries to use cfg the original exception from loading the
+# config is raised. But if the command doesn't use the cfg no exception is
+# raised, so e.g. --help works.
+class NoConfig(object):
+	def __init__(self, e, user_cwd):
+		self._e = e
+		self.user_cwd = user_cwd
+		self.project_directory = user_cwd
+
+	def __getattr__(self, name):
+		raise self._e
+
+	def __getitem__(self, name):
+		return getattr(self, name)
+
 def setup(config_fn=None, debug_cmd=False):
+	global cfg
 	try:
 		locale.resetlocale()
 	except locale.Error:
@@ -121,7 +138,10 @@ def setup(config_fn=None, debug_cmd=False):
 	if config_fn:
 		load_cfg(config_fn)
 	else:
-		load_some_cfg(all=debug_cmd)
+		try:
+			load_some_cfg(all=debug_cmd)
+		except UserError as e:
+			cfg = NoConfig(e, user_cwd)
 	cfg.user_cwd = user_cwd
 	if not debug_cmd:
 		# We want the project directory to be first in sys.path.
