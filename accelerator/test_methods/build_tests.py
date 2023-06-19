@@ -38,6 +38,11 @@ Run the tests. Needs at least 3 slices to work.
 def main(urd):
 	assert urd.info.slices >= 3, "The tests don't work with less than 3 slices (you have %d)." % (urd.info.slices,)
 
+	from accelerator.shell import cfg
+	# sys.argv[0] is absolute for unqualified commands ("ax"), but exactly what
+	# the user wrote otherwise ("./venv/bin/ax"). This makes either absolute.
+	command_prefix = [os.path.join(cfg.user_cwd, sys.argv[0]), '--config', cfg.config_filename]
+
 	print()
 	print("Testing urd.build and job.load")
 	want = ({'foo': 'foo', 'a': 'a'}, {'foo': '', 'b': ''}, {'foo': '', 'c': ''})
@@ -65,6 +70,7 @@ def main(urd):
 
 	print()
 	print("Testing urd.begin/end/truncate/get/peek/latest/first/since")
+	urd.build('test_urd', command_prefix=command_prefix)
 	urd.truncate("tests_urd", 0)
 	assert not urd.peek_latest("tests_urd").joblist
 	urd.begin("tests_urd", 1, caption="first")
@@ -313,10 +319,6 @@ def main(urd):
 
 	print()
 	print("Test shell commands")
-	from accelerator.shell import cfg
-	# sys.argv[0] is absolute for unqualified commands ("ax"), but exactly what
-	# the user wrote otherwise ("./venv/bin/ax"). This makes either absolute.
-	command_prefix = [os.path.join(cfg.user_cwd, sys.argv[0]), '--config', cfg.config_filename]
 	urd.truncate("tests_urd", 0)
 	# These have to be rebuilt every time, or the resolving might give other jobs.
 	urd.begin("tests_urd", 1)
