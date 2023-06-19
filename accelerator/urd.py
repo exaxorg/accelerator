@@ -594,6 +594,10 @@ def main(argv, cfg):
 		raise Exception('No users in %r and --allow-passwordless not specified.' % (auth_fn,))
 	db = DB(args.path, not args.quiet)
 
+	# The standard DotDict is now ordered, but that doesn't suit urd.
+	DotDict.__eq__ = dict.__eq__
+	DotDict.__ne__ = dict.__ne__
+
 	bottle.install(jsonify)
 
 	kw = dict(debug=False, reloader=False, quiet=args.quiet, server=WaitressServer)
