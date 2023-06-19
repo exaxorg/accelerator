@@ -574,13 +574,18 @@ def main(argv, cfg):
 	parser.add_argument('--path', type=str, default='urd.db',
 		help='database directory (can be relative to project directory) (default: urd.db)',
 	)
+	parser.add_argument('--listen', help='[host]:port or socket path, overrides config')
 	parser.add_argument('--allow-passwordless', action='store_true', negation='dont', help='accept any pass for users not in passwd.')
 	parser.add_argument('--quiet',              action='store_true', negation='not',  help='less chatty.')
 	args = parser.parse_intermixed_args(argv)
-	if not args.quiet:
-		print('-'*79)
-		print(args)
-		print()
+
+	if args.listen is None:
+		listen = cfg.urd_listen
+		if not listen:
+			raise Exception('urd not configured in this project')
+	else:
+		from accelerator.configfile import resolve_listen
+		listen = resolve_listen(args.listen)[0]
 
 	auth_fn = os.path.join(args.path, 'passwd')
 	authdict = readauth(auth_fn)
@@ -592,9 +597,6 @@ def main(argv, cfg):
 	bottle.install(jsonify)
 
 	kw = dict(debug=False, reloader=False, quiet=args.quiet, server=WaitressServer)
-	listen = cfg.urd_listen
-	if not listen:
-		raise Exception('urd not configured in this project')
 	if isinstance(listen, tuple):
 		kw['host'], kw['port'] = listen
 	else:
