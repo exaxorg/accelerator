@@ -59,7 +59,7 @@ def fixup_listen(project_directory, listen):
 	listen, url = listen
 	if not isinstance(listen, tuple):
 		socket = os.path.join(project_directory, listen)
-		url = 'unixhttp://' + quote_plus(os.path.realpath(socket))
+		url = 'unixhttp://' + quote_plus(os.path.realpath(socket)).replace('+', '%20')
 	return listen, url
 
 

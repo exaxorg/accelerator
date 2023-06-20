@@ -21,7 +21,7 @@
 from __future__ import print_function
 from __future__ import division
 
-from accelerator.compat import PY3, unquote_plus
+from accelerator.compat import PY3
 from accelerator.compat import urlopen, Request, URLError, HTTPError
 from accelerator.extras import json_encode, json_decode
 from accelerator.error import ServerError, UrdError, UrdPermissionError, UrdConflictError
@@ -41,7 +41,7 @@ import socket
 class UnixHTTPConnection(HTTPConnection):
 	def __init__(self, host, *a, **kw):
 		HTTPConnection.__init__(self, 'localhost', *a, **kw)
-		self.unix_path = unquote_plus(host.split(':', 1)[0])
+		self.unix_path = host
 
 	def connect(self):
 		s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
