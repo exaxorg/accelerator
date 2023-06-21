@@ -2,8 +2,9 @@
 
 	<h1>{{ key }}</h1>
 	<table class="urd-table">
+		% saved_caption = entry.caption
 		% for thing in ('timestamp', 'user', 'build', 'caption',):
-			<tr><td>{{ thing }}</td><td>{{ entry.pop(thing) }}</td></tr>
+			<tr><td>{{ thing }}</td><td id="urd-{{ thing }}">{{ entry.pop(thing) }}</td></tr>
 		% end
 		% for thing in sorted(entry):
 			% if thing not in ('joblist', 'deps',):
@@ -30,4 +31,10 @@
 			</ol>
 		</td></tr>
 	</table>
+<script language="javascript">
+(function() {
+	const el = document.getElementById('urd-caption');
+	parseANSI(el, {{! js_quote(saved_caption) }});
+})();
+</script>
 </body>
