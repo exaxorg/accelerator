@@ -246,6 +246,12 @@ def run(cfg, from_shell=False):
 	project = os.path.split(cfg.project_directory)[1]
 	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
 
+	# The default path filter (i.e. <something:path>) does not match newlines,
+	# but we want it to do so (e.g. in case someone names a dataset with one).
+	def pathfilter(config):
+		return r'(?:.|\n)+?', None, None
+	bottle.default_app[0].router.add_filter('path', pathfilter)
+
 	populate_hashed()
 
 	def call_s(*path, **kw):
