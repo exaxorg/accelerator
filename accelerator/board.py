@@ -118,9 +118,9 @@ def ax_link(v):
 		if isinstance(v, Dataset):
 			job = bottle.html_escape(v.job)
 			name = bottle.html_escape(v.name)
-			return '<a href="/job/%s">%s</a>/<a href="/dataset/%s">%s</a>' % (job, job, ev, name,)
+			return '<a href="/job/%s">%s</a>/<a href="/dataset/%s">%s</a>' % (url_quote(v.job), job, url_quote(v), name,)
 		elif isinstance(v, Job):
-			return '<a href="/job/%s">%s</a>' % (ev, ev,)
+			return '<a href="/job/%s">%s</a>' % (url_quote(v), ev,)
 		else:
 			return ev
 	else:
@@ -165,6 +165,7 @@ def template(tpl_name, **kw):
 		js_quote=js_quote,
 		name2hashed=name2hashed,
 		template=template,
+		url_quote=url_quote,
 		**kw
 	)
 

@@ -70,7 +70,7 @@
 				tbody.appendChild(tr);
 				return tr;
 			};
-			const url = '/dataset/{{ ds }}?lines=' + want_lines + '&column='
+			const url = '/dataset/{{ url_quote(ds) }}?lines=' + want_lines + '&column='
 			for (let col = 0; col < columns.length; col++) {
 				if (!document.getElementById('wantCol' + col).checked) continue;
 				const td = document.getElementById('col' + col);

@@ -22,10 +22,10 @@
 	<div class="prevnext">
 		<h1>{{ job }}</h1>
 		% if job.number > 0:
-			<a accesskey="p" href="/job/{{ '%s-%d' % (job.workdir, job.number - 1,) }}">⇦ prev</a>
+			<a accesskey="p" href="/job/{{ url_quote('%s-%d' % (job.workdir, job.number - 1,)) }}">⇦ prev</a>
 		% end
-		<a accesskey="n" href="/job/{{ '%s-%d' % (job.workdir, job.number + 1,) }}">next ⇨</a>
-		<a accesskey="l" href="/job/{{ '%s-LATEST' % (job.workdir,) }}">LATEST ⇉</a>
+		<a accesskey="n" href="/job/{{ url_quote('%s-%d' % (job.workdir, job.number + 1,)) }}">next ⇨</a>
+		<a accesskey="l" href="/job/{{ url_quote('%s-LATEST' % (job.workdir,)) }}">LATEST ⇉</a>
 	</div>
 	% if aborted:
 		<div class="warning">WARNING: Job didn't finish, information may be incomplete.</div>
@@ -34,8 +34,8 @@
 	% end
 	<h2>setup</h2>
 	<div class="box">
-		<a href="/method/{{ params.method }}">{{ params.package }}.{{ params.method }}</a><br>
-		<a href="/job/{{ job }}/method.tar.gz/">Source</a>
+		<a href="/method/{{ url_quote(params.method) }}">{{ params.package }}.{{ params.method }}</a><br>
+		<a href="/job/{{ url_quote(job) }}/method.tar.gz/">Source</a>
 		<div class="box" id="other-params">
 			% blacklist = {
 			%     'package', 'method', 'options', 'datasets', 'jobs', 'params',
@@ -79,7 +79,7 @@
 		<div class="box">
 			<ul>
 				% for ds in datasets:
-					<li><a href="/dataset/{{ ds }}">{{ ds }}</a> {{ '%d columns, %d lines' % ds.shape }}</li>
+					<li><a href="/dataset/{{ url_quote(ds) }}">{{ ds }}</a> {{ '%d columns, %d lines' % ds.shape }}</li>
 				% end
 			</ul>
 		</div>
@@ -89,7 +89,7 @@
 		<div class="box">
 			<ul>
 				% for j, is_current in subjobs:
-					<li><a href="/job/{{ j }}">{{ j }}</a> {{ j.method }}
+					<li><a href="/job/{{ url_quote(j) }}">{{ j }}</a> {{ j.method }}
 					% if not is_current:
 						<span class="warning">not current</span>
 					% end
@@ -103,7 +103,7 @@
 		<div class="box">
 			<ul>
 				% for fn in sorted(files):
-					<li><a target="_blank" href="/job/{{ job }}/{{ fn }}">{{ fn }}</a></li>
+					<li><a target="_blank" href="/job/{{ url_quote(job) }}/{{ url_quote(fn) }}">{{ fn }}</a></li>
 				% end
 			</ul>
 		</div>
@@ -125,7 +125,7 @@
 					const h3 = document.createElement('H3');
 					h3.innerText = displayname;
 					const pre = document.createElement('PRE');
-					fetch('/job/{{ job }}/OUTPUT/' + name, {headers: {Accept: 'text/plain'}})
+					fetch('/job/{{! url_quote(job) }}/OUTPUT/' + name, {headers: {Accept: 'text/plain'}})
 					.then(res => {
 						if (res.status == 404) {
 							el.remove();

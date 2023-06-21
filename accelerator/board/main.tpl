@@ -4,8 +4,8 @@
 		<table id="workdirs">
 			% for workdir in sorted(workdirs):
 				<tr>
-					<td><a target="_blank" href="/workdir/{{ workdir }}">{{ workdir }}</a></td>
-					<td><a target="_blank" href="/job/{{ workdir }}-LATEST">latest</a></td>
+					<td><a target="_blank" href="/workdir/{{ url_quote(workdir) }}">{{ workdir }}</a></td>
+					<td><a target="_blank" href="/job/{{ url_quote(workdir) }}-LATEST">latest</a></td>
 				</tr>
 			% end
 			<tr>

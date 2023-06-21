@@ -7,7 +7,7 @@
 		% for name in names:
 			% description = methods[name].description.text.split('\n')
 			<tr>
-				<td><a href="/method/{{ name }}">{{ name }}</a></td>
+				<td><a href="/method/{{ url_quote(name) }}">{{ name }}</a></td>
 				<td>
 					% for line in description:
 						{{ line }}<br>

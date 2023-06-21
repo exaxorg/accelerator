@@ -7,11 +7,11 @@
 	% else:
 		<table id="status-stacks">
 			% for job, pid, indent, part, msg, t in tree:
-				<tr><td><a href="/job/{{ job }}">{{ job }}</a></td><td>{{ pid }}</td>
+				<tr><td><a href="/job/{{ url_quote(job) }}">{{ job }}</a></td><td>{{ pid }}</td>
 				% if indent < 0:
 					<td><div class="output">
 						Tail of output ({{ t }} ago)
-						<a href="/job/{{ job }}/OUTPUT/{{ part }}">view full</a>
+						<a href="/job/{{ url_quote(job) }}/OUTPUT/{{ part }}">view full</a>
 						<pre>{{ '\n'.join(msg) }}</pre>
 					</div></td>
 				% else:

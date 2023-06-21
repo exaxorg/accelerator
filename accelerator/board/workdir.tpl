@@ -24,7 +24,7 @@
 	</tr>
 	% for job, data in reversed(jobs.items()):
 		<tr class="{{ data.klass }}">
-			<td data-jid="{{ job }}"><a href="/job/{{ job }}">{{ job }}</a></td>
+			<td data-jid="{{ job }}"><a href="/job/{{ url_quote(job) }}">{{ job }}</a></td>
 			<td>{{ data.method }}</td>
 			% if data.totaltime is None:
 				<td data-s="-1">DID NOT FINISH</td>

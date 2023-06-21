@@ -3,7 +3,7 @@
 	<h1>{{ key }}</h1>
 	<ul class="urdlist">
 	% for ts, caption in timestamps:
-		<li><a href="/urd/{{ key }}/{{ ts }}">{{ ts }}</a> <span class="urd-caption">{{ caption[:70] + '....' if len(caption) > 80 else caption }}</span></li>
+		<li><a href="/urd/{{ url_quote(key) }}/{{ url_quote(ts) }}">{{ ts }}</a> <span class="urd-caption">{{ caption[:70] + '....' if len(caption) > 80 else caption }}</span></li>
 	% end
 	</ul>
 <script language="javascript">
