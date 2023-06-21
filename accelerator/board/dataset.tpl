@@ -1,6 +1,5 @@
 {{ ! template('head', title=ds) }}
 
-% import json
 % def tdif(k, v):
 	% if v:
 		<tr><td>{{ k }}</td><td>{{ ! ax_link(v) }}</td></tr>
@@ -40,7 +39,7 @@
 	<h2>contents:</h2>
 	<script language="javascript">
 		const lines = {{ lines }};
-		const columns = {{! json.dumps(sorted(ds.columns)) }};
+		const columns = {{! js_quote(sorted(ds.columns)) }};
 		function toggle() {
 			const checks = [];
 			for (let ix = 0; ix < columns.length; ix++) {

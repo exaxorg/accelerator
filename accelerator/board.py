@@ -149,12 +149,20 @@ def populate_hashed():
 			name2hashed[filename] = '/h/ERROR'
 			print(e, file=sys.stderr)
 
+
+def js_quote(obj):
+	# If the string contains '</script>' that will end the script, even if
+	# it's in the middle of a string. Escape < to avoid problems like that.
+	return json.dumps(obj).replace('<', '\\074')
+
+
 def template(tpl_name, **kw):
 	return bottle.template(
 		tpl_name,
 		ax_repr=ax_repr,
 		ax_link=ax_link,
 		ax_version=ax_version,
+		js_quote=js_quote,
 		name2hashed=name2hashed,
 		template=template,
 		**kw
