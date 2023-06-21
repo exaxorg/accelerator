@@ -432,7 +432,9 @@ def synthesis(job, slices):
 	grep_json(['-l', '-c', '', previous], [{'dataset': ds} for ds, _ in header_test])
 	grep_json(['-l', '-c', '-S', '', previous], [{'dataset': ds, 'sliceno': sliceno} for ds, sliceno in header_test])
 	# test escaping
-	grep_text(['-l', '-t', '/', '-S', '', previous], [['"%s"/%d' % header_test[-1]]])
+	unescaped, sliceno = header_test[-1]
+	escaped = unescaped.replace('\n', '\\n').replace('\r', '\\r').replace('"', '""')
+	grep_text(['-l', '-t', '/', '-S', '', previous], [['"%s"/%d' % (escaped, sliceno)]])
 
 	# more escaping
 	escapy = mk_ds('escapy',
