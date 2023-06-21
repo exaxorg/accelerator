@@ -477,8 +477,6 @@ class Dataset(unicode):
 		if dc.offsets:
 			return jid.filename(name)
 		else:
-			if sliceno is None:
-				sliceno = '%s'
 			return jid.filename(name % (sliceno,))
 
 	def _chain(self, length, reverse, stop):
@@ -1041,14 +1039,14 @@ class Dataset(unicode):
 		from accelerator.g import slices
 		if slices < 2:
 			return
-		fn = self.column_filename(n)
+		fn = partial(self.column_filename, n)
 		def getsize(sliceno):
 			try:
 				if self.lines[sliceno] == 0:
 					# if it's not used it shouldn't exist, so make sure it doesn't
-					os.unlink(fn % (sliceno,))
+					os.unlink(fn(sliceno))
 					return None
-				return os.path.getsize(fn % (sliceno,))
+				return os.path.getsize(fn(sliceno))
 			except FileNotFoundError:
 				return None
 		sizes = [(sliceno, getsize(sliceno)) for sliceno, cnt in enumerate(self.lines)]
@@ -1061,10 +1059,10 @@ class Dataset(unicode):
 			return
 		offsets = []
 		pos = 0
-		with open(fn % ('m',), 'wb') as m_fh:
+		with open(fn('m'), 'wb') as m_fh:
 			for sliceno, size in sizes:
 				if size:
-					with open(fn % (sliceno,), 'rb') as p_fh:
+					with open(fn(sliceno), 'rb') as p_fh:
 						data = p_fh.read()
 					assert len(data) == size, "Slice %d is %d bytes, not %d?" % (sliceno, len(data), size,)
 					m_fh.write(data)
@@ -1073,12 +1071,13 @@ class Dataset(unicode):
 					# no need to waste space storing an offset that won't be used
 					offsets.append(False)
 				if size is not None:
-					os.unlink(fn % (sliceno,))
+					os.unlink(fn(sliceno))
 					pos += size
 		c = self._data.columns[n]
+		location = c.location.split('/', 1) # the jobid might have % in it, so split it off
 		self._data.columns[n] = c._replace(
 			offsets=offsets,
-			location=c.location % ('m',),
+			location='%s/%s' % (location[0], location[1] % ('m',)),
 		)
 
 	def _maybe_merge_fully(self, columns):
