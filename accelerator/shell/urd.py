@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -122,13 +122,19 @@ def main(argv, cfg):
 def fmt(res, entry):
 	if not res:
 		return ''
-	def fmt_caption(path, caption):
-		return template % (path, caption,) if caption else path
+	def fix_caption(caption, indent):
+		caption = caption.replace('\r', '').strip()
+		if '\x1b' in caption:
+			caption += '\x1b[m'
+		caption = caption.replace('\n', '\n   ' + ' ' * indent)
+		return caption
+	def fmt_caption(path, caption, indent):
+		return template % (path, fix_caption(caption, indent),) if caption else path
 	if isinstance(res, list):
 		if isinstance(res[0], list):
 			tlen = max(len(ts) for ts, _ in res)
 			template = '%%-%ds : %%s' % (tlen,)
-			return '\n'.join(fmt_caption(*item) for item in res)
+			return '\n'.join(fmt_caption(*item, indent=tlen + 3) for item in res)
 		else:
 			return '\n'.join(res)
 	joblist = JobList(Job(j, m) for m, j in res['joblist'])
@@ -142,15 +148,15 @@ def fmt(res, entry):
 		if len(deps) > 1:
 			plen = max(len(path) for path, _ in deps)
 			template = '%%-%ds : %%s' % (plen,)
-			deps = '\n           '.join(fmt_caption(*dep) for dep in deps)
+			deps = '\n           '.join(fmt_caption(*dep, indent=11 + plen) for dep in deps)
 		else:
 			template = '%s : %s'
-			deps = fmt_caption(*deps[0])
+			deps = fmt_caption(*deps[0], indent=11 + len(deps[0][0]))
 	else:
 		deps = ''
 	return "timestamp: %s\ncaption  : %s\ndeps     : %s\n%s" % (
 		res['timestamp'],
-		res['caption'],
+		fix_caption(res['caption'], 8),
 		deps,
 		joblist.pretty,
 	)
