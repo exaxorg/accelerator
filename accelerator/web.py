@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2021 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -80,6 +80,8 @@ class BaseWebHandler(BaseHTTPRequestHandler):
 			       "REQUEST_METHOD": "POST"
 			      }
 			cgi_args = cgi.parse(self.rfile, environ=env, keep_blank_values=True)
+			if PY3:
+				cgi_args = {k: [v[-1].encode('iso-8859-1')] for k, v in cgi_args.items()}
 		else:
 			cgi_args = {None: [self.rfile.read(int(length))]}
 		self.is_head = False
