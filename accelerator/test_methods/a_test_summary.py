@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020 Carl Drougge                                          #
+# Copyright (c) 2020-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -26,8 +26,12 @@ Produce a summary that build_tests can put in the result directory.
 
 from accelerator.job import Job
 from accelerator.build import fmttime
+from accelerator.compat import url_quote
 
 options = {'joblist': []}
+
+def html_quote(s):
+	return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 def synthesis(job):
 	joblist = [Job(j) for j in options.joblist]
@@ -35,7 +39,7 @@ def synthesis(job):
 	with job.open('summary.html', 'w', encoding='utf-8') as fh:
 		fh.write('<h2>Test built these jobs in ' + fmttime(total) + '</h2>\n')
 		fh.write('<ol>\n')
-		list_item = '<li><a href="/job/{job}" target="_blank">{job}</a> {job.method} {time}</li>\n'
+		list_item = '<li><a href="/job/%s" target="_blank">%s</a> %s %s</li>\n'
 		for j in joblist:
-			fh.write(list_item.format(job=j, time=fmttime(j.params.exectime.total)))
+			fh.write(list_item % (url_quote(j), html_quote(j), html_quote(j.method), fmttime(j.params.exectime.total)))
 		fh.write('</ol>\n')
