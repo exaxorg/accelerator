@@ -507,8 +507,21 @@ def run(cfg, from_shell=False, development=False):
 					info = members[0]
 				else:
 					return template('job_method_list', members=members, job=job)
+			code = tar.extractfile(info).read()
 			bottle.response.content_type = 'text/plain; charset=UTF-8'
-			return tar.extractfile(info).read()
+			if info.name.endswith('.py'):
+				accept = get_best_accept('text/plain', 'text/html')
+				if accept == 'text/html':
+					try:
+						from pygments import highlight
+						from pygments.lexers import PythonLexer
+						from pygments.formatters import HtmlFormatter
+						data = highlight(code, PythonLexer(), HtmlFormatter())
+						code = '<style>\n' + HtmlFormatter().get_style_defs('.highlight') + '</style>\n' + data
+						bottle.response.content_type = 'text/html; charset=UTF-8'
+					except Exception:
+						pass
+			return code
 
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
@@ -686,6 +699,12 @@ def run(cfg, from_shell=False, development=False):
 		if isinstance(e.exception, NoSuchWhateverError):
 			e.body = str(e.exception)
 		return bottle.template(tpl, e=e)
+
+	try:
+		from pygments import highlight
+	except Exception:
+		from accelerator.colour import bold, red, green
+		print(bold("\nINFO: Install \"pygments\" to have " + red("prett") + green("ified") + " source code in board.\n"))
 
 	bottle.TEMPLATE_PATH = [os.path.join(os.path.dirname(__file__), 'board')]
 	kw = {}
