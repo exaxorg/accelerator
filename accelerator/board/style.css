@@ -134,6 +134,7 @@ input:disabled {
 	position: absolute;
 	top: 1.7em;
 	right: 0.4em;
+	z-index: 2;
 }
 .error, input:focus.error {
 	background: var(--bgerr);
