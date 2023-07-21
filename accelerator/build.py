@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -539,6 +539,7 @@ class Urd(object):
 		path = self._path(path)
 		assert self._current, 'Tried to finish %s with nothing running' % (path,)
 		assert path == self._current, 'Tried to finish %s while running %s' % (path, self._current,)
+		assert self.joblist, 'Tried to finish %s without building any jobs' % (path,)
 		user, build = path.split('/')
 		self._current = None
 		caption = caption or self._current_caption or ''
