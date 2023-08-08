@@ -561,8 +561,10 @@ if __name__ == "__main__":
 	if r1 < 5000:
 		print("WARNING: RLIMIT_NOFILE is %d, that's not much." % (r1,))
 
+	wait_for = []
 	try:
 		while True:
+			wait_for = [p for p in wait_for if p.is_alive()] # calls waitpid(), to avoid zombies
 			op, length = struct.unpack('<cI', recvall(sock, 5, True))
 			data = recvall(sock, length, True)
 			cookie, data = pickle.loads(data)
@@ -574,11 +576,12 @@ if __name__ == "__main__":
 				respond(cookie, res)
 			elif op == b'f':
 				# waits until job is done, so must run in a separate process
-				SimplifiedProcess(
+				p = SimplifiedProcess(
 					target=launch_finish,
 					args=(cookie, data,),
 					name=data[3], # jobid
 				)
+				wait_for.append(p)
 				os.close(data[1]) # close prof_r in the parent
 			elif op == b'w':
 				# It would be nice to be able to just ignore children
