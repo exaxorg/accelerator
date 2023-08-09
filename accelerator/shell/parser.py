@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2019 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -108,11 +108,19 @@ def urd_call_w_tildes(cfg, path, tildes):
 	return res
 
 def name2job(cfg, n):
+	dotted = None
 	if '.' in n:
-		n, dotted = n.split('.', 1)
-		dotted = iter(dotted.split('.'))
-	else:
-		dotted = None
+		prefix_len = 0
+		# If workdir names have '.' in them we don't want to split there.
+		for prefix in sorted((name + '-' for name in cfg.workdirs), key=lambda name: -len(name)):
+			if n.startswith(prefix):
+				prefix_len = len(prefix)
+				break
+		try:
+			prefix_len = n.index('.', prefix_len)
+			n, dotted = n[:prefix_len], iter(n[prefix_len + 1:].split('.'))
+		except ValueError:
+			pass
 	def split(n, what):
 		n, tildes = split_tildes(n, extended=True, allow_empty=True)
 		if n.endswith('!'):
