@@ -110,7 +110,10 @@ def urd_call_w_tildes(cfg, path, tildes):
 def name2job(cfg, n):
 	dotted = None
 	if '.' in n:
-		prefix_len = 0
+		if n.startswith(':') and ':' in n[1:]: # :urd:-list
+			prefix_len = n.index(':', 1) + 1
+		else:
+			prefix_len = 0
 		# If workdir names have '.' in them we don't want to split there.
 		for prefix in sorted((name + '-' for name in cfg.workdirs), key=lambda name: -len(name)):
 			if n.startswith(prefix):
