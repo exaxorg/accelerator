@@ -76,7 +76,7 @@ ZLIB_PREFIX="/prepare/zlib-ng"
 
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
-	VERSIONS=(/opt/python/cp[23][5-9]-*)
+	VERSIONS=(/opt/python/cp[23][5-7]-*)
 	if [ ! -e "/out/wheelhouse/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl ]; then
 		echo "First build in a manylinux2014 container"
 		exit 1
@@ -86,7 +86,7 @@ if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 else
 	BUILD_STEP="new"
 	if [ "$X86glibc" = "true" ]; then
-		VERSIONS=(/opt/python/cp31[0-9]-*)
+		VERSIONS=(/opt/python/cp3[89]-* /opt/python/cp31[0-9]-*)
 	else
 		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
 	fi
@@ -223,23 +223,29 @@ done
 
 
 if [ "$BUILD_STEP" = "old" ]; then
-	# Test running 2.7 and 3.5 under a 3.8 server
+	# Test running 2.7 and 3.5 under a 3.7 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-		/opt/python/cp38-cp38/bin \
+		/opt/python/cp37-cp37m/bin \
 		/opt/python/cp27-cp27mu/bin \
 		/opt/python/cp35-cp35m/bin
 
-	# Test running 3.6 and 3.9 under a 2.7 server
+	# Test running 3.6 and 3.5 under a 2.7 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
 		/opt/python/cp27-cp27m/bin \
 		/opt/python/cp36-cp36m/bin \
-		/opt/python/cp39-cp39/bin
+		/opt/python/cp35-cp35m/bin
 elif [ "$X86glibc" = "false" ]; then
 	# Test running 3.10 and 3.6 under a 3.8 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
 		/opt/python/cp38-cp38/bin \
 		/opt/python/cp310-cp310/bin \
 		/opt/python/cp36-cp36m/bin
+else # X86glibc new
+	# Test running 3.12 and 3.8 under a 3.10 server
+	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
+		/opt/python/cp310-cp310/bin \
+		/opt/python/cp312-cp312/bin \
+		/opt/python/cp38-cp38/bin
 fi
 
 
