@@ -143,10 +143,13 @@ def name2job(cfg, n):
 			k = None
 			if n in ('jobs', 'datasets'):
 				k = n
+				if current or tildes:
+					raise JobNotFound("Don't use !~+<>^ on .%s, put after .%s.foo(HERE)." % (k, k))
 				try:
 					n = next(dotted)
 				except StopIteration:
 					raise JobNotFound("%s.%s.what?" % (job, k,))
+				n, current, tildes = split(n, k)
 			elif n in p.jobs and n in p.datasets:
 				raise JobNotFound("Job %s (%s) has %s in both .jobs and .datasets, please specify." % (job, job.method, n,))
 			if k:
