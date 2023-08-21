@@ -71,60 +71,60 @@ def main(urd):
 	print()
 	print("Testing urd.begin/end/truncate/get/peek/latest/first/since")
 	urd.build('test_urd', command_prefix=command_prefix)
-	urd.truncate("tests_urd", 0)
-	assert not urd.peek_latest("tests_urd").joblist
-	urd.begin("tests_urd", 1, caption="first")
+	urd.truncate("tests.urd", 0)
+	assert not urd.peek_latest("tests.urd").joblist
+	urd.begin("tests.urd", 1, caption="first")
 	urd.build("test_build_kws")
-	fin = urd.finish("tests_urd")
+	fin = urd.finish("tests.urd")
 	assert fin == {'new': True, 'changed': False, 'is_ghost': False}, fin
-	urd.begin("tests_urd", 1)
+	urd.begin("tests.urd", 1)
 	job = urd.build("test_build_kws")
-	fin = urd.finish("tests_urd", caption="first")
+	fin = urd.finish("tests.urd", caption="first")
 	assert fin == {'new': False, 'changed': False, 'is_ghost': False}, fin
-	urd.begin("tests_urd", 1) # will be overridden to 2 in finish
-	jl = urd.latest("tests_urd").joblist
+	urd.begin("tests.urd", 1) # will be overridden to 2 in finish
+	jl = urd.latest("tests.urd").joblist
 	assert jl == [job], '%r != [%r]' % (jl, job,)
 	urd.build("test_build_kws", options=dict(foo='bar', a='A'))
-	urd.finish("tests_urd", 2, caption="second")
-	u = urd.peek_latest("tests_urd")
+	urd.finish("tests.urd", 2, caption="second")
+	u = urd.peek_latest("tests.urd")
 	assert u.caption == "second"
 	dep0 = list(u.deps.values())[0]
 	assert dep0.caption == "first", dep0.caption
 	assert dep0.joblist == jl, '%r != %r' % (dep0.joblist, jl,)
-	assert urd.since("tests_urd", 0) == ['1', '2']
-	urd.truncate("tests_urd", 2)
-	assert urd.since("tests_urd", 0) == ['1']
-	urd.truncate("tests_urd", 0)
-	assert urd.since("tests_urd", 0) == []
+	assert urd.since("tests.urd", 0) == ['1', '2']
+	urd.truncate("tests.urd", 2)
+	assert urd.since("tests.urd", 0) == ['1']
+	urd.truncate("tests.urd", 0)
+	assert urd.since("tests.urd", 0) == []
 	ordered_ts = [1, 2, 1000000000, '1978-01-01', '1978-01-01+0', '1978-01-01+2', '1978-01-01 00:00', '1978-01-01T00:00+42', '2017-06-27', '2017-06-27T17:00:00', '2017-06-27 17:00:00+42']
 	for ts in ordered_ts:
-		urd.begin("tests_urd")
+		urd.begin("tests.urd")
 		if ts == 1000000000:
-			urd.get("tests_urd", '1')
+			urd.get("tests.urd", '1')
 		urd.build("test_build_kws")
-		urd.finish("tests_urd", ts)
-	urd.begin("tests_urd")
+		urd.finish("tests.urd", ts)
+	urd.begin("tests.urd")
 	urd.build("test_build_kws")
-	urd.finish("tests_urd", ('2019-12', 3))
+	urd.finish("tests.urd", ('2019-12', 3))
 	ordered_ts.append('2019-12+3')
 	ordered_ts = [str(v).replace(' ', 'T') for v in ordered_ts]
-	assert urd.since("tests_urd", 0) == ordered_ts
-	assert urd.since("tests_urd", '1978-01-01') == ordered_ts[4:]
-	assert urd.peek_first("tests_urd").timestamp == '1'
-	assert not urd.peek("tests_urd", 2).deps
-	dep_jl = list(urd.peek("tests_urd", 1000000000).deps.values())[0].joblist
+	assert urd.since("tests.urd", 0) == ordered_ts
+	assert urd.since("tests.urd", '1978-01-01') == ordered_ts[4:]
+	assert urd.peek_first("tests.urd").timestamp == '1'
+	assert not urd.peek("tests.urd", 2).deps
+	dep_jl = list(urd.peek("tests.urd", 1000000000).deps.values())[0].joblist
 	assert dep_jl == [job]
-	assert urd.peek("tests_urd", ('2017-06-27 17:00:00', 42)).timestamp == '2017-06-27T17:00:00+42'
+	assert urd.peek("tests.urd", ('2017-06-27 17:00:00', 42)).timestamp == '2017-06-27T17:00:00+42'
 	while ordered_ts:
-		urd.truncate("tests_urd", ordered_ts.pop())
-		assert urd.since("tests_urd", 0) == ordered_ts, ordered_ts
+		urd.truncate("tests.urd", ordered_ts.pop())
+		assert urd.since("tests.urd", 0) == ordered_ts, ordered_ts
 	want = [date.today() - timedelta(10), datetime.utcnow()]
 	for ts in want:
-		urd.begin("tests_urd", ts)
+		urd.begin("tests.urd", ts)
 		urd.build("test_build_kws")
-		urd.finish("tests_urd")
-	assert urd.since("tests_urd", 0) == [str(ts).replace(' ', 'T') for ts in want]
-	urd.truncate("tests_urd", 0)
+		urd.finish("tests.urd")
+	assert urd.since("tests.urd", 0) == [str(ts).replace(' ', 'T') for ts in want]
+	urd.truncate("tests.urd", 0)
 
 	for how in ("exiting", "dying",):
 		print()
@@ -319,19 +319,19 @@ def main(urd):
 
 	print()
 	print("Test shell commands")
-	urd.truncate("tests_urd", 0)
+	urd.truncate("tests.urd", 0)
 	# These have to be rebuilt every time, or the resolving might give other jobs.
-	urd.begin("tests_urd", 1)
+	urd.begin("tests.urd", 1)
 	a = urd.build('test_shell_data', force_build=True)
 	b = urd.build('test_shell_data', force_build=True)
 	c = urd.build('test_shell_data', datasets={'previous': a})
-	urd.finish("tests_urd")
-	urd.begin("tests_urd", "2021-09-27T03:14")
+	urd.finish("tests.urd")
+	urd.begin("tests.urd", "2021-09-27T03:14")
 	d = urd.build('test_shell_data', datasets={'previous': c, 'parent': a + '/j'}, jobs={'previous': b})
-	urd.finish("tests_urd")
-	urd.begin("tests_urd", "2021-09-27T03:14+1")
+	urd.finish("tests.urd")
+	urd.begin("tests.urd", "2021-09-27T03:14+1")
 	e = urd.build('test_shell_data', jobs={'previous': d})
-	urd.finish("tests_urd")
+	urd.finish("tests.urd")
 	urd.build('test_shell_commands', command_prefix=command_prefix)
 	# ~ finds earlier jobs with that method, ^ follows jobs.previous falling back to datasets.previous.
 	want = {
@@ -340,13 +340,13 @@ def main(urd):
 		'test_shell_data~3': b, # numbered tildes
 		'test_shell_data~2^': a, # ~~ goes to c, ^ follows .previous to a.
 		d + '^': b, # prefers jobs.previous to .datasets.previous
-		':tests_urd:': e,
-		':tests_urd/2021-09-27T03:14:': d,
-		':tests_urd/1:1': b, # 1 is the second entry
-		':tests_urd/1:-3': a, # third entry from the end
-		':tests_urd:^': d,
-		':tests_urd/2021-09-27T03:14+1^^:0': a, # ^ in :: goes to earlier entries
-		':tests_urd/1~:': d, # ~ in :: goes to later entries
+		':tests.urd:': e,
+		':tests.urd/2021-09-27T03:14:': d,
+		':tests.urd/1:1': b, # 1 is the second entry
+		':tests.urd/1:-3': a, # third entry from the end
+		':tests.urd:^': d,
+		':tests.urd/2021-09-27T03:14+1^^:0': a, # ^ in :: goes to earlier entries
+		':tests.urd/1~:': d, # ~ in :: goes to later entries
 	}
 	urd.build('test_shell_job', command_prefix=command_prefix, want=want)
 	# the job is resolved first, so the old specs give the same results
@@ -357,15 +357,15 @@ def main(urd):
 		'test_shell_data~/j^': a + '/j', # both job and ds movement
 		e + '/j~^': a + '/j', # .previous.parent
 		# some urdlist ones with datasets on
-		':tests_urd:/j': e + '/j',
-		':tests_urd/1:1/j': b + '/j',
-		':tests_urd:^/j': d + '/j',
-		':tests_urd/2021-09-27T03:14:/j': d + '/j',
+		':tests.urd:/j': e + '/j',
+		':tests.urd/1:1/j': b + '/j',
+		':tests.urd:^/j': d + '/j',
+		':tests.urd/2021-09-27T03:14:/j': d + '/j',
 		# finally one with : in the list and / in the ds name
-		':tests_urd/2021-09-27T03:14+1:0/name/with/slash': e + '/name/with/slash',
+		':tests.urd/2021-09-27T03:14+1:0/name/with/slash': e + '/name/with/slash',
 	})
 	urd.build('test_shell_ds', command_prefix=command_prefix, want=want)
-	urd.truncate("tests_urd", 0)
+	urd.truncate("tests.urd", 0)
 	urd.build('test_shell_grep', command_prefix=command_prefix)
 	urd.build('test_shell_config', command_prefix=command_prefix)
 
