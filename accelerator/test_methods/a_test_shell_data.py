@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -28,7 +28,7 @@ and a j dataset with previous from j in jobs.previous.
 '''
 
 datasets = ('previous', 'parent',)
-jobs = ('previous',)
+jobs = ('previous', 'extra',)
 
 def synthesis(job):
 	dw = job.datasetwriter(columns={'a': 'bool'}, previous=datasets.previous)

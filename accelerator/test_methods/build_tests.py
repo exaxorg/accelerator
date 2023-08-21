@@ -327,10 +327,10 @@ def main(urd):
 	c = urd.build('test_shell_data', datasets={'previous': a})
 	urd.finish("tests.urd")
 	urd.begin("tests.urd", "2021-09-27T03:14")
-	d = urd.build('test_shell_data', datasets={'previous': c, 'parent': a + '/j'}, jobs={'previous': b})
+	d = urd.build('test_shell_data', datasets={'previous': c, 'parent': a + '/j'}, jobs={'previous': b, 'extra': c})
 	urd.finish("tests.urd")
 	urd.begin("tests.urd", "2021-09-27T03:14+1")
-	e = urd.build('test_shell_data', jobs={'previous': d})
+	e = urd.build('test_shell_data', jobs={'previous': d, 'extra': a})
 	urd.finish("tests.urd")
 	urd.build('test_shell_commands', command_prefix=command_prefix)
 	# ~ finds earlier jobs with that method, ^ follows jobs.previous falling back to datasets.previous.
@@ -347,6 +347,12 @@ def main(urd):
 		':tests.urd:^': d,
 		':tests.urd/2021-09-27T03:14+1^^:0': a, # ^ in :: goes to earlier entries
 		':tests.urd/1~:': d, # ~ in :: goes to later entries
+		':tests.urd/2021-09-27T03:14:.extra': c,
+		':tests.urd/2021-09-27T03:14+1:.extra': a,
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous': d,
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous.extra': c,
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous.jobs.extra.datasets.previous': a,
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous~.datasets.previous': a,
 	}
 	urd.build('test_shell_job', command_prefix=command_prefix, want=want)
 	# the job is resolved first, so the old specs give the same results
