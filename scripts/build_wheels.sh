@@ -72,6 +72,13 @@ BUILT=()
 
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
 WHEEL_WILDCARD="${MANYLINUX_VERSION/%20*}*_$AUDITWHEEL_ARCH"
+
+# For manylinux all sorts of stuff happens with the tag, but for musllinux
+# we can match on the complete platform tag without messing around.
+if [ "$MANYLINUX_VERSION" = "musllinux" ]; then
+	WHEEL_WILDCARD="$AUDITWHEEL_PLAT"
+fi
+
 ZLIB_PREFIX="/prepare/zlib-ng"
 
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
