@@ -135,10 +135,17 @@ class Job(unicode):
 	def withfile(self, filename, sliced=False, extra=None):
 		return JobWithFile(self, filename, sliced, extra)
 
-	@_cachedprop
+	@property # usually cached
 	def params(self):
+		if 'params' in self._cache:
+			return self._cache['params']
 		from accelerator.extras import job_params
-		return job_params(self)
+		res = job_params(self)
+		if 'endtime' in res:
+			# only cache it if the job is finished, so that board does
+			# not get stuck with an incomplete job.
+			self._cache['params'] = res
+		return res
 
 	@_cachedprop
 	def version(self):
