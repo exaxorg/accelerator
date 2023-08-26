@@ -16,6 +16,12 @@ if [ -z "${AUDITWHEEL_ARCH-}" ]; then
 	exit 1
 fi
 
+if [[ "${AUDITWHEEL_POLICY-}" =~ manylinux_2_ ]]; then
+	# You can build in a PEP 600 container, but the wheels should still be manylinux2014
+	export AUDITWHEEL_POLICY=manylinux2014
+	export AUDITWHEEL_PLAT=manylinux2014_"$AUDITWHEEL_ARCH"
+fi
+
 X86glibc="false"
 if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
 	if [ "${AUDITWHEEL_PLAT/%20*}" = "manylinux" ]; then
