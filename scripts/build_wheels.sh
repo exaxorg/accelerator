@@ -109,6 +109,9 @@ else
 fi
 
 
+# Aim for reproducible wheels by using the commit date.
+export SOURCE_DATE_EPOCH=$(git -C /tmp/accelerator show -s --format=%ct "$2")
+
 SDIST="$WHEELHOUSE/$NAME.tar.gz"
 if [ -e "$SDIST" ]; then
 	BUILT_SDIST=""
@@ -129,7 +132,7 @@ if [ -e "$SDIST" ]; then
 	fi
 else
 	cd /tmp/accelerator
-	ACCELERATOR_BUILD_VERSION="$VERSION" ACCELERATOR_BUILD="$ACCELERATOR_BUILD" /opt/python/cp38-cp38/bin/python3 ./setup.py sdist
+	ACCELERATOR_BUILD_VERSION="$VERSION" ACCELERATOR_BUILD="$ACCELERATOR_BUILD" /opt/python/cp311-cp311/bin/python3 -m build --no-isolation --sdist .
 	cp -p "dist/$NAME.tar.gz" /tmp/
 	SDIST="/tmp/$NAME.tar.gz"
 	BUILT_SDIST="$SDIST"
@@ -143,9 +146,12 @@ mkdir /tmp/wheels /tmp/wheels/fixed
 build_one_wheel() {
 	set -euo pipefail
 	set -x
+	mkdir "/tmp/axbuild.$V"
+	tar zxf "$SDIST" -C "/tmp/axbuild.$V"
 	ACCELERATOR_BUILD_STATIC_ZLIB="$ZLIB_PREFIX/lib/libz.a" \
 	CPPFLAGS="-I$ZLIB_PREFIX/include" \
-	"/opt/python/$V/bin/pip" wheel "$SDIST" --no-deps -w /tmp/wheels/
+	"/opt/python/$V/bin/python" -m build --no-isolation --wheel "/tmp/axbuild.$V/$NAME" -o /tmp/wheels/
+	rm -rf "/tmp/axbuild.$V"
 	auditwheel repair "$UNFIXED_NAME" -w /tmp/wheels/fixed/
 	"/opt/python/$V/bin/pip" install "/tmp/wheels/fixed/$NAME-$V-"$WHEEL_WILDCARD.whl
 }
