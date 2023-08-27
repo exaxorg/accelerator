@@ -87,7 +87,8 @@ fi
 
 ZLIB_PREFIX="/prepare/zlib-ng"
 
-WHEELHOUSE="/out/wheelhouse"
+WHEELHOUSE="/out/wheelhouse/${VERSION//.0/.}"
+mkdir -p "$WHEELHOUSE"
 
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
