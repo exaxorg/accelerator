@@ -87,10 +87,12 @@ fi
 
 ZLIB_PREFIX="/prepare/zlib-ng"
 
+WHEELHOUSE="/out/wheelhouse"
+
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
 	VERSIONS=(/opt/python/cp[23][5-7]-*)
-	if [ ! -e "/out/wheelhouse/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl ]; then
+	if [ ! -e "$WHEELHOUSE/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl ]; then
 		echo "First build in a manylinux2014 container"
 		exit 1
 	fi
@@ -106,7 +108,7 @@ else
 fi
 
 
-SDIST="/out/wheelhouse/$NAME.tar.gz"
+SDIST="$WHEELHOUSE/$NAME.tar.gz"
 if [ -e "$SDIST" ]; then
 	BUILT_SDIST=""
 	mkdir /tmp/sdist_check
@@ -155,7 +157,7 @@ for V in "${VERSIONS[@]}"; do
 	V="${V/\/opt\/python\//}"
 	test -e "/opt/python/$V/bin/ax" && exit 1
 	UNFIXED_NAME="/tmp/wheels/$NAME-$V-linux_$AUDITWHEEL_ARCH.whl"
-	test -e "/out/wheelhouse/$NAME-$V-"$WHEEL_WILDCARD.whl && continue
+	test -e "$WHEELHOUSE/$NAME-$V-"$WHEEL_WILDCARD.whl && continue
 	rm -f "$UNFIXED_NAME" "/tmp/wheels/fixed/$NAME-$V-"$WHEEL_WILDCARD.whl
 	build_one_wheel &
 	Vs+=("$V")
@@ -262,12 +264,12 @@ else # X86glibc new
 fi
 
 
-# finally copy everything to /out/wheelhouse
+# finally copy everything to the wheelhouse
 for N in "${BUILT[@]}"; do
-	cp -p "$N" /out/wheelhouse/
+	cp -p "$N" "$WHEELHOUSE/"
 done
 if [ -n "$BUILT_SDIST" ]; then
-	cp -p "$BUILT_SDIST" /out/wheelhouse/
+	cp -p "$BUILT_SDIST" "$WHEELHOUSE/"
 	BUILT+=("$BUILT_SDIST")
 fi
 
