@@ -76,6 +76,13 @@ for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
 done
 
 
+if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
+	# auditwheel in the old containers is too old for reproducible builds.
+	# auditwheel 5.2.0 is the last that works with the patchelf there.
+	/opt/_internal/tools/bin/pip install 'auditwheel==5.2.0'
+fi
+
+
 echo "$VERSION" >/prepare/.done
 
 set +x
