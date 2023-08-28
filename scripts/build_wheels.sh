@@ -133,7 +133,12 @@ if [ -e "$SDIST" ]; then
 else
 	cd /tmp/accelerator
 	ACCELERATOR_BUILD_VERSION="$VERSION" ACCELERATOR_BUILD="$ACCELERATOR_BUILD" /opt/python/cp311-cp311/bin/python3 -m build --no-isolation --sdist .
-	cp -p "dist/$NAME.tar.gz" /tmp/
+	# Turns out build --sdist does not honour $SOURCE_DATE_EPOCH
+	mkdir repack
+	cd repack
+	tar zxf "../dist/$NAME.tar.gz"
+	tar cf "/tmp/$NAME.tar" --mtime="@$SOURCE_DATE_EPOCH" --format=ustar --sort=name --owner=0 --group=0 --numeric-owner "$NAME"
+	gzip -n "/tmp/$NAME.tar"
 	SDIST="/tmp/$NAME.tar.gz"
 	BUILT_SDIST="$SDIST"
 fi
