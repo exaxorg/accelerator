@@ -3,6 +3,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2022 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
+# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -24,6 +25,7 @@ from __future__ import division
 from collections import OrderedDict
 from json import dumps
 from datetime import datetime, date, time, timedelta
+from pathlib import PosixPath
 
 from accelerator.compat import iteritems, unicode, long, PY3, PY2, uni
 
@@ -120,6 +122,8 @@ def encode_setup(data, sort_keys=True, as_str=False):
 			return [src.year, src.month, src.day, src.hour, src.minute, src.second, src.microsecond]
 		elif isinstance(src, date):
 			return [src.year, src.month, src.day]
+		elif isinstance(src, PosixPath):
+			return str(src)
 		elif isinstance(src, time):
 			return [1970, 1, 1, src.hour, src.minute, src.second, src.microsecond]
 		elif isinstance(src, timedelta):

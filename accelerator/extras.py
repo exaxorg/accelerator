@@ -3,6 +3,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 # Modifications copyright (c) 2019-2023 Carl Drougge                       #
+# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -24,6 +25,7 @@ from __future__ import division
 import os
 import datetime
 import json
+import pathlib
 from traceback import print_exc
 from collections import OrderedDict
 from functools import partial
@@ -661,6 +663,7 @@ typing_conv = dict(
 	JobWithFile=lambda a: JobWithFile(*a),
 	datetime=lambda a: datetime.datetime(*a),
 	date=lambda a: datetime.date(*a[:3]),
+	Path=lambda a: pathlib.PosixPath(a),
 	time=lambda a: datetime.time(*a[3:]),
 	timedelta=lambda a: datetime.timedelta(seconds=a),
 )
