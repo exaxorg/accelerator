@@ -131,7 +131,7 @@ def encode_setup(data, sort_keys=True, as_str=False):
 		elif PY2 and isinstance(src, bytes):
 			return uni(src)
 		else:
-			assert isinstance(src, (str, unicode, int, float, long, bool)) or src is None, type(src)
+			assert isinstance(src, (str, unicode, int, float, long, bool)) or src is None, "%s not supported in data" % (type(src),)
 			return src
 	res = _encode_with_compact(
 		copy(data),
