@@ -160,7 +160,7 @@ class Main:
 
 
 	def initialise_jobs(self, setup, workdir=None):
-		""" Updata database, check deps, create jobids. """
+		""" Update database, check deps, create jobids. """
 		ws = workdir or self.target_workdir
 		if ws not in self.workspaces:
 			raise BuildError("Workdir %s does not exist" % (ws,))
