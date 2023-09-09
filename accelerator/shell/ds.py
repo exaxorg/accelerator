@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -50,9 +50,12 @@ def printcolwise(data, template, printfunc, minrows=8, indent=4):
 		if v:
 			print(' ' * indent + '  '.join(template.format(*printfunc(x)) for x in v))
 
-def original_location(ds, col):
+def original_location(ds, colname):
 	from accelerator.dataset import Dataset
 	from accelerator.job import Job
+	col = ds.columns[colname]
+	if not col.location: # if it doesn't exist (0 line ds) we claim it comes from this ds
+		return True, ds, colname
 	parts = col.location.split('/')
 	job = Job(parts[0])
 	if job.version >= 4: # with /DS/, .[pm] and encoding of problem characters
@@ -82,7 +85,7 @@ def typed_from(ds, loc):
 	src_ds = ds.job.params.datasets.source
 	colname = unrename_column(ds.job, src_ds, colname)
 	res = 'typed from ' + format_location((False, src_ds, colname))
-	orig_loc = original_location(src_ds, src_ds.columns[colname])
+	orig_loc = original_location(src_ds, colname)
 	if orig_loc and not orig_loc[0]:
 		return '%s, originally %s' % (res, format_location(orig_loc))
 	else:
@@ -211,7 +214,7 @@ def main(argv, cfg):
 			name2typ = {n: c.type + '+None' if c.none_support else c.type for n, c in ds.columns.items()}
 			len_n, len_t = colwidth((quote(n), name2typ[n]) for n, c in ds.columns.items())
 			if args.location:
-				locations = {n: original_location(ds, c) for n, c in ds.columns.items()}
+				locations = {n: original_location(ds, n) for n in ds.columns}
 				len_l = max(len(format_location(locations[n])) for n in ds.columns)
 				len_c = max(len(c.compression) for c in ds.columns.values())
 				template = '        {2} {0:%d}  {1:%d}  {4:%d}  {5:%d}  {3}' % (len_n, len_t, len_l, len_c,)
