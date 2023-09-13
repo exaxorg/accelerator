@@ -623,11 +623,13 @@ def main(argv, cfg):
 	# to keep the number of syscalls down.
 
 	class Outputter:
+		new_merge_buffer = bytes
+
 		def __init__(self, q_in, q_out):
 			self.q_in = q_in
 			self.q_out = q_out
 			self.buffer = []
-			self.merge_buffer = b''
+			self.merge_buffer = self.new_merge_buffer()
 
 		def put(self, lineno, items, was_match=False):
 			data = self.show(lineno, items)
@@ -638,11 +640,14 @@ def main(argv, cfg):
 			if len(self.merge_buffer) >= 1024:
 				self.move_merge()
 
+		def write(self, data):
+			write(1, data)
+
 		def move_merge(self):
 			if self.merge_buffer:
 				with io_lock:
-					write(1, self.merge_buffer)
-				self.merge_buffer = b''
+					self.write(self.merge_buffer)
+				self.merge_buffer = self.new_merge_buffer()
 
 		def start(self, ds):
 			pass
@@ -687,14 +692,14 @@ def main(argv, cfg):
 
 		def move_merge(self):
 			data = self.merge_buffer
-			self.merge_buffer = b''
+			self.merge_buffer = self.new_merge_buffer()
 			if self.buffer:
 				self.pump()
 				if self.buffer:
 					self.buffer.append(data)
 					return
 			with io_lock:
-				write(1, data)
+				self.write(data)
 
 		def pump(self, wait=None):
 			if wait is None:
@@ -725,7 +730,7 @@ def main(argv, cfg):
 					if data is None:
 						break
 					elif data:
-						write(1, data)
+						self.write(data)
 				else:
 					# We did not reach the next fence, so last item is real data
 					# and needs to be removed. (The buffer will then be empty and
@@ -763,7 +768,7 @@ def main(argv, cfg):
 						self.q_out.put(True)
 						break
 					elif data:
-						write(1, data)
+						self.write(data)
 				else:
 					pos += 1
 			self.buffer[:pos] = ()
@@ -782,7 +787,7 @@ def main(argv, cfg):
 				# The True we put in when reaching the fence has travelled
 				# all the way around the queue ring, it's time to print the
 				# new headers
-				write(1, next(headers_iter))
+				self.write(next(headers_iter))
 				# and then unblock the other slices
 				self.q_out.put(None)
 				self.drain()
@@ -821,14 +826,14 @@ def main(argv, cfg):
 
 		def move_merge(self):
 			data = self.merge_buffer
-			self.merge_buffer = b''
+			self.merge_buffer = self.new_merge_buffer()
 			if self.buffer:
 				self.pump()
 				if self.buffer:
 					self.buffer.append(data)
 					return
 			# No need for a lock, the other slices aren't writing concurrently.
-			write(1, data)
+			self.write(data)
 
 		def drain(self):
 			assert self.buffer[0] is None
@@ -838,7 +843,7 @@ def main(argv, cfg):
 					self.q_out.put(None)
 					break
 				elif data:
-					write(1, data)
+					self.write(data)
 			else:
 				# We did not reach the next ds, so last item is real data and
 				# needs to be removed. (The buffer will then be empty and
@@ -1149,7 +1154,7 @@ def main(argv, cfg):
 			class LocalQueue:
 				def __init__(self):
 					self._lst = []
-					self.put = self._lst.append
+					self.put = self.put_local = self._lst.append
 				def get(self, wait=None):
 					if self._lst:
 						return self._lst.pop(0)
