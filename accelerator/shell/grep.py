@@ -629,7 +629,8 @@ def main(argv, cfg):
 			self.buffer = []
 			self.merge_buffer = b''
 
-		def put(self, data, was_match=False):
+		def put(self, lineno, items, was_match=False):
+			data = self.show(lineno, items)
 			if mark_matching_lines:
 				marker = b'M' if was_match else b'C'
 				data = marker + data
@@ -1007,7 +1008,7 @@ def main(argv, cfg):
 				prefix['dataset'] = ds
 			if args.show_sliceno:
 				prefix['sliceno'] = sliceno
-			show = make_show(prefix, used_columns)
+			out.show = make_show(prefix, used_columns)
 		else:
 			prefix = []
 			if args.show_dataset:
@@ -1015,7 +1016,7 @@ def main(argv, cfg):
 			if args.show_sliceno:
 				prefix.append(str(sliceno))
 			prefix = tuple(prefix)
-			show = make_show(prefix, used_columns)
+			out.show = make_show(prefix, used_columns)
 		if args.invert_match:
 			maybe_invert = operator.not_
 		else:
@@ -1036,11 +1037,11 @@ def main(argv, cfg):
 						pass
 					return
 				while before:
-					out.put(show(*before.popleft()))
+					out.put(*before.popleft())
 				to_show = 1 + args.after_context
 				was_match = True
 			if to_show:
-				out.put(show(lineno, items), was_match)
+				out.put(lineno, items, was_match)
 				was_match = False
 				to_show -= 1
 			elif before is not None:
