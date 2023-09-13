@@ -223,6 +223,7 @@ def main(argv, cfg):
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', negation='dont', help="datasets are allowed to not have (some) columns", )
 	parser.add_argument('-g', '--grep',         action='append',                      help="grep this column only, can be specified multiple times", metavar='COLUMN')
 	parser.add_argument('-s', '--slice',        action='append',                      help="grep this slice only, can be specified multiple times",  type=int)
+	parser.add_argument('-u', '--unique',       action='append', nargs='?', metavar='COLUMN', help="only show one value [for this set of columns]")
 	parser.add_argument('-D', '--show-dataset', action='store_true', negation='dont', help="show dataset on matching lines", )
 	parser.add_argument('-S', '--show-sliceno', action='store_true', negation='dont', help="show sliceno on matching lines", )
 	parser.add_argument('-L', '--show-lineno',  action='store_true', negation='dont', help="show lineno (per slice) on matching lines", )
@@ -478,6 +479,10 @@ def main(argv, cfg):
 		else:
 			escape_item = None
 		errors = 'replace' if PY2 else 'surrogateescape'
+
+	if args.unique:
+		unique_set = mp.MpSet()
+		args.ordered = True
 
 	# This is for the ^T handling. Each slice sends an update when finishing
 	# a dataset, and every status_interval[sliceno] lines while iterating.
@@ -876,6 +881,31 @@ def main(argv, cfg):
 				self.buffer.append(b'') # Avoid need for special case in .drain
 			self.pump()
 
+	# This is used as .merge_buffer for unique writers, to keep everything
+	# around until it is safe to determine if it's unique or not.
+
+	class UniqueMergeBuffer:
+		def __init__(self):
+			self.items = []
+			self.length = 0
+
+		# So += b'...' still works, for markers
+		def __add__(self, data):
+			self.append((bool, True, data))
+			return self
+
+		def append(self, data):
+			self.items.append(data)
+			self.length += len(data[2])
+
+		def __len__(self):
+			return self.length
+
+		def finish(self):
+			for func, arg, data in self.items:
+				if func(arg):
+					yield data
+
 	# Choose the right outputter for the kind of sync we need.
 	def outputter(q_in, q_out, first_slice=False):
 		if args.list_matching:
@@ -885,6 +915,26 @@ def main(argv, cfg):
 				cls = OrderedHeaderOutputter
 			else:
 				cls = OrderedOutputter
+			if args.unique:
+				# Subclass whichever outputter we needed for unique output.
+				class UniqueOutputter(cls):
+					new_merge_buffer = UniqueMergeBuffer
+
+					def put(self, lineno, items, was_match=False):
+						data = self.show(lineno, items)
+						if mark_matching_lines:
+							marker = b'M' if was_match else b'C'
+							data = marker + data
+						self.merge_buffer.append((self.should_output, items, data))
+						if len(self.merge_buffer) >= 1024:
+							self.move_merge()
+
+					def write(self, data):
+						assert data is not None
+						if hasattr(data, 'finish'): # could be plain bytes (headers)
+							data = b''.join(data.finish())
+						write(1, data)
+				cls = UniqueOutputter
 		elif headers:
 			if first_slice:
 				cls = HeaderOutputter
@@ -1030,6 +1080,27 @@ def main(argv, cfg):
 			fmtfix = number_or_None
 		else:
 			fmtfix = unicode
+		if args.unique:
+			if args.unique == [None]: # all columns
+				care_mask = [True] * len(used_columns)
+				unique_columns = tuple(used_columns)
+			else: # named columns
+				care_mask = [col in args.unique for col in used_columns]
+				unique_columns = tuple(item for care, item in zip(care_mask, used_columns) if care)
+				if not unique_columns:
+					# No columns => no unique items
+					out.end(ds)
+					return
+			def should_output(items):
+				items = tuple(
+					str(item)
+					for care, item in zip(care_mask, items)
+					if care
+				)
+				if (items, unique_columns) not in unique_set:
+					unique_set.add((items, unique_columns))
+					return True
+			out.should_output = should_output
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if maybe_invert(any(chk(fmtfix(item)) for item in grep_items or items)):
