@@ -481,6 +481,14 @@ def main(argv, cfg):
 		errors = 'replace' if PY2 else 'surrogateescape'
 
 	if args.unique:
+		# A --unique without a value means all, and deletes any previously specified columns.
+		while None in args.unique:
+			# No .rindex on lists unfortunately.
+			args.unique = args.unique[args.unique.index(None) + 1:]
+		if args.unique:
+			args.unique = set(args.unique)
+		else:
+			args.unique = True
 		unique_set = mp.MpSet()
 		args.ordered = True
 
@@ -1081,7 +1089,7 @@ def main(argv, cfg):
 		else:
 			fmtfix = unicode
 		if args.unique:
-			if args.unique == [None]: # all columns
+			if args.unique is True: # all columns
 				care_mask = [True] * len(used_columns)
 				unique_columns = tuple(used_columns)
 			else: # named columns
