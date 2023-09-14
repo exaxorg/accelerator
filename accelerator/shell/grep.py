@@ -491,6 +491,10 @@ def main(argv, cfg):
 			args.unique = True
 		unique_set = mp.MpSet()
 		args.ordered = True
+		# This is just a normal set, i.e. not shared between processes.
+		# It mirrors everything each process is sure is in the MpSet,
+		# to speed up common cases at the cost of higher memory use.
+		unique_set_per_process = set()
 
 	# This is for the ^T handling. Each slice sends an update when finishing
 	# a dataset, and every status_interval[sliceno] lines while iterating.
@@ -1109,8 +1113,12 @@ def main(argv, cfg):
 					for care, item in zip(care_mask, items)
 					if care
 				)
-				if (items, unique_columns) not in unique_set:
-					unique_set.add((items, unique_columns))
+				thing = (items, unique_columns)
+				if thing in unique_set_per_process:
+					return False
+				unique_set_per_process.add(thing)
+				if thing not in unique_set:
+					unique_set.add(thing)
 					return True
 			out.should_output = should_output
 		to_show = 0
