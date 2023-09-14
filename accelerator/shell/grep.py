@@ -1099,9 +1099,13 @@ def main(argv, cfg):
 					# No columns => no unique items
 					out.end(ds)
 					return
+			if args.ignore_case:
+				item_fixup = lambda item: str(item).lower()
+			else:
+				item_fixup = str
 			def should_output(items):
 				items = tuple(
-					str(item)
+					item_fixup(item)
 					for care, item in zip(care_mask, items)
 					if care
 				)
