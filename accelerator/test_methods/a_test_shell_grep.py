@@ -29,7 +29,7 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from subprocess import check_output, Popen
+from subprocess import check_output, Popen, CalledProcessError
 import datetime
 import os
 import errno
@@ -1017,4 +1017,153 @@ def synthesis(job, slices):
 		[         'small',          'float',  '\x1b[31m44.999\x1b[39m' ],
 		[         'small',         'number',  '\x1b[31m45\x1b[39m'     ],
 		[         'space', '\\n \x1b[31m96\x1b[39m ',  27              ],
+	])
+
+	# Test --unique
+
+	dw = job.datasetwriter(name='uniq', allow_missing_slices=True)
+	dw.add('', 'ascii')
+	dw.add('a', 'ascii')
+	dw.add('b', 'int32')
+	dw.set_slice(0)
+	# a lot of lines in slice 0 before the duplicates, to catch races.
+	for ix in range(99000):
+		dw.write('foo', 'bar', ix)
+	for ix in range(99000, 99099):
+		dw.write('foo', 'baz', ix)
+	dw.set_slice(1)
+	for ix in range(99000, 99099):
+		dw.write('foo', 'baz', ix)
+	# same thing except for case
+	for ix in range(99000, 99099):
+		dw.write('Foo', 'baz', ix)
+	uniq = dw.finish()
+
+	grep_text(['--unique', '--show-sliceno', '99000', uniq], [
+		[0, 'foo', 'baz', 99000],
+		[1, 'Foo', 'baz', 99000],
+	])
+	grep_text(['--unique', '--ignore-case', '99000', uniq], [
+		['foo', 'baz', 99000],
+	])
+	grep_text(['--unique=', '--show-sliceno', '000', uniq], [
+		[0, 'foo', 'bar', 1000],
+		[1, 'Foo', 'baz', 99000],
+	])
+	grep_text(['--unique=a', '--show-sliceno', '000', uniq], [
+		[0, 'foo', 'bar', 1000],
+		[0, 'foo', 'baz', 99000],
+	])
+	grep_text(['--unique=', '--unique=a', '--show-sliceno', '000', uniq], [
+		[0, 'foo', 'bar', '1000'],
+		[0, 'foo', 'baz', '99000'],
+		[1, 'Foo', 'baz', '99000'],
+	])
+	grep_text(['-u=a', '-u=', '-i', '-S', '000', uniq], [
+		[0, 'foo', 'bar', '1000'],
+		[0, 'foo', 'baz', '99000'],
+	])
+	grep_text(['--unique', '--slice=1', '--show-sliceno', '000', uniq], [
+		[1, 'foo', 'baz', '99000'],
+		[1, 'Foo', 'baz', '99000'],
+	])
+
+	dw = job.datasetwriter(name='uniq2', previous=uniq, allow_missing_slices=True)
+	dw.add('', 'ascii')
+	dw.add('a', 'ascii')
+	dw.add('b', 'int32')
+	dw.set_slice(2)
+	# These match lines in the first dataset.
+	dw.write('foo', 'bar', 55000)
+	dw.write('foo', 'baz', 99000)
+	# These match in the '' column.
+	dw.write('foo', 'x', -1000)
+	dw.write('Foo', 'x', -1000)
+	# This doesn't match anywhere.
+	dw.write('no', 'match', -99000)
+	uniq2 = dw.finish()
+
+	grep_text(['--unique', '--ignore-case', '--chain', '--show-dataset', '99000', uniq2], [
+		[uniq, 'foo', 'baz', '99000'],
+		[uniq2, 'no', 'match', '-99000'],
+	])
+	grep_text(['--unique=', '--chain', '--show-dataset', '000', uniq2], [
+		[uniq, 'foo', 'bar', '1000'],
+		[uniq, 'Foo', 'baz', '99000'],
+		[uniq2, 'no', 'match', '-99000'],
+	])
+	grep_text(['--unique=', '--unique=a', '--chain', '--show-dataset', '000', uniq2], [
+		[uniq, 'foo', 'bar', '1000'],
+		[uniq, 'foo', 'baz', '99000'],
+		[uniq, 'Foo', 'baz', '99000'],
+		[uniq2, 'foo', 'x', '-1000'],
+		[uniq2, 'Foo', 'x', '-1000'],
+		[uniq2, 'no', 'match', '-99000'],
+	])
+
+	dw = job.datasetwriter(name='uniq3', previous=uniq)
+	dw.add('a', 'ascii')
+	dw.add('b', 'ascii')
+	dw.add('c', 'int32')
+	w = dw.get_split_write()
+	# These match lines in the first dataset, but the column names are different.
+	w('foo', 'bar', 55000)
+	w('foo', 'baz', 99000)
+	# This matches in the a column (first column here, second in the first ds).
+	w('baz', 'x', 99000)
+	uniq3 = dw.finish()
+
+	grep_text(['--unique', '--show-dataset', '--chain', '99000', uniq3], [
+		[uniq, 'foo', 'baz', 99000],
+		[uniq, 'Foo', 'baz', 99000],
+		[uniq3, 'foo', 'baz', 99000], # repeats because the column names are different
+		[uniq3, 'baz', 'x', 99000],
+	])
+	grep_text(['--unique=a', '--show-dataset', '--chain', '99000', uniq3], [
+		[uniq, 'foo', 'baz', 99000],
+		[uniq3, 'foo', 'baz', 99000],
+		# no baz x line because baz matches the baz from uniq above (both columns are named a)
+	])
+
+	# This should fail, because column c doesn't exist in uniq
+	cmd = options.command_prefix + ['grep', '--unique=c', '--chain', '000', uniq3]
+	try:
+		check_output(cmd)
+		raise Exception("%r worked, should have complained that %s doesn't have column c" % (cmd, uniq.quoted,))
+	except CalledProcessError:
+		pass
+
+	grep_text(['--unique=c', '--allow-missing-columns', '--chain', '000', uniq3], [
+		# No output from uniq because it has no column c to be unique in
+		['foo', 'bar', 55000],
+		['foo', 'baz', 99000],
+	])
+
+	# This chain is [uniq, uniq3, uniq4], where uniq and uniq4 have the same
+	# columns but uniq3 has different columns. This is to test that this change
+	# back does not confuse the uniqueness tests.
+	# Everything matching is in a different slice.
+
+	dw = job.datasetwriter(name='uniq4', previous=uniq3, allow_missing_slices=True)
+	dw.add('', 'ascii')
+	dw.add('a', 'ascii')
+	dw.add('b', 'int32')
+	dw.set_slice(1)
+	# Matches a line in uniq3 (slice 2), but column names are different
+	dw.write('baz', 'x', 99000)
+	# Matches nothing
+	dw.write('a', 'b', 59000)
+	dw.set_slice(2)
+	# Matches a line in uniq (slice 0)
+	dw.write('foo', 'bar', 59000)
+	uniq4 = dw.finish()
+
+	grep_text(['--unique', '--show-dataset', '--chain', '[59]9000', uniq4], [
+		[uniq, 'foo', 'bar', 59000],
+		[uniq, 'foo', 'baz', 99000],
+		[uniq, 'Foo', 'baz', 99000],
+		[uniq3, 'foo', 'baz', 99000], # repeats because the column names are different
+		[uniq3, 'baz', 'x', 99000],
+		[uniq4, 'baz', 'x', 99000], # repeats because the column names are different
+		[uniq4, 'a', 'b', 59000],
 	])
