@@ -1095,11 +1095,9 @@ def main(argv, cfg):
 		if args.unique:
 			if args.unique is True: # all columns
 				care_mask = [True] * len(used_columns)
-				unique_columns = tuple(used_columns)
 			else: # named columns
 				care_mask = [col in args.unique for col in used_columns]
-				unique_columns = tuple(item for care, item in zip(care_mask, used_columns) if care)
-				if not unique_columns:
+				if not any(care_mask):
 					# No columns => no unique items
 					out.end(ds)
 					return
@@ -1107,13 +1105,14 @@ def main(argv, cfg):
 				item_fixup = lambda item: str(item).lower()
 			else:
 				item_fixup = str
+			unique_columns_ix = ds2unique_columns_ix[ds]
 			def should_output(items):
 				items = tuple(
 					item_fixup(item)
 					for care, item in zip(care_mask, items)
 					if care
 				)
-				thing = (items, unique_columns)
+				thing = (unique_columns_ix,) + items
 				if thing in unique_set_per_process:
 					return False
 				unique_set_per_process.add(thing)
@@ -1210,6 +1209,27 @@ def main(argv, cfg):
 		headers_iter = iter(map(gen_headers, headers))
 		show_headers_here[0] = (datasets[0], False) # first one is already printed
 		show_headers_here = iter(show_headers_here)
+
+	if args.unique:
+		# Build a {ds: unique id for the current unique columns}
+		# to speed up and save memory in --unique, by replacing the
+		# tuple of column names with a unique small integer (shared
+		# between processes).
+		# Since this is sent to a set in a remote process this should
+		# save a decent amount of memory.
+		unique_columns_ix = 0
+		unique_columns2ix = {}
+		if args.unique is True:
+			unique_filter = lambda _: True
+		else:
+			unique_filter = args.unique.__contains__
+		ds2unique_columns_ix = {}
+		for ds in datasets:
+			unique_columns = tuple(col for col in columns_for_ds(ds) if unique_filter(col))
+			if unique_columns not in unique_columns2ix:
+				unique_columns2ix[unique_columns] = unique_columns_ix
+				unique_columns_ix += 1
+			ds2unique_columns_ix[ds] = unique_columns2ix[unique_columns]
 
 	q_in = q_out = first_q_out = q_to_close = q_list = None
 	seen_list = None
