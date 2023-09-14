@@ -1217,19 +1217,29 @@ def main(argv, cfg):
 		# between processes).
 		# Since this is sent to a set in a remote process this should
 		# save a decent amount of memory.
+		# Also checks that no --unique columns are missing if appropriate.
 		unique_columns_ix = 0
 		unique_columns2ix = {}
 		if args.unique is True:
 			unique_filter = lambda _: True
+			check_unique_columns_existance = False
 		else:
 			unique_filter = args.unique.__contains__
+			check_unique_columns_existance = not args.allow_missing_columns
 		ds2unique_columns_ix = {}
+		bad = False
 		for ds in datasets:
 			unique_columns = tuple(col for col in columns_for_ds(ds) if unique_filter(col))
+			if check_unique_columns_existance and len(unique_columns) != len(args.unique):
+				missing = args.unique - set(unique_columns)
+				print('ERROR: %s does not have columns %r' % (ds.quoted, missing,), file=sys.stderr)
+				bad = True
 			if unique_columns not in unique_columns2ix:
 				unique_columns2ix[unique_columns] = unique_columns_ix
 				unique_columns_ix += 1
 			ds2unique_columns_ix[ds] = unique_columns2ix[unique_columns]
+		if bad:
+			return 1
 
 	q_in = q_out = first_q_out = q_to_close = q_list = None
 	seen_list = None
