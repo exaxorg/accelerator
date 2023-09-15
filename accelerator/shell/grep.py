@@ -489,12 +489,28 @@ def main(argv, cfg):
 			args.unique = set(args.unique)
 		else:
 			args.unique = True
-		unique_set = mp.MpSet()
+
+		# This is a set of tuples, where each value in the tuple is deduped
+		# so there is only one copy of it no matter how many tuples it is in.
+		# E.g. {('a', 'b', 'c'), ('a', 'b', 'foo')} only has one copy of
+		# 'a' and 'b', potentially saving a lot of memory.
+		class DedupTupleSet(set):
+			__slots__ = ('_dedup',)
+
+			def __init__(self, *a):
+				set.__init__(self, *a)
+				self._dedup = {}
+
+			def add(self, value):
+				value = tuple(self._dedup.setdefault(v, v) for v in value)
+				set.add(self, value)
+
+		unique_set = mp.MpSet(_set_cls=DedupTupleSet)
 		args.ordered = True
-		# This is just a normal set, i.e. not shared between processes.
+		# This is just a normal object, i.e. not shared between processes.
 		# It mirrors everything each process is sure is in the MpSet,
 		# to speed up common cases at the cost of higher memory use.
-		unique_set_per_process = set()
+		unique_set_per_process = DedupTupleSet()
 
 	# This is for the ^T handling. Each slice sends an update when finishing
 	# a dataset, and every status_interval[sliceno] lines while iterating.
