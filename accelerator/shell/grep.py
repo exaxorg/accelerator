@@ -903,19 +903,22 @@ def main(argv, cfg):
 
 		# So += b'...' still works, for markers
 		def __add__(self, data):
-			self.append((bool, True, data))
+			self.append((True, data))
 			return self
 
 		def append(self, data):
 			self.items.append(data)
-			self.length += len(data[2])
+			self.length += len(data[1])
 
 		def __len__(self):
 			return self.length
 
 		def finish(self):
-			for func, arg, data in self.items:
-				if func(arg):
+			for thing, data in self.items:
+				if thing is True:
+					yield data
+				elif thing not in unique_set:
+					unique_set.add(thing)
 					yield data
 
 	# Choose the right outputter for the kind of sync we need.
@@ -933,11 +936,14 @@ def main(argv, cfg):
 					new_merge_buffer = UniqueMergeBuffer
 
 					def put(self, lineno, items, was_match=False):
+						thing = self.should_output_precheck(items)
+						if not thing:
+							return
 						data = self.show(lineno, items)
 						if mark_matching_lines:
 							marker = b'M' if was_match else b'C'
 							data = marker + data
-						self.merge_buffer.append((self.should_output, items, data))
+						self.merge_buffer.append((thing, data))
 						if len(self.merge_buffer) >= 1024:
 							self.move_merge()
 
@@ -1106,7 +1112,7 @@ def main(argv, cfg):
 			else:
 				item_fixup = str
 			unique_columns_ix = ds2unique_columns_ix[ds]
-			def should_output(items):
+			def should_output_precheck(items):
 				items = tuple(
 					item_fixup(item)
 					for care, item in zip(care_mask, items)
@@ -1116,10 +1122,8 @@ def main(argv, cfg):
 				if thing in unique_set_per_process:
 					return False
 				unique_set_per_process.add(thing)
-				if thing not in unique_set:
-					unique_set.add(thing)
-					return True
-			out.should_output = should_output
+				return thing
+			out.should_output_precheck = should_output_precheck
 		to_show = 0
 		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
 			if maybe_invert(any(chk(fmtfix(item)) for item in grep_items or items)):
