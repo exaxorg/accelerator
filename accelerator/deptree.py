@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -24,7 +24,7 @@ from __future__ import division
 from traceback import print_exc
 from collections import OrderedDict
 from datetime import datetime, date, time, timedelta
-from pathlib import Path, PosixPath
+from pathlib import Path, PosixPath, PurePath, PurePosixPath
 import sys
 
 from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types, unicode
@@ -170,7 +170,9 @@ class DepTree:
 				default_v = type(default_v)
 			if isinstance(default_v, PosixPath) or default_v is PosixPath:
 				default_v = Path
-			if default_v in _date_types + (Path,):
+			if isinstance(default_v, PurePosixPath) or default_v is PurePosixPath:
+				default_v = PurePath
+			if default_v in _date_types + (Path, PurePath,):
 				try:
 					return typing_conv[default_v.__name__](v)
 				except Exception:

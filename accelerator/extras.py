@@ -664,6 +664,7 @@ typing_conv = dict(
 	datetime=lambda a: datetime.datetime(*a),
 	date=lambda a: datetime.date(*a[:3]),
 	Path=lambda a: pathlib.PosixPath(a),
+	PurePath=lambda a: pathlib.PurePosixPath(a),
 	time=lambda a: datetime.time(*a[3:]),
 	timedelta=lambda a: datetime.timedelta(seconds=a),
 )

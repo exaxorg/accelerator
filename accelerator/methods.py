@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 # Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
@@ -156,7 +156,7 @@ def _reprify(o):
 	if isinstance(o, dict):
 		assert isinstance(o, OrderedDict)
 		return '{%s}' % (', '.join('%s: %s' % (_reprify(k), _reprify(v),) for k, v in iteritems(o)),)
-	if isinstance(o, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.Path,)):
+	if isinstance(o, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.Path, pathlib.PurePath)):
 		return str(o)
 	raise AcceleratorError('Unhandled %s in dependency resolution' % (type(o),))
 
@@ -188,7 +188,7 @@ def params2defaults(params):
 			return type(item)(l)
 		if isinstance(item, (type, OptionEnum)):
 			return None
-		assert isinstance(item, (bytes, unicode, int, float, long, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath,)), type(item)
+		assert isinstance(item, (bytes, unicode, int, float, long, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath, pathlib.PurePosixPath,)), type(item)
 		return item
 	def fixup0(item):
 		if isinstance(item, RequiredOption):
@@ -239,6 +239,8 @@ def options2typing(method, options):
 			typ = value.__name__
 		elif value in (pathlib.Path, pathlib.PosixPath,) or isinstance(value, pathlib.PosixPath):
 			typ = 'Path'
+		elif value in (pathlib.PurePath, pathlib.PurePosixPath,) or isinstance(value, pathlib.PurePosixPath):
+			typ = 'PurePath'
 		elif isinstance(value, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta,)):
 			typ = type(value).__name__
 		if typ:
