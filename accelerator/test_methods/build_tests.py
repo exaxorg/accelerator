@@ -300,8 +300,9 @@ def main(urd):
 	urd.build("test_output_on_error")
 
 	print()
-	print("Test datetime types in options")
+	print("Test special types in options")
 	urd.build("test_datetime")
+	urd.build("test_path")
 
 	print()
 	print("Test various utility functions")
