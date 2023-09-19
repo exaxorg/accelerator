@@ -3,6 +3,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2023 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
+# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -23,6 +24,7 @@ import re
 
 from collections import namedtuple, OrderedDict
 from functools import wraps
+from pathlib import Path
 
 from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
@@ -238,6 +240,10 @@ class Job(unicode):
 		from accelerator.g import running
 		assert running == 'build', "Only link_result from a build script"
 		from accelerator.shell import cfg
+		if isinstance(filename, Path):
+			filename = str(filename)
+		if isinstance(linkname, Path):
+			linkname = str(linkname)
 		_assert_is_normrelpath(filename, 'job')
 		if linkname is None:
 			linkname = os.path.basename(filename.rstrip('/'))
@@ -407,6 +413,8 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 	__slots__ = ()
 
 	def __new__(cls, job, name, sliced=False, extra=None):
+		if isinstance(name, Path):
+			name = str(name)
 		assert not name.startswith('/'), "Specify relative filenames to JobWithFile"
 		return tuple.__new__(cls, (Job(job), name, bool(sliced), extra,))
 
