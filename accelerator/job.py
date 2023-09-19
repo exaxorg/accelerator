@@ -136,6 +136,8 @@ class Job(unicode):
 		return os.path.join(WORKDIRS[self.workdir], self)
 
 	def filename(self, filename, sliceno=None):
+		if isinstance(filename, Path):
+			filename = str(filename)
 		if sliceno is not None:
 			filename = '%s.%d' % (filename, sliceno,)
 		return os.path.join(self.path, filename)
