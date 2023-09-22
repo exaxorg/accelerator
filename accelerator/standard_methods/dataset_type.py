@@ -1451,7 +1451,7 @@ all_c_functions = r'''
 #include <locale.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <bytesobject.h>
 #include <datetime.h>

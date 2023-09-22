@@ -29,7 +29,7 @@
 #include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/fcntl.h>
+#include <fcntl.h>
 
 
 // Choose some python number functions based on the size of long.
