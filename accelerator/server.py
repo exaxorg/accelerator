@@ -2,7 +2,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -202,6 +202,14 @@ class XtdHandler(BaseWebHandler):
 				job = self.ctrl.DataBase.db_by_workdir[Job(jid).workdir].get(jid)
 				res[jid] = bool(job and job['current'])
 			self.do_response(200, 'text/json', res)
+
+		elif path==['allocate_job']:
+			workdir = args.get('workdir') or self.ctrl.target_workdir
+			if workdir in self.ctrl.workspaces:
+				job = self.ctrl.workspaces[workdir].allocate_jobs(1)[0]
+				self.do_response(200, 'text/json', {'jobid': job})
+			else:
+				self.do_response(500, 'text/json', {'error': 'workdir %r does not exist' % (workdir,)})
 
 		elif path==['submit']:
 			if self.ctrl.broken:

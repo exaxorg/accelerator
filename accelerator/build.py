@@ -23,7 +23,11 @@ from __future__ import division
 
 import sys
 import os
+import io
 import json
+import hashlib
+import tarfile
+import time
 import traceback
 from operator import itemgetter
 from collections import defaultdict
@@ -36,6 +40,7 @@ from accelerator.compat import unicode, str_types, PY3
 from accelerator.compat import urlencode
 from accelerator.compat import getarglist
 
+from accelerator import __version__ as ax_version
 from accelerator import setupfile
 from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, DotDict, _ListTypePreserver
@@ -695,8 +700,38 @@ def run_automata(options, cfg):
 		a.update_method_info()
 	else:
 		a.update_methods()
+
+	url = 'allocate_job?' + urlencode({'workdir': options.workdir or '' })
+	job = a._url_json(url)
+	if 'error' in job:
+		print(job.error, file=sys.stderr)
+		return 1
+	job = Job(job.jobid)
+	print('build running as job', job)
+	os.chdir(job.path)
+	setup = setupfile.generate(caption='build script', method=module_ref.__name__)
+	setup.starttime = time.time()
+	setup.is_build = True
+	setup.jobid = job
+	setup.slices = cfg.slices
+	setup.versions.python_path = sys.executable
+	setup.versions.python = sys.version
+	setup.versions.accelerator = ax_version
+	with open(module_ref.__file__, 'rb') as fh:
+		data = fh.read()
+	info = tarfile.TarInfo()
+	info.name = '/'.join(module_ref.__file__.split('/')[-len(module_ref.__name__.split('.')):])
+	info.size = len(data)
+	with tarfile.open(name='method.tar.gz', mode='w:gz', compresslevel=1) as tar:
+		tar.addfile(info, io.BytesIO(data))
+	setup.hash = hashlib.sha1(data).hexdigest()
+	setupfile.save_setup(job, setup)
 	res = module_ref.main(urd)
 	urd._show_warnings()
+
+	setup.endtime = time.time()
+	setup.exectime = {'total': setup.endtime - setup.starttime}
+	setupfile.save_setup(job, setup)
 	return res
 
 
