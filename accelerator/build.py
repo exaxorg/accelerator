@@ -735,9 +735,29 @@ def run_automata(options, cfg):
 		tar.addfile(info, io.BytesIO(data))
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
+
+	res = 1
 	with iowrapper.build():
-		res = module_ref.main(urd)
-		urd._show_warnings()
+		try:
+			res = module_ref.main(urd)
+			urd._show_warnings()
+		except (JobError, ServerError):
+			# If it's a JobError we don't care about the local traceback,
+			# we want to see the job traceback, and maybe know what line
+			# we built the job on.
+			# If it's a ServerError we just want the line and message.
+			print_minimal_traceback()
+		except KeyboardInterrupt:
+			# For ^C we don't want to see stuff from this file and earlier,
+			# but we do want to see where in the user code we were stopped.
+			print_user_part_traceback()
+			# And we still want to die with SIGINT.
+			raise
+		except Exception:
+			# For the rest we still don't want to see stuff from this
+			# file and earlier.
+			print_user_part_traceback()
+
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
 	setupfile.save_setup(job, setup)
@@ -795,25 +815,7 @@ def main(argv, cfg):
 				raise BuildError('Bad concurrency spec %r' % (v,))
 	options.concurrency_map = concurrency_map
 
-	try:
-		return run_automata(options, cfg)
-	except (JobError, ServerError):
-		# If it's a JobError we don't care about the local traceback,
-		# we want to see the job traceback, and maybe know what line
-		# we built the job on.
-		# If it's a ServerError we just want the line and message.
-		print_minimal_traceback()
-	except KeyboardInterrupt:
-		# For ^C we don't want to see stuff from this file and earlier,
-		# but we do want to see where in the user code we were stopped.
-		print_user_part_traceback()
-		# And we still want to die with SIGINT.
-		raise
-	except Exception:
-		# For the rest we still don't want to see stuff from this
-		# file and earlier.
-		print_user_part_traceback()
-	return 1
+	return run_automata(options, cfg)
 
 
 def print_user_part_traceback():
