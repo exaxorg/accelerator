@@ -29,12 +29,17 @@
 	</div>
 	% if aborted:
 		<div class="warning">WARNING: Job didn't finish, information may be incomplete.</div>
-	% elif not current:
+	% elif not current and not job.is_build:
 		<div class="warning">Job is not current.</div>
 	% end
 	<h2>setup</h2>
 	<div class="box">
-		<a href="/method/{{ url_quote(params.method) }}">{{ params.package }}.{{ params.method }}</a><br>
+		% if job.is_build:
+			{{ params.method }}
+		% else:
+			<a href="/method/{{ url_quote(params.method) }}">{{ params.package }}.{{ params.method }}</a>
+		% end
+		<br>
 		<a href="/job/{{ url_quote(job) }}/method.tar.gz/">Source</a>
 		<div class="box" id="other-params">
 			% blacklist = {

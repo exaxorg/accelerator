@@ -111,6 +111,10 @@ class Job(unicode):
 	def input_directory(self):
 		return self.params.get('input_directory', None)
 
+	@_cachedprop
+	def is_build(self):
+		return self.params.get('is_build', False)
+
 	@property
 	def path(self):
 		if self.workdir not in WORKDIRS:
