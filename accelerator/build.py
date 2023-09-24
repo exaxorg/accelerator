@@ -41,6 +41,7 @@ from accelerator.compat import urlencode
 from accelerator.compat import getarglist
 
 from accelerator import __version__ as ax_version
+from accelerator import iowrapper
 from accelerator import setupfile
 from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, json_save, DotDict, _ListTypePreserver
@@ -734,9 +735,9 @@ def run_automata(options, cfg):
 		tar.addfile(info, io.BytesIO(data))
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
-	res = module_ref.main(urd)
-	urd._show_warnings()
-
+	with iowrapper.build():
+		res = module_ref.main(urd)
+		urd._show_warnings()
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
 	setupfile.save_setup(job, setup)

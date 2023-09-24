@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2021 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import os
+from contextlib import contextmanager
 from multiprocessing import Process
 from subprocess import Popen
 from time import sleep
@@ -50,6 +51,24 @@ def main():
 	os.close(b)
 
 
+@contextmanager
+def build():
+	real_stdout = os.dup(1)
+	a, b = openpty()
+	os.environ['BD_TERM_FD'] = '1'
+	os.mkdir('OUTPUT')
+	run_reader({a: os.getpid()}, ['synthesis'], [a], [b], 'build iowrapper.reader', is_build=True)
+	os.dup2(b, 1)
+	os.dup2(b, 2)
+	os.close(a)
+	os.close(b)
+	try:
+		yield # build script runs here
+	finally:
+		os.dup2(real_stdout, 1)
+		os.dup2(real_stdout, 2)
+
+
 def setup(slices, include_prepare, include_analysis):
 	os.mkdir('OUTPUT')
 	names = []
@@ -73,9 +92,9 @@ def setup(slices, include_prepare, include_analysis):
 	return fd2pid, names, masters, slaves
 
 
-def run_reader(fd2pid, names, masters, slaves, process_name='iowrapper.reader', basedir='OUTPUT', is_main=False, q=None):
+def run_reader(fd2pid, names, masters, slaves, process_name='iowrapper.reader', basedir='OUTPUT', is_main=False, is_build=False, q=None):
 	syncpipe_r, syncpipe_w = os.pipe()
-	args = (fd2pid, names, masters, slaves, process_name, basedir, is_main, syncpipe_r, syncpipe_w, q)
+	args = (fd2pid, names, masters, slaves, process_name, basedir, is_main, is_build, syncpipe_r, syncpipe_w, q)
 	p = Process(target=reader, args=args, name=process_name)
 	p.start()
 	if not is_main:
@@ -89,7 +108,7 @@ def run_reader(fd2pid, names, masters, slaves, process_name='iowrapper.reader', 
 
 MAX_OUTPUT = 640
 
-def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncpipe_r, syncpipe_w, q):
+def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, is_build, syncpipe_r, syncpipe_w, q):
 	# don't get killed when we kill the job (will exit on EOF, so no output is lost)
 	os.setpgrp()
 	# we are safe now, the main process can continue
@@ -165,7 +184,7 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, syncp
 						os.write(fd2fd[fd], data)
 					try_print(data)
 					output_happened = True
-					if not is_main:
+					if not is_main and not is_build:
 						outputs[fd] = (outputs[fd] + data[-MAX_OUTPUT:])[-MAX_OUTPUT:]
 						statmsg._output(fd2pid[fd], outputs[fd].decode('utf-8', 'replace'))
 				else:
