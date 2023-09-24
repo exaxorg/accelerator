@@ -38,6 +38,7 @@ from .parser import name2job, ArgumentParser
 
 def show(url, job, verbose, show_output):
 	setup = job.json_load('setup.json')
+	is_build = setup.get('is_build', False)
 	if verbose:
 		print(colour(job.path, 'job/header'))
 		print(colour('=' * len(job.path), 'job/header'))
@@ -98,7 +99,7 @@ def show(url, job, verbose, show_output):
 		if verbose:
 			files = [job.filename(fn) for fn in files]
 		list_of_things('files', files)
-	if post and not call(url + '/job_is_current/' + url_quote(job)):
+	if post and not is_build and not call(url + '/job_is_current/' + url_quote(job)):
 		print(colour('Job is not current', 'job/info'))
 	print()
 	out = job.output('parts')
