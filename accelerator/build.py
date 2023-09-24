@@ -43,7 +43,7 @@ from accelerator.compat import getarglist
 from accelerator import __version__ as ax_version
 from accelerator import setupfile
 from accelerator.colourwrapper import colour
-from accelerator.extras import json_encode, DotDict, _ListTypePreserver
+from accelerator.extras import json_encode, json_save, DotDict, _ListTypePreserver
 from accelerator.job import Job
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
@@ -740,6 +740,18 @@ def run_automata(options, cfg):
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
 	setupfile.save_setup(job, setup)
+
+	if not res:
+		post = dict(
+			starttime=setup.starttime,
+			endtime=setup.endtime,
+			exectime=setup.exectime,
+			files=[],
+			subjobs={},
+			version=1,
+		)
+		json_save(post, job.filename('post.json'))
+
 	return res
 
 
