@@ -717,6 +717,14 @@ def run_automata(options, cfg):
 	setup.versions.python_path = sys.executable
 	setup.versions.python = sys.version
 	setup.versions.accelerator = ax_version
+	setup.options = {
+		'--flags': options.flags,
+		'--concurrency': options.concurrency,
+		'--workdir': options.workdir,
+		'--horizon': options.horizon,
+		'package': options.package,
+		'script': options.script,
+	}
 	with open(module_ref.__file__, 'rb') as fh:
 		data = fh.read()
 	info = tarfile.TarInfo()
