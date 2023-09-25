@@ -684,8 +684,8 @@ def run_automata(options, cfg):
 		return
 
 	module_ref = find_automata(a, options.package, options.script)
+	main_args = getarglist(module_ref.main) # do this early to get errors for missing / not a function early
 
-	assert getarglist(module_ref.main) == ['urd'], "Only urd-enabled automatas are supported"
 	if 'URD_AUTH' in os.environ:
 		assert ':' in os.environ['URD_AUTH'], "Set $URD_AUTH to user:password"
 		user, password = os.environ['URD_AUTH'].split(':', 1)
@@ -736,10 +736,16 @@ def run_automata(options, cfg):
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
 
+	available_args = {'urd': urd}
+	kw = {}
+	for arg in main_args:
+		if arg in available_args:
+			kw[arg] = available_args[arg]
+
 	res = 1
 	with iowrapper.build():
 		try:
-			res = module_ref.main(urd)
+			res = module_ref.main(**kw)
 			urd._show_warnings()
 		except (JobError, ServerError):
 			# If it's a JobError we don't care about the local traceback,
