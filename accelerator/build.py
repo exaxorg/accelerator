@@ -46,6 +46,7 @@ from accelerator import setupfile
 from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, json_save, DotDict, _ListTypePreserver
 from accelerator.job import Job, CurrentJob
+from accelerator.launch import _FinishJob
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
 from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
@@ -742,10 +743,17 @@ def run_automata(options, cfg):
 			kw[arg] = available_args[arg]
 
 	res = 1
+	save_res = None
 	with iowrapper.build():
 		try:
 			res = module_ref.main(**kw)
+			if not isinstance(res, int):
+				save_res = res
+				res = 0
 			urd._show_warnings()
+		except _FinishJob as finish:
+			res = 0
+			save_res = finish.result
 		except (JobError, ServerError):
 			# If it's a JobError we don't care about the local traceback,
 			# we want to see the job traceback, and maybe know what line
@@ -762,6 +770,9 @@ def run_automata(options, cfg):
 			# For the rest we still don't want to see stuff from this
 			# file and earlier.
 			print_user_part_traceback()
+
+	if save_res is not None:
+		job.save(save_res, temp=False)
 
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
