@@ -45,7 +45,7 @@ from accelerator import iowrapper
 from accelerator import setupfile
 from accelerator.colourwrapper import colour
 from accelerator.extras import json_encode, json_save, DotDict, _ListTypePreserver
-from accelerator.job import Job
+from accelerator.job import Job, CurrentJob
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
 from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
@@ -659,7 +659,6 @@ def find_automata(a, package, script):
 		module_name = p + '.' + script
 		try:
 			module_ref = import_module(module_name)
-			print(module_name)
 			return module_ref
 		except ImportError as e:
 			if PY3:
@@ -707,13 +706,11 @@ def run_automata(options, cfg):
 	if 'error' in job:
 		print(job.error, file=sys.stderr)
 		return 1
-	job = Job(job.jobid)
-	print('build running as job', job)
-	os.chdir(job.path)
-	setup = setupfile.generate(caption='build script', method=module_ref.__name__)
+	print('%s running as job %s' % (module_ref.__name__, job.jobid,))
+	setup = setupfile.generate(caption='build script', method=module_ref.__name__, input_directory=cfg.input_directory)
 	setup.starttime = time.time()
 	setup.is_build = True
-	setup.jobid = job
+	setup.jobid = job.jobid
 	setup.slices = cfg.slices
 	setup.versions.python_path = sys.executable
 	setup.versions.python = sys.version
@@ -726,6 +723,8 @@ def run_automata(options, cfg):
 		'package': options.package,
 		'script': options.script,
 	}
+	job = CurrentJob(job.jobid, setup)
+	os.chdir(job.path)
 	with open(module_ref.__file__, 'rb') as fh:
 		data = fh.read()
 	info = tarfile.TarInfo()
@@ -736,7 +735,7 @@ def run_automata(options, cfg):
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
 
-	available_args = {'urd': urd}
+	available_args = {'urd': urd, 'job': job}
 	kw = {}
 	for arg in main_args:
 		if arg in available_args:
