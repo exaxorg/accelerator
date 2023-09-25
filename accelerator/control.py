@@ -183,15 +183,7 @@ class Main:
 		setup = update_setup(jobid, starttime=t0)
 		prof = setup.get('exectime', DotDict())
 		new_prof, files, subjobs = dispatch.launch(W.path, setup, self.config, self.Methods, active_workdirs, slices, concurrency, self.server_url, subjob_cookie, parent_pid)
-		prefix = join(W.path, jobid) + '/'
-		if not self.keep_temp_files:
-			for filename, temp in list(files.items()):
-				if temp:
-					try:
-						unlink(join(prefix, filename))
-					except FileNotFoundError:
-						pass
-					del files[filename]
+		files = finish_job_files(jobid, files, self.keep_temp_files)
 		prof.update(new_prof)
 		prof.total = 0
 		prof.total = sum(v for v in prof.values() if isinstance(v, (float, int)))
@@ -203,7 +195,7 @@ class Main:
 			exectime=prof,
 		)
 		update_setup(jobid, **data)
-		data['files'] = sorted(fn[len(prefix):] if fn.startswith(prefix) else fn for fn in files)
+		data['files'] = files
 		data['subjobs'] = subjobs
 		data['version'] = 1
 		json_save(data, jobid.filename('post.json'))
@@ -222,6 +214,19 @@ class Main:
 				d[k] = [v[0] if isinstance(v, (list, tuple)) else v for v in p[k]]
 			d['description'] = self.Methods.descriptions[method]
 			return d
+
+
+def finish_job_files(job, files, keep_temp_files=False):
+	prefix = job.path + '/'
+	if not keep_temp_files:
+		for filename, temp in list(files.items()):
+			if temp:
+				try:
+					unlink(join(prefix, filename))
+				except FileNotFoundError:
+					pass
+				del files[filename]
+	return sorted(fn[len(prefix):] if fn.startswith(prefix) else fn for fn in files)
 
 
 def _pool_init(workdirs):

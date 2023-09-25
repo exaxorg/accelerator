@@ -736,6 +736,10 @@ def run_automata(options, cfg):
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
 
+	from accelerator.control import finish_job_files
+	from accelerator.extras import saved_files
+	saved_files.clear() # remove setup.json, we don't want to see it
+
 	available_args = {'urd': urd, 'job': job}
 	kw = {}
 	for arg in main_args:
@@ -783,7 +787,7 @@ def run_automata(options, cfg):
 			starttime=setup.starttime,
 			endtime=setup.endtime,
 			exectime=setup.exectime,
-			files=[],
+			files=finish_job_files(job, saved_files),
 			subjobs={},
 			version=1,
 		)
