@@ -736,9 +736,13 @@ def run_automata(options, cfg):
 	setup.hash = hashlib.sha1(data).hexdigest()
 	setupfile.save_setup(job, setup)
 
+	from accelerator import dataset
 	from accelerator.control import finish_job_files
 	from accelerator.extras import saved_files
 	saved_files.clear() # remove setup.json, we don't want to see it
+
+	g.job = job
+	g.slices = cfg.slices
 
 	available_args = {'urd': urd, 'job': job}
 	kw = {}
@@ -775,6 +779,8 @@ def run_automata(options, cfg):
 			# file and earlier.
 			print_user_part_traceback()
 
+	if not res:
+		dataset.finish_datasets()
 	if save_res is not None:
 		job.save(save_res, temp=False)
 
