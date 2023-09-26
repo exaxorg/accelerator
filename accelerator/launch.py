@@ -348,21 +348,6 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 	for fd in masters:
 		os.close(fd)
 
-	# A chain must be finished from the back, so sort on that.
-	sortnum_cache = {}
-	def dw_sortnum(name):
-		if name not in sortnum_cache:
-			dw = dataset._datasetwriters.get(name)
-			if not dw: # manually .finish()ed
-				num = -1
-			elif dw.previous and dw.previous.startswith(jobid + '/'):
-				pname = dw.previous.split('/')[1]
-				num = dw_sortnum(pname) + 1
-			else:
-				num = 0
-			sortnum_cache[name] = num
-		return sortnum_cache[name]
-
 	prof = {}
 	if prepare_func is dummy:
 		prof['prepare'] = 0 # truthish!
@@ -379,11 +364,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 				analysis_func = synthesis_func = dummy
 				if finish.result is not None:
 					blob.save(finish.result, temp=False)
-			to_finish = [dw.name for dw in dataset._datasetwriters.values() if dw._started]
-			if to_finish:
-				with statmsg.status("Finishing datasets"):
-					for name in sorted(to_finish, key=dw_sortnum):
-						dataset._datasetwriters[name].finish()
+			dataset.finish_datasets(final=False)
 		c_fflush()
 		_backgrounded_wait()
 		prof['prepare'] = monotonic() - t
@@ -416,12 +397,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 			synthesis_res = finish.result
 		if synthesis_res is not None:
 			blob.save(synthesis_res, temp=False)
-		if dataset._datasetwriters:
-			with statmsg.status("Finishing datasets"):
-				for name in sorted(dataset._datasetwriters, key=dw_sortnum):
-					dataset._datasetwriters[name].finish()
-	if dataset._datasets_written:
-		blob.save(dataset._datasets_written, 'DS/LIST', temp=False, _hidden=True)
+		dataset.finish_datasets()
 	c_fflush()
 	_backgrounded_wait()
 	t = monotonic() - t

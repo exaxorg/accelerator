@@ -1809,3 +1809,36 @@ def job_datasets(job):
 		res.append(Dataset(job, name))
 	res.reverse()
 	return res
+
+
+def finish_datasets(final=True):
+	from accelerator.g import job
+
+	if final:
+		to_finish = _datasetwriters
+	else:
+		to_finish = [dw.name for dw in _datasetwriters.values() if dw._started]
+
+	# A chain must be finished from the back, so sort on that.
+	sortnum_cache = {}
+	def dw_sortnum(name):
+		if name not in sortnum_cache:
+			dw = _datasetwriters.get(name)
+			if not dw: # manually .finish()ed
+				num = -1
+			elif dw.previous and dw.previous.startswith(job + '/'):
+				pname = dw.previous.split('/')[1]
+				num = dw_sortnum(pname) + 1
+			else:
+				num = 0
+			sortnum_cache[name] = num
+		return sortnum_cache[name]
+
+	if to_finish:
+		from accelerator.statmsg import status
+		with status("Finishing datasets"):
+			for name in sorted(to_finish, key=dw_sortnum):
+				_datasetwriters[name].finish()
+
+	if final and _datasets_written:
+		blob.save(_datasets_written, 'DS/LIST', temp=False, _hidden=True)
