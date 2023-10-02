@@ -488,7 +488,11 @@ class DotDict(OrderedDict):
 	def __getattr__(self, name):
 		if name[0] == "_":
 			raise AttributeError(name)
-		return self[name]
+		try:
+			return self[name]
+		except KeyError:
+			pass # raise new error outside this except clause
+		raise AttributeError(name)
 
 	def __setattr__(self, name, value):
 		# if using the python implementation of OrderedDict (as python2 does)
