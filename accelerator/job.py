@@ -115,6 +115,18 @@ class Job(unicode):
 	def is_build(self):
 		return self.params.get('is_build', False)
 
+	@_cachedprop
+	def parent(self):
+		parent = self.params.get('parent')
+		return Job(parent) if parent else NoJob
+
+	@_cachedprop
+	def build_job(self):
+		candidate = self.parent
+		while candidate and not candidate.is_build:
+			candidate = candidate.parent
+		return candidate
+
 	@property
 	def path(self):
 		if self.workdir not in WORKDIRS:
@@ -383,6 +395,10 @@ class NoJob(Job):
 
 	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
 		return self.load(filename, sliceno, default=default)
+
+	@property # so it can return the same instance as all other NoJob things
+	def parent(self):
+		return NoJob
 
 NoJob = NoJob()
 
