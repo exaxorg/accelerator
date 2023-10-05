@@ -120,7 +120,7 @@ class Automata:
 			self.monitor.submit(method)
 		if not caption:
 			caption = ''
-		data = setupfile.generate(caption, method, options, datasets, jobs, why_build=why_build, force_build=force_build or 'force_build' in self.flags)
+		data = setupfile.generate(caption, method, options, datasets, jobs, why_build=why_build, force_build=force_build or 'force_build' in self.flags, parent=g.job)
 		if self.subjob_cookie:
 			data.subjob_cookie = self.subjob_cookie
 			data.parent_pid = os.getpid()

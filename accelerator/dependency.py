@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2022 Carl Drougge                       #
+# Modifications copyright (c) 2019-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -113,6 +113,7 @@ def initialise_jobs(setup, target_WorkSpace, DataBase, Methods, config):
 				package=method['package'],
 				description=Methods.descriptions[data['method']],
 				input_directory=config.get('input_directory'),
+				parent=setup.get('parent'),
 			)
 			new_setup.hash = Methods.hash[data['method']][0]
 			new_setup.seed = randint(0, 2**63 - 1)
