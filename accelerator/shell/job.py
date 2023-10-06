@@ -53,6 +53,8 @@ def show(url, job, verbose, show_output):
 		if 'exectime' in setup:
 			hdr = '%s in %s' % (hdr, fmttime(setup.exectime.total),)
 		print(colour(hdr, 'job/header'))
+		if job.is_build:
+			print(colour('  build job', 'job/highlight'))
 		if job.parent:
 			built_from = "  built from %s (%s)" % (job.parent, job.parent.method,)
 			if job.build_job and job.parent != job.build_job:
