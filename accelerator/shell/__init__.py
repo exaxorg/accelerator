@@ -307,13 +307,14 @@ def parse_user_config(alias_d, colour_d):
 	from accelerator.compat import open
 	from configparser import ConfigParser
 	from os import environ
+	fns = ['/etc/accelerator/config']
 	cfgdir = environ.get('XDG_CONFIG_HOME')
 	if not cfgdir:
 		home = environ.get('HOME')
-		if not home:
-			return None
-		cfgdir = join(home, '.config')
-	fn = join(cfgdir, 'accelerator', 'config')
+		if home:
+			cfgdir = join(home, '.config')
+	if cfgdir:
+		fns.append(join(cfgdir, 'accelerator', 'config'))
 	all_cfg = []
 	def read(fn, seen_fns=(), must_exist=False):
 		try:
@@ -336,7 +337,8 @@ def parse_user_config(alias_d, colour_d):
 				read(include, seen_fns, True)
 		# Append this file after the included files, so this file takes priority.
 		all_cfg.append((fn, contents))
-	read(fn)
+	for fn in fns:
+		read(fn)
 	cfg = ConfigParser()
 	cfg.optionxform = str # case sensitive (don't downcase aliases)
 	for fn, contents in all_cfg:
