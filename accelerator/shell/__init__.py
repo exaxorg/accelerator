@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2022 Carl Drougge                                     #
+# Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -24,7 +24,7 @@ from __future__ import unicode_literals
 import sys
 import errno
 import os
-from os.path import dirname, basename, realpath, join
+from os.path import dirname, basename, realpath, join, expanduser
 import locale
 from collections import namedtuple
 from glob import glob
@@ -305,6 +305,7 @@ def _unesc(m):
 
 def parse_user_config(alias_d, colour_d):
 	from accelerator.compat import open
+	from configparser import ConfigParser
 	from os import environ
 	cfgdir = environ.get('XDG_CONFIG_HOME')
 	if not cfgdir:
@@ -313,19 +314,37 @@ def parse_user_config(alias_d, colour_d):
 			return None
 		cfgdir = join(home, '.config')
 	fn = join(cfgdir, 'accelerator', 'config')
-	try:
-		fh = open(fn, 'r', encoding='utf-8')
-	except IOError:
-		return None
-	with fh:
-		from configparser import ConfigParser
+	all_cfg = []
+	def read(fn, seen_fns=(), must_exist=False):
+		try:
+			with open(fn, 'r', encoding='utf-8') as fh:
+				contents = fh.read()
+		except IOError:
+			if must_exist:
+				raise
+			return
+		seen_fns = set(seen_fns)
+		seen_fns.add(fn)
 		cfg = ConfigParser()
-		cfg.optionxform = str # case sensitive (don't downcase aliases)
-		cfg.read_file(fh)
-		if 'alias' in cfg:
-			alias_d.update(cfg['alias'])
-		if 'colour' in cfg:
-			colour_d.update({k: [_unesc_re.sub(_unesc, e) for e in v.split()] for k, v in cfg['colour'].items()})
+		cfg.read_string(contents, fn)
+		include = cfg.get('include', 'path', fallback=None)
+		if include:
+			for include in shlex.split(include):
+				include = join(dirname(fn), expanduser(include))
+				if include in seen_fns:
+					raise Exception('Config include loop: %r goes back to %r' % (fn, include,))
+				read(include, seen_fns, True)
+		# Append this file after the included files, so this file takes priority.
+		all_cfg.append((fn, contents))
+	read(fn)
+	cfg = ConfigParser()
+	cfg.optionxform = str # case sensitive (don't downcase aliases)
+	for fn, contents in all_cfg:
+		cfg.read_string(contents, fn)
+	if 'alias' in cfg:
+		alias_d.update(cfg['alias'])
+	if 'colour' in cfg:
+		colour_d.update({k: [_unesc_re.sub(_unesc, e) for e in v.split()] for k, v in cfg['colour'].items()})
 
 def printdesc(items, columns, colour_prefix, full=False):
 	ddot = ' ...'
