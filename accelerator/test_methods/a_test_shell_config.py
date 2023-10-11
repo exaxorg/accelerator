@@ -46,6 +46,7 @@ def ax_cmd(*a):
 
 def synthesis(job):
 	os.putenv('XDG_CONFIG_HOME', job.path)
+	os.putenv('ACCELERATOR_IGNORE_ETC', 'Y') # make sure we can't be messed up by global config
 	os.putenv('CLICOLOR_FORCE', '1')
 	os.mkdir('accelerator')
 	with open('accelerator/config', 'w') as fh:

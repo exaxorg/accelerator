@@ -141,6 +141,7 @@ def synthesis(job, slices):
 	os.unsetenv('CLICOLOR')
 	os.unsetenv('CLICOLOR_FORCE')
 	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
+	os.putenv('ACCELERATOR_IGNORE_ETC', 'Y') # make sure we can't be messed up by global config
 
 	def frame(framevalues, *a):
 		framevalues = cycle(framevalues)

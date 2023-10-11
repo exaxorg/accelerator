@@ -70,6 +70,7 @@ def synthesis(job):
 	dw.get_split_write()('this is a value')
 	ds = dw.finish()
 	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
+	os.putenv('ACCELERATOR_IGNORE_ETC', 'Y') # make sure we can't be messed up by global config
 	os.unsetenv('CLICOLOR_FORCE')
 	chk(['-h'], want_in_help=['\ncommands:\n', '\naliases:\n'])
 	chk(['abort'], want_in_help=['--quiet'])

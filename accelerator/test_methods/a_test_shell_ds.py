@@ -1,6 +1,6 @@
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021 Carl Drougge                                          #
+# Copyright (c) 2021-2023 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -42,6 +42,7 @@ def ax_ds(*a):
 
 def synthesis(job):
 	os.putenv('XDG_CONFIG_HOME', job.path) # make sure we can't be messed up by config
+	os.putenv('ACCELERATOR_IGNORE_ETC', 'Y') # make sure we can't be messed up by global config
 	for spec, ds in options.want.items():
 		res = ax_ds(spec)
 		got_ds = res[0]

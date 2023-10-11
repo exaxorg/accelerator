@@ -307,7 +307,12 @@ def parse_user_config(alias_d, colour_d):
 	from accelerator.compat import open
 	from configparser import ConfigParser
 	from os import environ
-	fns = ['/etc/accelerator/config']
+	fns = []
+	# This can't be an argument, as aliases specified here need to be expanded
+	# during argument parsing. Therefore it's an environment variable instead.
+	# It's not really intended for users, just for tests.
+	if environ.get('ACCELERATOR_IGNORE_ETC', None) is None:
+		fns = ['/etc/accelerator/config']
 	cfgdir = environ.get('XDG_CONFIG_HOME')
 	if not cfgdir:
 		home = environ.get('HOME')
