@@ -734,6 +734,7 @@ def run_automata(options, cfg):
 	with tarfile.open(name='method.tar.gz', mode='w:gz', compresslevel=1) as tar:
 		tar.addfile(info, io.BytesIO(data))
 	setup.hash = hashlib.sha1(data).hexdigest()
+	setup.project_directory = cfg.project_directory
 	setupfile.save_setup(job, setup)
 
 	from accelerator import dataset
