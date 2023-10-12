@@ -76,6 +76,7 @@ class Automata:
 		WORKDIRS.update(self.list_workdirs())
 		self.update_method_info()
 		self.clear_record()
+		self._all_record = {}
 		# Only do this when run from shell.
 		if infoprints:
 			from accelerator.workarounds import SignalWrapper
@@ -287,6 +288,9 @@ class Automata:
 			exit()
 		jid = Job(jid, record_as or method)
 		self.record[record_in].append(jid)
+		for d in res.jobs.values():
+			if d.link not in self._all_record:
+				self._all_record[d.link] = bool(d.make)
 		return jid
 
 
@@ -795,7 +799,7 @@ def run_automata(options, cfg):
 			endtime=setup.endtime,
 			exectime=setup.exectime,
 			files=finish_job_files(job, saved_files),
-			subjobs={},
+			subjobs=a._all_record,
 			version=1,
 		)
 		json_save(post, job.filename('post.json'))
