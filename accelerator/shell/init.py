@@ -231,8 +231,15 @@ def main(argv, cfg):
 	if workdir_slices and workdir_slices != options.slices and not options.force:
 		raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
 
-	if not options.force and exists(options.directory) and listdir(options.directory):
-		raise UserError('Directory %r is not empty.' % (options.directory,))
+	if not options.force:
+		if exists(options.directory) and listdir(options.directory):
+			raise UserError('Directory %r is not empty.' % (options.directory,))
+		def plausible_jobdir(n):
+			parts = n.rsplit('-', 1)
+			return len(parts) == 2 and parts[0] == options.name and parts[1].isnumeric()
+		if exists(workdir) and any(map(plausible_jobdir, listdir(workdir))):
+			raise UserError('Workdir %r already has jobs in it.' % (workdir,))
+
 	if not exists(options.directory):
 		makedirs(options.directory)
 	chdir(options.directory)
