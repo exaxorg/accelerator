@@ -73,11 +73,11 @@ config_template = r"""# The configuration is a collection of key value pairs.
 
 slices: {slices}
 workdirs:
-	{name} ./workdirs/{name}
+	{all_workdirs}
 
 # Target workdir defaults to the first workdir, but you can override it.
 # (this is where jobs without a workdir override are built)
-target workdir: {name}
+target workdir: {first_workdir_name}
 
 method packages:
 	{name} auto-discover
@@ -153,10 +153,12 @@ def git(method_dir):
 
 
 def main(argv, cfg):
-	from os import makedirs, listdir, chdir
-	from os.path import exists, join, realpath, dirname
+	from os import makedirs, listdir, chdir, environ
+	from os.path import exists, join, realpath, dirname, split
+	import re
 	from sys import version_info
 	from argparse import RawTextHelpFormatter
+	from accelerator.configfile import interpolate
 	from accelerator.shell.parser import ArgumentParser
 	from accelerator.compat import shell_quote
 	from accelerator.error import UserError
@@ -175,12 +177,13 @@ def main(argv, cfg):
 		formatter_class=RawTextHelpFormatter,
 	)
 	parser.add_argument('--slices', default=None, type=int, help='override slice count detection')
-	parser.add_argument('--name', default='dev', help='name of method dir and workdir, default "dev"')
+	parser.add_argument('--name', default='dev', help='name of method dir and (default) workdir, default "dev"')
 	parser.add_argument('--input', default='# /some/path where you want import methods to look.', help='input directory')
 	parser.add_argument('--force', action='store_true', negation='dont', help='go ahead even though directory is not empty, or workdir\nexists with incompatible slice count')
 	parser.add_argument('--tcp', default=False, metavar='HOST/PORT', nargs='?', help='listen on TCP instead of unix sockets.\nspecify HOST (can be IP) to listen on that host\nspecify PORT to use range(PORT, PORT + 3)\nspecify both as HOST:PORT')
 	parser.add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
 	parser.add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
+	parser.add_argument('--workdir-template', metavar='TEMPLATE', default='./workdirs/[name]', help='where to put workdir, default "workdirs/[name]"')
 	parser.add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
 	options = parser.parse_intermixed_args(argv)
 
@@ -213,10 +216,35 @@ def main(argv, cfg):
 			urd='%s:%d' % (host, port + 2,),
 		)
 
+	if options.slices is None:
+		from multiprocessing import cpu_count
+		default_slices = cpu_count()
+	else:
+		default_slices = options.slices
+
 	if not options.input.startswith('#'):
 		options.input = shell_quote(realpath(options.input))
 	prefix = realpath(options.directory)
-	workdir = join(prefix, 'workdirs', options.name)
+	project = split(prefix)[1]
+
+	template_vars = dict(
+		name=options.name,
+		project=project,
+		slices=str(default_slices),
+		user=environ.get('USER', 'NO-USER'),
+	)
+	template_re = re.compile(r'\[(' + r'|'.join(template_vars.keys()) + r')\]')
+	def template_var(m):
+		name = m.group(1)
+		if name == 'slices':
+			# If the path depends on slices, we can't change that later.
+			options.slices = default_slices
+		return template_vars[name]
+
+	workdir = template_re.sub(template_var, options.workdir_template)
+	workdirs = [(options.name, workdir)]
+	workdir = interpolate(workdir)
+
 	slices_conf = join(workdir, '.slices')
 	try:
 		with open(slices_conf, 'r') as fh:
@@ -226,8 +254,7 @@ def main(argv, cfg):
 	if workdir_slices and options.slices is None:
 		options.slices = workdir_slices
 	if options.slices is None:
-		from multiprocessing import cpu_count
-		options.slices = cpu_count()
+		options.slices = default_slices
 	if workdir_slices and workdir_slices != options.slices and not options.force:
 		raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
 
@@ -269,9 +296,12 @@ def main(argv, cfg):
 		examples = 'examples'
 	else:
 		examples = '# accelerator.examples'
+	all_workdirs = ['%s %s' % (shell_quote(name), shell_quote(path),) for name, path in workdirs]
 	with open('accelerator.conf', 'w') as fh:
 		fh.write(config_template.format(
 			name=shell_quote(options.name),
+			first_workdir_name=shell_quote(workdirs[0][0]),
+			all_workdirs='\n\t'.join(all_workdirs),
 			slices=options.slices,
 			version=accelerator.__version__,
 			examples=examples,
