@@ -184,6 +184,7 @@ def main(argv, cfg):
 	parser.add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
 	parser.add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
 	parser.add_argument('--workdir-template', metavar='TEMPLATE', default='./workdirs/[name]', help='where to put workdir, default "workdirs/[name]"')
+	parser.add_argument('--workdir', metavar='NAME or TEMPLATE', action='append', help='name of workdir (default --name), can specify several')
 	parser.add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
 	options = parser.parse_intermixed_args(argv)
 
@@ -241,22 +242,38 @@ def main(argv, cfg):
 			options.slices = default_slices
 		return template_vars[name]
 
-	workdir = template_re.sub(template_var, options.workdir_template)
-	workdirs = [(options.name, workdir)]
-	workdir = interpolate(workdir)
+	if not options.workdir:
+		options.workdir = ['[name]']
+	workdirs = []
+	for name in options.workdir:
+		if ':' in name:
+			name, path = name.split(':', 1)
+		elif '/' in name:
+			path = name.rstrip('/')
+			name = path.rsplit('/', 1)[-1]
+		else:
+			path = options.workdir_template
+		# using --name when expanding the name part
+		template_vars['name'] = options.name
+		name = template_re.sub(template_var, name)
+		# and then using the expanded name part when expanding path
+		template_vars['name'] = name
+		path = template_re.sub(template_var, path)
+		workdirs.append((name, path))
+	first_workdir_path = interpolate(workdirs[0][1])
 
-	slices_conf = join(workdir, '.slices')
-	try:
-		with open(slices_conf, 'r') as fh:
-			workdir_slices = int(fh.read())
-	except IOError:
-		workdir_slices = None
-	if workdir_slices and options.slices is None:
-		options.slices = workdir_slices
+	def slices_conf(workdir):
+		return join(workdir, '.slices')
+
+	def slice_count(workdir):
+		try:
+			with open(slices_conf(workdir), 'r') as fh:
+				return int(fh.read())
+		except IOError:
+			return None
+
 	if options.slices is None:
-		options.slices = default_slices
-	if workdir_slices and workdir_slices != options.slices and not options.force:
-		raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
+		options.slices = slice_count(first_workdir_path) or default_slices
 
 	if not options.force:
 		if exists(options.directory) and listdir(options.directory):
@@ -264,8 +281,14 @@ def main(argv, cfg):
 		def plausible_jobdir(n):
 			parts = n.rsplit('-', 1)
 			return len(parts) == 2 and parts[0] == options.name and parts[1].isnumeric()
-		if exists(workdir) and any(map(plausible_jobdir, listdir(workdir))):
-			raise UserError('Workdir %r already has jobs in it.' % (workdir,))
+		for _, workdir in workdirs:
+			workdir = interpolate(workdir)
+			if exists(workdir):
+				workdir_slices = slice_count(workdir)
+				if workdir_slices not in (None, options.slices):
+					raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
+		if exists(first_workdir_path) and any(map(plausible_jobdir, listdir(first_workdir_path))):
+			raise UserError('Workdir %r already has jobs in it.' % (first_workdir_path,))
 
 	if not exists(options.directory):
 		makedirs(options.directory)
@@ -273,11 +296,15 @@ def main(argv, cfg):
 	for dir_to_make in ('.socket.dir', 'urd.db',):
 		if not exists(dir_to_make):
 			makedirs(dir_to_make, 0o750)
-	for dir_to_make in (workdir, 'results',):
-		if not exists(dir_to_make):
-			makedirs(dir_to_make)
-	with open(slices_conf, 'w') as fh:
-		fh.write('%d\n' % (options.slices,))
+	if not exists('results'):
+		makedirs('results')
+	for _, path in workdirs:
+		path = interpolate(path)
+		if not exists(path):
+			makedirs(path)
+		if options.force or not exists(slices_conf(path)):
+			with open(slices_conf(path), 'w') as fh:
+				fh.write('%d\n' % (options.slices,))
 	method_dir = options.name
 	if not exists(method_dir):
 		makedirs(method_dir)
