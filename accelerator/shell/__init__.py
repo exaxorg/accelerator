@@ -38,6 +38,7 @@ from accelerator.error import UserError
 from accelerator.shell.parser import ArgumentParser
 
 cfg = None
+user_cfg = None
 
 def find_cfgs(basedir='.', wildcard=False):
 	"""Find all accelerator.conf (or accelerator*.conf if wildcard=True)
@@ -303,7 +304,7 @@ def _unesc(m):
 	else:
 		return _unesc_v.get(v.lower(), v)
 
-def parse_user_config(alias_d, colour_d):
+def parse_user_config():
 	from accelerator.compat import open
 	from configparser import ConfigParser
 	from os import environ
@@ -348,10 +349,7 @@ def parse_user_config(alias_d, colour_d):
 	cfg.optionxform = str # case sensitive (don't downcase aliases)
 	for fn, contents in all_cfg:
 		cfg.read_string(contents, fn)
-	if 'alias' in cfg:
-		alias_d.update(cfg['alias'])
-	if 'colour' in cfg:
-		colour_d.update({k: [_unesc_re.sub(_unesc, e) for e in v.split()] for k, v in cfg['colour'].items()})
+	return cfg
 
 def printdesc(items, columns, colour_prefix, full=False):
 	ddot = ' ...'
@@ -487,7 +485,13 @@ def main():
 		'evenlines': ('BLACK', 'WHITEBG',),
 		'oddlines': ('BLACK', 'BRIGHTWHITEBG',),
 	}
-	parse_user_config(aliases, colour_d)
+
+	global user_cfg
+	user_cfg = parse_user_config()
+	if 'alias' in user_cfg:
+		aliases.update(user_cfg['alias'])
+	if 'colour' in user_cfg:
+		colour_d.update({k: [_unesc_re.sub(_unesc, e) for e in v.split()] for k, v in user_cfg['colour'].items()})
 	colour._names.update(colour_d)
 
 	main_argv, argv = expand_aliases(main_argv, argv)
