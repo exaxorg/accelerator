@@ -159,6 +159,7 @@ def main(argv, cfg):
 	from sys import version_info
 	from argparse import RawTextHelpFormatter
 	from accelerator.configfile import interpolate
+	from accelerator.shell import user_cfg
 	from accelerator.shell.parser import ArgumentParser
 	from accelerator.compat import shell_quote
 	from accelerator.error import UserError
@@ -176,17 +177,49 @@ def main(argv, cfg):
 		'''.replace('\t', ''),
 		formatter_class=RawTextHelpFormatter,
 	)
-	parser.add_argument('--slices', default=None, type=int, help='override slice count detection')
-	parser.add_argument('--name', default='dev', help='name of method dir and (default) workdir, default "dev"')
-	parser.add_argument('--input', default='# /some/path where you want import methods to look.', help='input directory')
-	parser.add_argument('--force', action='store_true', negation='dont', help='go ahead even though directory is not empty, or workdir\nexists with incompatible slice count')
-	parser.add_argument('--tcp', default=False, metavar='HOST/PORT', nargs='?', help='listen on TCP instead of unix sockets.\nspecify HOST (can be IP) to listen on that host\nspecify PORT to use range(PORT, PORT + 3)\nspecify both as HOST:PORT')
-	parser.add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
-	parser.add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
-	parser.add_argument('--workdir-template', metavar='TEMPLATE', default='./workdirs/[name]', help='where to put workdir, default "workdirs/[name]"')
-	parser.add_argument('--workdir', metavar='NAME or TEMPLATE', action='append', help='name of workdir (default --name), can specify several')
-	parser.add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
+
+	configurable_args = {
+		'--examples',
+		'--input',
+		'--name',
+		'--no-git',
+		'--slices',
+		'--tcp',
+		'--workdir-template',
+		# --workdir is also configurable, but handled further down
+	}
+	bool_fallbacks = set()
+	def add_argument(name, default=None, help='', **kw):
+		if name in configurable_args:
+			cfg_name = name[2:]
+			default = user_cfg.get('init', cfg_name, fallback=default)
+			if default is not None:
+				if kw.get('action') == 'store_true':
+					if default.lower() == 'true':
+						bool_fallbacks.add(cfg_name.replace('-', '_'))
+					elif default.lower() != 'false':
+						raise UserError("Configuration init.%s must be either true or false, not %r." % (cfg_name, default,))
+					default = None
+				elif 'type' in kw:
+					default = kw['type'](default)
+		if '[DEFAULT]' in help:
+			help = help.replace('[DEFAULT]', default)
+		parser.add_argument(name, default=default, help=help, **kw)
+
+	add_argument('--slices', default=None, type=int, help='override slice count detection')
+	add_argument('--name', default='dev', help='name of method dir and (default) workdir, default "[DEFAULT]"')
+	add_argument('--input', default='# /some/path where you want import methods to look.', help='input directory')
+	add_argument('--force', action='store_true', negation='dont', help='go ahead even though directory is not empty, or workdir\nexists with incompatible slice count')
+	add_argument('--tcp', default=False, metavar='HOST/PORT', nargs='?', help='listen on TCP instead of unix sockets.\nspecify HOST (can be IP) to listen on that host\nspecify PORT to use range(PORT, PORT + 3)\nspecify both as HOST:PORT')
+	add_argument('--no-git', action='store_true', negation='yes', help='don\'t create git repository')
+	add_argument('--examples', action='store_true', negation='no', help='copy examples to project directory')
+	add_argument('--workdir-template', metavar='TEMPLATE', default='./workdirs/[name]', help='where to put workdir, default "[DEFAULT]"')
+	add_argument('--workdir', metavar='NAME or TEMPLATE', action='append', help='name of workdir (default --name), can specify several')
+	add_argument('directory', default='.', help='project directory to create. default "."', metavar='DIR', nargs='?')
 	options = parser.parse_intermixed_args(argv)
+	for name in bool_fallbacks:
+		if getattr(options, name) is None:
+			setattr(options, name, True)
 
 	assert options.name
 	assert '/' not in options.name
@@ -243,7 +276,9 @@ def main(argv, cfg):
 		return template_vars[name]
 
 	if not options.workdir:
-		options.workdir = ['[name]']
+		import shlex
+		workdir = shlex.split(user_cfg.get('init', 'workdir', fallback=''), posix=True)
+		options.workdir = workdir or ['[name]']
 	workdirs = []
 	for name in options.workdir:
 		if ':' in name:
