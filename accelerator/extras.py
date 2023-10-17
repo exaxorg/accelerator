@@ -39,6 +39,8 @@ from accelerator.job import Job, JobWithFile
 from accelerator.statmsg import status
 
 def _fn(filename, jobid, sliceno):
+	if isinstance(filename, pathlib.Path):
+		filename = str(filename)
 	if filename.startswith('/'):
 		assert not jobid, "Don't specify full path (%r) and jobid (%s)." % (filename, jobid,)
 		assert not sliceno, "Don't specify full path (%r) and sliceno." % (filename,)
@@ -71,6 +73,8 @@ class _SavedFile(object):
 	__slots__ = ('_filename', '_sliceno', '_loader',)
 
 	def __init__(self, filename, sliceno, loader):
+		if isinstance(filename, pathlib.Path):
+			filename = str(filename)
 		self._filename = filename
 		self._sliceno = sliceno
 		self._loader = loader
