@@ -20,15 +20,29 @@ description = """
 Test using the returned object from job.save() and job.json_save()
 """
 
+from pathlib import Path
+
+
 def save(job, name, sliceno):
 	p = job.save('contents of %s %s' % (name, sliceno,), name + '.pickle', sliceno=sliceno)
 	j = job.json_save({name: sliceno}, name + '.json', sliceno=sliceno)
-	return p, j
+	name += '_path'
+	p_path = job.save('contents of %s %s' % (name, sliceno,), Path(name + '.pickle'), sliceno=sliceno)
+	j_path = job.json_save({name: sliceno}, Path(name + '.json'), sliceno=sliceno)
+	return p, j, p_path, j_path
 
-def check(job, name, sliceno, p, j):
-	assert p.load() == 'contents of %s %s' % (name, sliceno,)
-	assert j.load() == {name: sliceno}
-	for obj, filename in [(p, name + '.pickle'), (j, name + '.json')]:
+def check(job, name, sliceno, p, j, p_path, j_path):
+	assert p.load() == job.load(Path(p.filename)) == 'contents of %s %s' % (name, sliceno,)
+	assert j.load() == job.json_load(Path(j.filename)) == {name: sliceno}
+	assert p_path.load() == job.load(Path(p_path.filename)) == 'contents of %s_path %s' % (name, sliceno,)
+	assert j_path.load() == job.json_load(Path(j_path.filename)) == {name + '_path': sliceno}
+	for obj, filename in [
+		# Use Path() for files saved with strings and strings for files saved with Path.
+		(p, Path(name + '.pickle')),
+		(j, Path(name + '.json')),
+		(p_path, name + '_path.pickle'),
+		(j_path, name + '_path.json'),
+	]:
 		path = job.filename(filename, sliceno=sliceno)
 		assert obj.path == path
 		assert obj.filename == path.split('/')[-1]
