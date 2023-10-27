@@ -3,6 +3,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 # Modifications copyright (c) 2018-2023 Carl Drougge                       #
+# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -672,7 +673,8 @@ def find_automata(a, script):
 					raise
 	raise BuildError('No build script "%s" found in {%s}' % (script, ', '.join(package)))
 
-def run_automata(options, cfg):
+
+def prepare_for_run(options, cfg):
 	g.running = 'build'
 	a = Automata(cfg.url, verbose=options.verbose, flags=options.flags.split(','), infoprints=True, print_full_jobpath=options.full_path, concurrency_map=options.concurrency_map)
 
@@ -684,9 +686,6 @@ def run_automata(options, cfg):
 
 	if options.just_wait:
 		return
-
-	module_ref = find_automata(a, options.script)
-	main_args = getarglist(module_ref.main) # do this early to get errors for missing / not a function early
 
 	if 'URD_AUTH' in os.environ:
 		assert ':' in os.environ['URD_AUTH'], "Set $URD_AUTH to user:password"
@@ -704,8 +703,18 @@ def run_automata(options, cfg):
 	else:
 		a.update_methods()
 
+	modules = []
+	for script in options.script:
+		module_ref = find_automata(a, script)
+		main_args = getarglist(module_ref.main) # do this early to get errors for missing / not a function early
+		modules.append((module_ref, main_args))
+
+	return urd, modules
+
+
+def run_automata(urd, options, cfg, module_ref, main_args):
 	url = 'allocate_job?' + urlencode({'workdir': options.workdir or '' })
-	job = a._url_json(url)
+	job = urd._a._url_json(url)
 	if 'error' in job:
 		print(job.error, file=sys.stderr)
 		return 1
@@ -796,7 +805,7 @@ def run_automata(options, cfg):
 			endtime=setup.endtime,
 			exectime=setup.exectime,
 			files=finish_job_files(job, saved_files),
-			subjobs=a._all_record,
+			subjobs=urd._a._all_record,
 			version=1,
 		)
 		json_save(post, job.filename('post.json'))
@@ -807,7 +816,7 @@ def run_automata(options, cfg):
 def main(argv, cfg):
 	parser = ArgumentParser(
 		prog=argv.pop(0),
-		usage="%(prog)s [options] [script]",
+		usage="%(prog)s [options] [script ...]",
 		formatter_class=RawTextHelpFormatter,
 	)
 	parser.add_argument('-f', '--flags',    default='',                           help="comma separated list of flags", )
@@ -819,7 +828,7 @@ def main(argv, cfg):
 	parser.add_argument('--verbose',        default='status',                     help="verbosity style {no, status, dots, log}")
 	parser.add_argument('--quiet',          action='store_true', negation='not',  help="same as --verbose=no")
 	parser.add_argument('--horizon',        default=None,                         help="time horizon - dates after this are not visible in\nurd.latest")
-	parser.add_argument('script',           default='build'   ,                   help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='?')
+	parser.add_argument('script',           default=['build']  ,                  help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='*')
 
 	options = parser.parse_intermixed_args(argv)
 
@@ -838,7 +847,16 @@ def main(argv, cfg):
 				raise BuildError('Bad concurrency spec %r' % (v,))
 	options.concurrency_map = concurrency_map
 
-	return run_automata(options, cfg)
+	urd, modules = prepare_for_run(options, cfg)
+
+	res = 0
+	for module_ref, main_args in modules:
+		res = run_automata(urd, options, cfg, module_ref, main_args)
+		if res:
+			break
+		urd._reset()
+
+	return res
 
 
 def print_user_part_traceback():

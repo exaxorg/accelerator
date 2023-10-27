@@ -91,7 +91,7 @@ def synthesis(job):
 	chk(['job', '--source-file=*.txt', '--', job], want_in_call=[in_extra], dont_want_in_call=[extra_hdr, in_this_file]),
 	chk(['job', '--file=filename', '--', job], want_in_call=[in_written_file], dont_want_in_call=['===', in_this_file]),
 	chk(['method', 'csvimport'], want_in_help=['lists methods'], want_in_call=['filename'])
-	chk(['run'], want_in_help=['[script]', 'WORKDIR'])
+	chk(['run'], want_in_help=['[script ...]', 'WORKDIR'])
 	chk(['script', 'build_tests'], want_in_help=['describes build scripts'], want_in_call=['Needs at least 3 slices to work.'])
 	chk(['server'], want_in_help=['--debuggable'])
 	chk(['status'], want_in_help=['--short'], want_in_call=['test_shell_commands (', 'synthesis (', 'TAIL OF OUTPUT:'])
