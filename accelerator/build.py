@@ -64,7 +64,6 @@ class Automata:
 	def __init__(self, server_url, verbose=False, flags=None, subjob_cookie=None, infoprints=False, print_full_jobpath=False, concurrency_map={}):
 		self.url = server_url
 		self.subjob_cookie = subjob_cookie
-		self.history = []
 		self.verbose = verbose
 		self.monitor = None
 		self.flags = flags or []
@@ -132,7 +131,7 @@ class Automata:
 		if self.concurrency_map:
 			data.concurrency_map = self.concurrency_map
 		self.job_retur = self._server_submit(data)
-		self.history.append((data, self.job_retur))
+		self._last_setup = data
 		#
 		if wait and not self.job_retur.done:
 			self.wait()
@@ -190,9 +189,6 @@ class Automata:
 		"""
 		if 'jobs' in self.job_retur:
 			return self.job_retur.jobs[method].link
-
-	def dump_history(self):
-		return self.history
 
 	def _server_idle(self, timeout=0, ignore_errors=False):
 		"""ask server if it is idle, return (idle, status_stacks)"""
@@ -277,7 +273,7 @@ class Automata:
 		if 'why_build' in res: # done by server anyway (because --flags why_build)
 			print("Would have built from:")
 			print("======================")
-			print(setupfile.encode_setup(self.history[-1][0], as_str=True))
+			print(setupfile.encode_setup(self._last_setup, as_str=True))
 			print("Could have avoided build if:")
 			print("============================")
 			print(json_encode(res.why_build, as_str=True))
