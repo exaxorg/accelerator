@@ -634,9 +634,10 @@ class Urd(object):
 			self._warnings = []
 
 
-def find_automata(a, package, script):
+def find_automata(a, script):
 	all_packages = sorted(a.config()['method_directories'])
-	if package:
+	if '.' in script:
+		package, script = script.rsplit('.', 1)
 		if package in all_packages:
 			package = [package]
 		else:
@@ -677,7 +678,7 @@ def run_automata(options, cfg):
 	if options.just_wait:
 		return
 
-	module_ref = find_automata(a, options.package, options.script)
+	module_ref = find_automata(a, options.script)
 	main_args = getarglist(module_ref.main) # do this early to get errors for missing / not a function early
 
 	if 'URD_AUTH' in os.environ:
@@ -715,7 +716,6 @@ def run_automata(options, cfg):
 		'--concurrency': options.concurrency,
 		'--workdir': options.workdir,
 		'--horizon': options.horizon,
-		'package': options.package,
 		'script': options.script,
 	}
 	job = CurrentJob(job.jobid, setup)
@@ -815,11 +815,6 @@ def main(argv, cfg):
 	parser.add_argument('script',           default='build'   ,                   help="build script to run. default \"build\".\nsearches under all method directories in alphabetical\norder if it does not contain a dot.\nprefixes build_ to last element unless specified.\npackage name suffixes are ok.\nso for example \"test_methods.tests\" expands to\n\"accelerator.test_methods.build_tests\".", nargs='?')
 
 	options = parser.parse_intermixed_args(argv)
-
-	if '.' in options.script:
-		options.package, options.script = options.script.rsplit('.', 1)
-	else:
-		options.package = None
 
 	options.verbose = {'no': False, 'status': True, 'dots': 'dots', 'log': 'log'}[options.verbose]
 	if options.quiet: options.verbose = False
