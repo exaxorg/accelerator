@@ -90,11 +90,6 @@ class Automata:
 		self.record = defaultdict(JobList)
 		self.jobs = self.record[None]
 
-	def validate_response(self, response):
-		# replace with homemade function,
-		# this is run on bigdata response
-		pass
-
 	def _url_json(self, *path, **kw):
 		from accelerator.unixhttp import call
 		url = self.url + os.path.join('/', *path)
@@ -216,7 +211,6 @@ class Automata:
 		if 'why_build' not in res:
 			if not self.subjob_cookie:
 				self._printlist(res.jobs)
-			self.validate_response(res.jobs)
 		return res
 
 	def _printlist(self, returndict):
