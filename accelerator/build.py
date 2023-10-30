@@ -67,15 +67,13 @@ class Automata:
 		self.verbose = verbose
 		self.monitor = None
 		self.flags = flags or []
-		self.job_method = None
 		last_error = self._url_json('last_error?subjob_cookie=' + (subjob_cookie or ''))
 		self.last_error_time = last_error.get('time')
 		# Workspaces should be per Automata
 		from accelerator.job import WORKDIRS
 		WORKDIRS.update(self.list_workdirs())
 		self.update_method_info()
-		self.clear_record()
-		self._all_record = {}
+		self._reset()
 		# Only do this when run from shell.
 		if infoprints:
 			from accelerator.workarounds import SignalWrapper
@@ -85,6 +83,11 @@ class Automata:
 			self.siginfo_check = lambda: False
 		self.print_full_jobpath = print_full_jobpath
 		self.concurrency_map = concurrency_map
+
+	def _reset(self):
+		self.job_method = None
+		self.clear_record()
+		self._all_record = {}
 
 	def clear_record(self):
 		self.record = defaultdict(JobList)
@@ -443,12 +446,9 @@ class Urd(object):
 			assert '://' in str(info.urd), 'Bad urd URL: %s' % (info.urd,)
 		self._url = info.urd or ''
 		self._user = user
-		self._current = None
 		self.info = info
 		self.flags = set(a.flags)
 		self.horizon = horizon
-		self.joblist = a.jobs
-		self.workdir = None
 		self.default_workdir = default_workdir
 		auth = '%s:%s' % (user, password,)
 		if PY3:
@@ -457,6 +457,13 @@ class Urd(object):
 			auth = b64encode(auth)
 		self._headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + auth}
 		self._auth_tested = False
+		self._reset()
+
+	def _reset(self):
+		self._a._reset()
+		self._current = None
+		self.workdir = None
+		self.joblist = self._a.jobs
 		self._warnings = []
 
 	def _path(self, path):
