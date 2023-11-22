@@ -2,6 +2,7 @@
 #                                                                          #
 # Copyright (c) 2019-2023 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
+# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -63,6 +64,7 @@ options = dict(
 	quotes            = '',      # Empty or False means no quotes, True means both ' and ", any other character means itself.
 	label_lines       = int,     # Number of lines with labels on them. Multi-line labels are space-separated.
 	                             # Defaults to 1 unless labels is set.
+	label_encoding    = 'utf-8', # Encoding to use to decode label names, if read from the file.
 	labels            = [],      # Mandatory if label_lines = 0, always sets labels if set.
 	strip_labels      = False,   # Do .strip() on all labels (happens before rename).
 	rename            = {},      # Labels to replace (if they are in the file) (happens before discard).
@@ -208,7 +210,7 @@ def prepare(job, slices):
 				labels = list(fh)
 			while None in labels:
 				ix = labels.index(None)
-				labels_from_file.append([lab.decode("utf-8", "backslashreplace") for lab in labels[:ix]])
+				labels_from_file.append([lab.decode(options.label_encoding, "backslashreplace") for lab in labels[:ix]])
 				labels = labels[ix + 1:]
 			assert labels == []
 			assert len(labels_from_file) == r_num[0]
