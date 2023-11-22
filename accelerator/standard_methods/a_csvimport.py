@@ -57,23 +57,23 @@ depend_extra = (csvimport,)
 
 options = dict(
 	filename          = OptionString,
-	separator         = ',',   # Single iso-8859-1 character or empty for a single field.
-	comment           = '',    # Single iso-8859-1 character or empty, lines beginning with this character are ignored.
-	newline           = '',    # Empty means \n or \r\n, or you can specify any single iso-8859-1 character.
-	quotes            = '',    # Empty or False means no quotes, True means both ' and ", any other character means itself.
-	label_lines       = int,   # Number of lines with labels on them. Multi-line labels are space-separated.
-	                           # Defaults to 1 unless labels is set.
-	labels            = [],    # Mandatory if label_lines = 0, always sets labels if set.
-	strip_labels      = False, # Do .strip() on all labels (happens before rename).
-	rename            = {},    # Labels to replace (if they are in the file) (happens before discard).
-	discard           = set(), # Labels to not include (if they are in the file)
-	lineno_label      = "",    # Label of column to store line number in (not stored if empty).
-	allow_bad         = False, # Still succeed if some lines have too few/many fields or bad quotes
-	                           # creates a "bad" dataset containing lineno and data from the bad lines.
-	allow_extra_empty = False, # Still consider a line good if it has extra empty fields at the end.
-	skip_lines        = 0,     # skip this many lines at the start of the file.
-	skip_empty_lines  = False, # ignore empty lines
-	compression       = 6,     # gzip level
+	separator         = ',',     # Single iso-8859-1 character or empty for a single field.
+	comment           = '',      # Single iso-8859-1 character or empty, lines beginning with this character are ignored.
+	newline           = '',      # Empty means \n or \r\n, or you can specify any single iso-8859-1 character.
+	quotes            = '',      # Empty or False means no quotes, True means both ' and ", any other character means itself.
+	label_lines       = int,     # Number of lines with labels on them. Multi-line labels are space-separated.
+	                             # Defaults to 1 unless labels is set.
+	labels            = [],      # Mandatory if label_lines = 0, always sets labels if set.
+	strip_labels      = False,   # Do .strip() on all labels (happens before rename).
+	rename            = {},      # Labels to replace (if they are in the file) (happens before discard).
+	discard           = set(),   # Labels to not include (if they are in the file)
+	lineno_label      = "",      # Label of column to store line number in (not stored if empty).
+	allow_bad         = False,   # Still succeed if some lines have too few/many fields or bad quotes
+	                             # creates a "bad" dataset containing lineno and data from the bad lines.
+	allow_extra_empty = False,   # Still consider a line good if it has extra empty fields at the end.
+	skip_lines        = 0,       # skip this many lines at the start of the file.
+	skip_empty_lines  = False,   # ignore empty lines
+	compression       = 6,       # gzip level
 )
 
 datasets = ('previous', )
