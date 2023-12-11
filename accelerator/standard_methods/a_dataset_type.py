@@ -60,7 +60,18 @@ will be saved in separate datasets with ".bad" appended to the name, or
 just "bad" for the final one (i.e. not "default.bad").
 '''
 
-TYPENAME = OptionEnum(dataset_type.convfuncs.keys())
+# Build the +None version of a type name, e.g. number:int => number+None:int
+def type_plus_None(typename):
+	if ':' in typename:
+		a, b = typename.split(':')
+		return a + '+None:' + b
+	else:
+		return typename + '+None'
+
+TYPENAME = OptionEnum(
+	list(dataset_type.convfuncs) +
+	[type_plus_None(typename) for typename in dataset_type.convfuncs]
+)
 
 options = {
 	'column2type'               : {'COLNAME': TYPENAME},
@@ -150,6 +161,9 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		if dc.type not in byteslike_types:
 			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, colname, dc.type, byteslike_types,))
 		coltype = coltype.split(':', 1)[0]
+		if coltype.endswith('+None'):
+			coltype = coltype[:-5]
+			none_support.add(colname)
 		columns[colname] = dataset_type.typerename.get(coltype, coltype)
 		if options.defaults.get(colname, False) is None or dc.none_support:
 			none_support.add(colname)
@@ -416,6 +430,12 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		skip_bad = options.filter_bad
 	minmax_fn = 'minmax%d' % (vars.sliceno,)
 
+	if coltype.split(':')[0].endswith('+None'):
+		coltype = ''.join(coltype.split('+None', 1))
+		empty_types_as_None = True
+	else:
+		empty_types_as_None = False
+
 	fmt = fmt_b = None
 	is_null_converter = False
 	if coltype in dataset_type.convfuncs:
@@ -487,7 +507,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		gzip_mode = "wb%d" % (options.compression,)
 		if in_fns:
 			assert len(out_fns) == c_slices + vars.save_bad
-			res = c(*cstuff.bytesargs(in_fns, in_msgnames, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
+			res = c(*cstuff.bytesargs(in_fns, in_msgnames, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, empty_types_as_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
 			assert not res, 'Failed to convert ' + colname
 		vars.res_bad_count[colname] = list(bad_count)
 		vars.res_default_count[colname] = sum(default_count)
@@ -552,7 +572,9 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 						bad_fh.write(v)
 					continue
 			try:
-				if v is not None:
+				if v is None or (empty_types_as_None and v == b''):
+					v = None
+				else:
 					v = pyfunc(v.decode('utf-8'))
 			except ValueError:
 				if default_value is not nodefault:

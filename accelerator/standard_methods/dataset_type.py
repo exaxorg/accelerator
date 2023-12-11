@@ -722,7 +722,7 @@ more_infiles:
 			continue;
 		}
 		char *ptr = (char *)buf;
-		if (line == NoneMarker) {
+		if (line == NoneMarker || (empty_types_as_None && g.linelen == 0)) {
 			memcpy(ptr, &%(noneval_name)s, %(datalen)s);
 		} else {
 			%(convert)s;
@@ -974,7 +974,7 @@ more_infiles:
 		PyObject *o_v = 0;
 		int do_minmax = 1;
 		int len;
-		if (line == NoneMarker) {
+		if (line == NoneMarker || (empty_types_as_None && g.linelen == 0)) {
 			ptr = "\0";
 			len = 1;
 			do_minmax = 0;
@@ -1106,7 +1106,7 @@ err:
 }
 '''
 
-proto_template = 'static int convert_column_%s(const char **in_fns, const char **in_msgnames, int in_count, const char **out_fns, const char *gzip_mode, const char *minmax_fn, const char *default_value, uint32_t default_len, int default_value_is_None, const char *fmt, const char *fmt_b, int record_bad, int skip_bad, int badmap_fd, size_t badmap_size, int save_bad, int slices, int slicemap_fd, size_t slicemap_size, uint64_t *bad_count, uint64_t *default_count, off_t *offsets, int64_t *max_counts)'
+proto_template = 'static int convert_column_%s(const char **in_fns, const char **in_msgnames, int in_count, const char **out_fns, const char *gzip_mode, const char *minmax_fn, const char *default_value, uint32_t default_len, int default_value_is_None, int empty_types_as_None, const char *fmt, const char *fmt_b, int record_bad, int skip_bad, int badmap_fd, size_t badmap_size, int save_bad, int slices, int slicemap_fd, size_t slicemap_size, uint64_t *bad_count, uint64_t *default_count, off_t *offsets, int64_t *max_counts)'
 
 protos = []
 funcs = [noneval_data]
@@ -1191,7 +1191,7 @@ more_infiles:
 			outfhs[chosen_slice] = gzopen(out_fns[chosen_slice], gzip_mode);
 			err1(!outfhs[chosen_slice]);
 		}
-		if (line == NoneMarker) {
+		if (line == NoneMarker || (empty_types_as_None && g.linelen == 0)) {
 			err1(gzwrite(outfhs[chosen_slice], "\xff\0\0\0\0", 5) != 5);
 			continue;
 		}
@@ -2292,6 +2292,7 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	const char *default_value;
 	int default_len;
 	int default_value_is_None;
+	int empty_types_as_None;
 	PyObject *o_fmt;
 	const char *fmt;
 	PyObject *o_fmt_b;
@@ -2312,7 +2313,7 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 	off_t *offsets = 0;
 	PyObject *o_max_counts;
 	int64_t *max_counts = 0;
-	if (!PyArg_ParseTuple(args, "OOiOetetOiiOOiiiLiiiLOOOO",
+	if (!PyArg_ParseTuple(args, "OOiOetetOiiiOOiiiLiiiLOOOO",
 		&o_in_fns,
 		&o_in_msgnames,
 		&in_count,
@@ -2322,6 +2323,7 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 		&o_default_value,
 		&default_len,
 		&default_value_is_None,
+		&empty_types_as_None,
 		&o_fmt,
 		&o_fmt_b,
 		&record_bad,
@@ -2384,7 +2386,7 @@ static PyObject *py_%s(PyObject *self, PyObject *args)
 		err1(!out_fns[i]);
 	}
 
-	err1(%s(in_fns, in_msgnames, in_count, out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, fmt, fmt_b, record_bad, skip_bad, badmap_fd, badmap_size, save_bad, slices, slicemap_fd, slicemap_size, bad_count, default_count, offsets, max_counts));
+	err1(%s(in_fns, in_msgnames, in_count, out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, empty_types_as_None, fmt, fmt_b, record_bad, skip_bad, badmap_fd, badmap_size, save_bad, slices, slicemap_fd, slicemap_size, bad_count, default_count, offsets, max_counts));
 	for (int i = 0; i < slices; i++) {
 		err1(PyList_SetItem(o_default_count, i, PyLong_FromUnsignedLongLong(default_count[i])));
 		err1(PyList_SetItem(o_bad_count, i, PyLong_FromUnsignedLongLong(bad_count[i])));
