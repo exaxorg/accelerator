@@ -505,19 +505,15 @@ static const uint8_t noneval_bool = 255;
 numeric_comma = False
 
 def _conv_json(_):
-	dec = json.JSONDecoder().decode
-	def conv_json(v):
-		return dec(v.decode('utf-8'))
-	return conv_json
+	return json.JSONDecoder().decode
 
 def _conv_complex(t):
 	if numeric_comma:
 		def conv_complex(v):
-			return None if v is None else complex(v.decode('utf-8').replace('.', 'dot').replace(',', '.'))
+			return complex(v.replace('.', 'dot').replace(',', '.'))
+		return conv_complex
 	else:
-		def conv_complex(v):
-			return None if v is None else complex(v.decode('utf-8'))
-	return conv_complex
+		return complex
 
 ConvTuple = namedtuple('ConvTuple', 'size conv_code_str pyfunc')
 # Size is bytes per value, or 0 for variable size.

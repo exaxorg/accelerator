@@ -1,7 +1,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2022 Carl Drougge                       #
+# Modifications copyright (c) 2018-2023 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -513,8 +513,6 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		if colname in options.defaults:
 			default_value = options.defaults[colname]
 			if default_value is not None:
-				if isinstance(default_value, unicode):
-					default_value = default_value.encode('utf-8')
 				default_value = pyfunc(default_value)
 		else:
 			default_value = nodefault
@@ -554,7 +552,8 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 						bad_fh.write(v)
 					continue
 			try:
-				v = pyfunc(v)
+				if v is not None:
+					v = pyfunc(v.decode('utf-8'))
 			except ValueError:
 				if default_value is not nodefault:
 					v = default_value
