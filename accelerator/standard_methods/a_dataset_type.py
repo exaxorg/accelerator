@@ -28,7 +28,7 @@ from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
 
-from accelerator.compat import NoneType, unicode, itervalues, PY2
+from accelerator.compat import unicode, itervalues, PY2
 
 from accelerator.extras import OptionEnum, DotDict, quote
 from accelerator.dsutil import typed_writer, typed_reader
@@ -565,7 +565,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 					continue
 				else:
 					raise Exception("Invalid value %r with no default in %r in %s" % (v, colname, vars.source_name,))
-			if do_minmax and not isinstance(v, NoneType):
+			if do_minmax and v is not None:
 				if col_min is None:
 					col_min = col_max = v
 				if v < col_min: col_min = v
