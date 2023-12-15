@@ -157,8 +157,8 @@ def test_numbers():
 	verify('not a number', ['number'], [b'forty two'], [42], want_fail=True)
 
 	verify('strbool', ['strbool'], [b'', b'0', b'FALSE', b'f', b'FaLSe', b'no', b'off', b'NIL', b'NULL', b'y', b'jao', b'well, sure', b' ', b'true'], [False] * 9 + [True] * 5)
-	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b'', b'0.00'], [False, False, True, True, True, True, True, False, False])
-	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y'], [True, False, False, True, True])
+	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b' 0 ', b'0.00'], [False, False, True, True, True, True, True, False, False])
+	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y', b''], [True, False, False, True, True, False])
 	def check_special(got, fromstr):
 		msg = 'Expected [inf, -inf, nan, nan, nan, nan, inf], got %r from %s.' % (got, fromstr,)
 		for ix, v in ((0, float('inf')), (1, float('-inf')), (-1, float('inf'))):

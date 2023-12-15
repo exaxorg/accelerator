@@ -302,8 +302,7 @@ _c_conv_float_template = r'''
 		char *endptr;
 		%(type)s value = %(func)s(line, &endptr);
 #if %(whole)d
-		while (dt_isspace(*endptr)) endptr++;
-		if (*endptr) { // not a valid float
+		if (line == endptr || *dt_skipspace(endptr)) { // not a valid float
 			ptr = 0;
 		} else {
 #else
@@ -328,8 +327,7 @@ _c_conv_int_template = r'''
 #endif
 		%(rtype)s value = %(func)s(startptr, &endptr, %(base)d);
 #if %(whole)d
-		while (dt_isspace(*endptr)) endptr++;
-		if (*endptr) { // not a valid int
+		if (line == endptr || *dt_skipspace(endptr)) { // not a valid int
 			ptr = 0;
 		} else
 #endif
@@ -370,8 +368,7 @@ _c_conv_floatbool_template = r'''
 		char *endptr;
 		double value = strtod(line, &endptr);
 #if %(whole)d
-		while (dt_isspace(*endptr)) endptr++;
-		if (*endptr) { // not a valid float
+		if (line == endptr || *dt_skipspace(endptr)) { // not a valid float
 			ptr = 0;
 		} else {
 #else
@@ -816,6 +813,7 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 	}
 	// Now remove whitespace at end
 	while (inlen && dt_isspace(inptr[inlen - 1])) inlen--;
+	if (!inlen) return 0; // empty (except whitespace) => error
 	// Then remove ending zeroes if there is a decimal dot and no exponent
 	if (hasdot && !hasexp) {
 		while (inlen && inptr[inlen - 1] == '0') inlen--;
@@ -1511,6 +1509,12 @@ static inline int dt_notspacedigit(int c)
 static inline int dt_ispercent(int c)
 {
 	return c == '%';
+}
+
+static inline char *dt_skipspace(char *ptr)
+{
+	while (dt_isspace(*ptr)) ptr++;
+	return ptr;
 }
 
 #define G_INIT(first) err1(g_init(&g, in_fns[current_file], in_msgnames[current_file], offsets[current_file], first));
