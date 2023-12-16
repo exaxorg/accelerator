@@ -824,11 +824,10 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 			hasdot = 0;
 		}
 	}
-	if (!inlen) {
-		*outptr = 8;
-		memset(outptr + 1, 0, 8);
+	if (!inlen) { // Some form of ".000"
+		*outptr = 0x85; // This is the most compact encoding of 0
 		*r_d = 0;
-		return 9;
+		return 1;
 	}
 	if (hasdot || hasexp || hasletter) { // Float
 		if (!allow_float) return 0;
