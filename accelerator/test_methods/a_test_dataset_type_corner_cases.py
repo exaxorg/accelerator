@@ -155,6 +155,7 @@ def test_numbers():
 		verify('nearly good numbers ' + typ, [typ], values, want, default)
 
 	verify('not a number', ['number'], [b'forty two'], [42], want_fail=True)
+	verify('just a dot', ['number', 'float32'], [b'.'], [0], want_fail=True)
 
 	verify('strbool', ['strbool'], [b'', b'0', b'FALSE', b'f', b'FaLSe', b'no', b'off', b'NIL', b'NULL', b'y', b'jao', b'well, sure', b' ', b'true'], [False] * 9 + [True] * 5)
 	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b' 0 ', b'0.00'], [False, False, True, True, True, True, True, False, False])
