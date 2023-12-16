@@ -825,6 +825,7 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 		}
 	}
 	if (!inlen) { // Some form of ".000"
+		if (inptr[1] != '0') return 0; // just a decimal separator is not a valid number
 		*outptr = 0x85; // This is the most compact encoding of 0
 		*r_d = 0;
 		return 1;
