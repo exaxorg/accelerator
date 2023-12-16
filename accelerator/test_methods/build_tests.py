@@ -254,6 +254,7 @@ def main(urd):
 		urd.warn('Follow the instructions in this error to enable numeric comma:')
 		urd.warn()
 		urd.warn(e.format_msg())
+	urd.build("test_dataset_type_None")
 	urd.build("test_dataset_type_corner_cases", numeric_comma=not comma_broken)
 	urd.build("test_dataset_type_minmax")
 
