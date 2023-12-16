@@ -133,9 +133,9 @@ def test_numbers():
 		values = [v + b'garbage' for v in values]
 		verify('base %d i' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
 		all_source_types = False
-	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.'], [42, 42, 42, 43])
+	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0])
 	if options.numeric_comma:
-		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,'], [42, 42, 42, 43], numeric_comma=True)
+		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True)
 
 	# Python 2 accepts 42L as an integer, python 3 doesn't. The number
 	# type falls back to python parsing, verify this works properly.
