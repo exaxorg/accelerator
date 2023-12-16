@@ -54,23 +54,27 @@ def used_type(typ):
 	used_typenames.add(typ)
 
 no_default = object()
-def verify(name, types, bytes_data, want, default=no_default, want_fail=False, all_source_types=False, **kw):
+def verify(name, types, bytes_data, want, default=no_default, want_fail=False, all_source_types=False, exact_types=False, **kw):
 	todo = [('bytes', bytes_data,)]
 	if all_source_types:
 		uni_data = [v.decode('ascii') for v in bytes_data]
 		todo += [('ascii', uni_data,), ('unicode', uni_data,)]
 	for coltype, data in todo:
 		dsname = '%s %s' % (name, coltype,)
-		_verify(dsname, types, data, coltype, want, default, want_fail, kw)
+		_verify(dsname, types, data, coltype, want, default, want_fail, exact_types, kw)
 
-def _verify(name, types, data, coltype, want, default, want_fail, kw):
+def _verify(name, types, data, coltype, want, default, want_fail, exact_types, kw):
 	if callable(want):
+		assert not exact_types, "Don't provide a callable want with exact_types=True"
 		check = want
 	else:
 		def check(got, fromstr, filtered=False):
 			want1 = want if isinstance(want, list) else want[typ]
 			if filtered:
 				want1 = want1[::2]
+			if exact_types:
+				got = [(v, type(v).__name__) for v in got]
+				want1 = [(v, type(v).__name__) for v in want1]
 			assert got == want1, 'Expected %r, got %r from %s.' % (want1, got, fromstr,)
 	dw = DatasetWriter(name=name, columns={'data': coltype, 'extra': 'bytes'})
 	dw.set_slice(0)
@@ -133,9 +137,10 @@ def test_numbers():
 		values = [v + b'garbage' for v in values]
 		verify('base %d i' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
 		all_source_types = False
-	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0])
+	# python2 has both int and long, let's not check exact types there.
+	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=PY3)
 	if options.numeric_comma:
-		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True)
+		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True, exact_types=PY3)
 
 	# Python 2 accepts 42L as an integer, python 3 doesn't. The number
 	# type falls back to python parsing, verify this works properly.
@@ -152,14 +157,14 @@ def test_numbers():
 			want = [None] * len(values)
 		else:
 			want = [int(default)] * len(values)
-		verify('nearly good numbers ' + typ, [typ], values, want, default)
+		verify('nearly good numbers ' + typ, [typ], values, want, default, exact_types=True)
 
 	verify('not a number', ['number'], [b'forty two'], [42], want_fail=True)
 	verify('just a dot', ['number', 'float32'], [b'.'], [0], want_fail=True)
 
-	verify('strbool', ['strbool'], [b'', b'0', b'FALSE', b'f', b'FaLSe', b'no', b'off', b'NIL', b'NULL', b'y', b'jao', b'well, sure', b' ', b'true'], [False] * 9 + [True] * 5)
-	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b' 0 ', b'0.00'], [False, False, True, True, True, True, True, False, False])
-	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y', b''], [True, False, False, True, True, False])
+	verify('strbool', ['strbool'], [b'', b'0', b'FALSE', b'f', b'FaLSe', b'no', b'off', b'NIL', b'NULL', b'y', b'jao', b'well, sure', b' ', b'true'], [False] * 9 + [True] * 5, exact_types=True)
+	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b' 0 ', b'0.00'], [False, False, True, True, True, True, True, False, False], exact_types=True)
+	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y', b''], [True, False, False, True, True, False], exact_types=True)
 	def check_special(got, fromstr):
 		msg = 'Expected [inf, -inf, nan, nan, nan, nan, inf], got %r from %s.' % (got, fromstr,)
 		for ix, v in ((0, float('inf')), (1, float('-inf')), (-1, float('inf'))):
@@ -170,9 +175,9 @@ def test_numbers():
 				v = v.real
 			assert isnan(v), msg
 	verify('special floats', ['complex32', 'complex64', 'float32', 'float64', 'number'], [b'+Inf', b'-inF', b'nan', b'NaN', b'NAN', b'Nan', b'INF'], check_special)
-	verify('complex', ['complex32', 'complex64'], [b'0.25-5j', b'-0.5j', b'infj'], [0.25-5j, -0.5j, complex(0, float('inf'))])
+	verify('complex', ['complex32', 'complex64'], [b'0.25-5j', b'-0.5j', b'infj'], [0.25-5j, -0.5j, complex(0, float('inf'))], exact_types=True)
 	if options.numeric_comma:
-		verify('complex numeric_comma', ['complex32', 'complex64'], [b'-0,5+1,5j', b'-0,5+1.5j', b',5j'], [-0.5+1.5j, 42j, 0.5j], '42j', numeric_comma=True)
+		verify('complex numeric_comma', ['complex32', 'complex64'], [b'-0,5+1,5j', b'-0,5+1.5j', b',5j'], [-0.5+1.5j, 42j, 0.5j], '42j', numeric_comma=True, exact_types=True)
 
 def test_bytes():
 	want = [b'foo', b'\\bar', b'bl\xe4', b'\x00\t \x08', b'a\xa0b\x255\x00']
