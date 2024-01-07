@@ -14,6 +14,8 @@ test -d /accelerator/.git || exit 1
 test -d /accelerator/accelerator || exit 1
 
 VERSION=5
+ZLIB_VERSION=9fb955b8ba734b6519fe1a35704a4bc0ef01a22d # 2.1.4
+
 ENDIANNESS="$(/opt/python/cp39-cp39/bin/python3 -c 'import sys; print(sys.byteorder)')"
 
 if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
@@ -31,9 +33,11 @@ if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
 fi
 
 if [ -e /prepare/.done ]; then
-	if [ "$(cat /prepare/.done)" = "$VERSION" ]; then
+	if [ "$(cat /prepare/.done)" = "$VERSION $ZLIB_VERSION" ]; then
 		exit 0
 	fi
+	echo "Version in /prepare/.done ($(cat /prepare/.done)) does not match current version ($VERSION $ZLIB_VERSION)"
+	exit 1
 fi
 
 if [ ! -e "/out/old_versions.$VERSION.$ENDIANNESS.tar.gz" ]; then
@@ -54,7 +58,7 @@ command -v localedef && localedef -i da_DK -f UTF-8 da_DK.UTF-8
 test -d /usr/share/zoneinfo || apk add tzdata
 
 ZLIB_PREFIX="/prepare/zlib-ng"
-/accelerator/scripts/build_zlib-ng.sh "$ZLIB_PREFIX"
+/accelerator/scripts/build_zlib-ng.sh "$ZLIB_PREFIX" "$ZLIB_VERSION"
 
 cd /tmp
 
@@ -83,7 +87,7 @@ if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
 fi
 
 
-echo "$VERSION" >/prepare/.done
+echo "$VERSION $ZLIB_VERSION" >/prepare/.done
 
 set +x
 
