@@ -194,6 +194,7 @@ def _find(pid, cookie):
 
 def statmsg_sink(sock):
 	from accelerator.extras import DotDict
+	wrong_pops = 0
 	while True:
 		data = None
 		try:
@@ -211,6 +212,10 @@ def statmsg_sink(sock):
 						stack.pop()
 					else:
 						print('POP OF WRONG STATUS: %d:%s (index %s of %d)' % (pid, msg, ix, len(stack)))
+						wrong_pops += 1
+						if wrong_pops == 3:
+							print('Getting a lot of these? Are you interleaving dataset iterators? Set status_reporting=False on all but one.')
+							wrong_pops = 0
 				elif typ == 'update':
 					msg, _, cookie = msg.split('\0', 3)
 					stack, ix = _find(pid, cookie)
