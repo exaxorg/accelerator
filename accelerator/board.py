@@ -279,6 +279,33 @@ def run(cfg, from_shell=False, development=False):
 			url = url + '?' + urlencode(kw)
 		return call(url, server_name='urd')
 
+	# yield chunks of a file, optionally inserting some bonus content somewhere
+	def file_parts_iter(parts, clen, fh, start=0, end=None, chunksize=128 * 1024):
+		try:
+			if end is None:
+				end = clen
+			pos = 0
+			for part, part_len in parts:
+				if end <= pos:
+					break
+				if pos + part_len > start:
+					if isinstance(part, bytes):
+						yield part[max(0, start - pos):max(0, end - pos)]
+					else:
+						skip = max(0, start - pos)
+						fh.seek(part + skip)
+						z = part_len - skip - max(0, pos + part_len - end)
+						while z > 0:
+							want = min(z, chunksize)
+							data = fh.read(want)
+							yield data
+							if len(data) != want:
+								return # File shrunk? Nothing we can do.
+							z -= chunksize
+				pos += part_len
+		finally:
+			fh.close()
+
 	# Based on the one in bottle but modified for our needs.
 	def static_file(filename, root):
 		root = os.path.abspath(root) + os.sep
@@ -311,7 +338,8 @@ def run(cfg, from_shell=False, development=False):
 			fh.close()
 			return bottle.HTTPResponse(status=304, **headers)
 
-		clen = stats.st_size
+		file_parts = [(0, stats.st_size)]
+		clen = sum(z for _, z in file_parts)
 		headers['Content-Length'] = clen
 
 		if bottle.request.method == 'HEAD':
@@ -329,8 +357,10 @@ def run(cfg, from_shell=False, development=False):
 			headers['Content-Range'] = 'bytes %d-%d/%d' % (offset, end-1, clen)
 			headers['Content-Length'] = str(end-offset)
 			if body:
-				body = bottle._file_iter_range(body, offset, end-offset)
+				body = file_parts_iter(file_parts, clen, body, offset, end)
 			return bottle.HTTPResponse(body, status=206, **headers)
+		if body:
+			body = file_parts_iter(file_parts, clen, body)
 		return bottle.HTTPResponse(body, **headers)
 
 	@bottle.get('/')
