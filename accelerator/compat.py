@@ -39,6 +39,7 @@ if sys.version_info[0] == 2:
 	import __builtin__ as builtins
 	import cPickle as pickle
 	FileNotFoundError = (builtins.OSError, builtins.IOError)
+	PermissionError = builtins.IOError
 	from urllib import quote as url_quote, quote_plus, unquote_plus, urlencode
 	from urllib2 import urlopen, Request, URLError, HTTPError
 	from itertools import izip, izip_longest, imap, ifilter
@@ -95,6 +96,7 @@ else:
 	PY3 = True
 	import builtins
 	FileNotFoundError = builtins.FileNotFoundError
+	PermissionError = builtins.PermissionError
 	import pickle
 	from urllib.parse import quote as url_quote, quote_plus, unquote_plus, urlencode
 	from urllib.request import urlopen, Request

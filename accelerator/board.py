@@ -27,6 +27,8 @@ import tarfile
 import itertools
 import collections
 import functools
+import mimetypes
+import time
 from stat import S_ISDIR, S_ISLNK
 
 from accelerator.job import Job, JobWithFile
@@ -38,6 +40,7 @@ from accelerator.error import NoSuchWhateverError
 from accelerator.shell.parser import ArgumentParser, name2job, name2ds
 from accelerator.shell.workdir import job_data, workdir_jids
 from accelerator.compat import setproctitle, url_quote, urlencode
+from accelerator.compat import FileNotFoundError, PermissionError
 from accelerator import __version__ as ax_version
 
 # why wasn't Accept specified in a sane manner (like sending it in preference order)?
@@ -276,6 +279,60 @@ def run(cfg, from_shell=False, development=False):
 			url = url + '?' + urlencode(kw)
 		return call(url, server_name='urd')
 
+	# Based on the one in bottle but modified for our needs.
+	def static_file(filename, root):
+		root = os.path.abspath(root) + os.sep
+		filename = os.path.abspath(os.path.join(root, filename))
+		if not filename.startswith(root):
+			return bottle.HTTPError(403, "Access denied.")
+		try:
+			fh = open(filename, 'rb')
+		except PermissionError:
+			return bottle.HTTPError(403, "Access denied.")
+		except FileNotFoundError:
+			return bottle.HTTPError(404, "File does not exist.")
+		headers = {}
+		mimetype, encoding = mimetypes.guess_type(filename)
+		if mimetype:
+			if mimetype.startswith('text/'):
+				mimetype += '; charset=UTF-8'
+			headers['Content-Type'] = mimetype
+		if encoding:
+			headers['Content-Encoding'] = encoding
+		stats = os.fstat(fh.fileno())
+		lm = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(stats.st_mtime))
+		headers['Last-Modified'] = lm
+
+		ims = bottle.request.environ.get('HTTP_IF_MODIFIED_SINCE')
+		if ims:
+			ims = bottle.parse_date(ims.split(';')[0].strip())
+		if ims is not None and ims >= int(stats.st_mtime):
+			headers['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime())
+			fh.close()
+			return bottle.HTTPResponse(status=304, **headers)
+
+		clen = stats.st_size
+		headers['Content-Length'] = clen
+
+		if bottle.request.method == 'HEAD':
+			body = ''
+			fh.close()
+		else:
+			body = fh
+
+		headers['Accept-Ranges'] = 'bytes'
+		if 'HTTP_RANGE' in bottle.request.environ:
+			ranges = list(bottle.parse_range_header(bottle.request.environ['HTTP_RANGE'], clen))
+			if not ranges:
+				return bottle.HTTPError(416, "Requested Range Not Satisfiable")
+			offset, end = ranges[0]
+			headers['Content-Range'] = 'bytes %d-%d/%d' % (offset, end-1, clen)
+			headers['Content-Length'] = str(end-offset)
+			if body:
+				body = bottle._file_iter_range(body, offset, end-offset)
+			return bottle.HTTPResponse(body, status=206, **headers)
+		return bottle.HTTPResponse(body, **headers)
+
 	@bottle.get('/')
 	@view('main')
 	def main_page(path='/results'):
@@ -369,7 +426,7 @@ def run(cfg, from_shell=False, development=False):
 				bottle.response.set_header('Cache-Control', 'no-cache')
 				return json.dumps(results_contents(path))
 		elif path:
-			return bottle.static_file(path, root=cfg.result_directory)
+			return static_file(path, root=cfg.result_directory)
 		else:
 			return {'missing': 'result directory %r missing' % (cfg.result_directory,)}
 
@@ -411,7 +468,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
 		job = name2job(cfg, jobid)
-		res = bottle.static_file(name, root=job.path)
+		res = static_file(name, root=job.path)
 		if not res.content_type and res.status_code < 400:
 			# bottle default is text/html, which is probably wrong.
 			res.content_type = 'text/plain'
