@@ -177,6 +177,7 @@ add_command('job',          '''information about a job''',                      
 add_command('method',       '''information about methods''')
 add_command('run',          '''run a build script''',                           modname='accelerator.build')
 add_command('script',       '''information about build scripts''')
+add_command('sherlock',     '''show which job produced a file''')
 add_command('status',       '''server status (like ^T when building)''')
 add_command('urd',          '''inspect urd contents''')
 add_command('urd-server',   '''run the urd server''',                           modname='accelerator.urd')

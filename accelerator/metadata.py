@@ -30,6 +30,7 @@ import traceback
 import zlib
 
 from accelerator.compat import PY3, FileNotFoundError
+from accelerator.extras import json_decode
 
 if PY3:
 	crc32 = zlib.crc32
@@ -76,7 +77,22 @@ def generate_png(fh, job, size):
 	]
 
 def extract_png(fh):
-	pass # TODO
+	fh.seek(0)
+	if fh.read(8) != b'\x89PNG\x0d\x0a\x1a\x0a':
+		return
+	while True:
+		data = fh.read(4)
+		if len(data) != 4:
+			return
+		z, = struct.unpack('>I', data)
+		chunk_id = fh.read(4)
+		if chunk_id == b'tEXt':
+			data = fh.read(z)
+			crc, = struct.unpack('>I', fh.read(4))
+			if crc == crc32(b'tEXt' + data) and data.startswith(b'ExAx\0'):
+				yield data[5:]
+		else:
+			fh.seek(z + 4, 1)
 
 
 def generate_jpeg(fh, job, size):
@@ -103,7 +119,26 @@ def generate_jpeg(fh, job, size):
 	]
 
 def extract_jpeg(fh):
-	pass # TODO
+	fh.seek(0)
+	data = fh.read(2)
+	if data != b'\xff\xd8':
+		return
+	pos = 2
+	# Look at APP blocks until we run out.
+	while True:
+		data = fh.read(4)
+		if len(data) != 4:
+			return
+		typ, z = struct.unpack('>HH', data)
+		if typ < 0xffe0 or typ > 0xffef or z < 2:
+			# Not an APP block, so we stop looking.
+			return
+		pos += z + 2
+		if typ == 0xffea:
+			data = fh.read(z - 2)
+			if len(data) == z - 2 and data.startswith(b'ExAx\0'):
+				yield data[5:]
+		fh.seek(pos, 0)
 
 
 formats = [
@@ -136,3 +171,23 @@ def insert_metadata(fh, job, size):
 					break
 				print("Failed to generate %s metadata." % (name,), file=sys.stderr)
 	return res or [(0, size)]
+
+def extract_metadata(fh):
+	def decode(gen):
+		for data in gen:
+			try:
+				yield json_decode(data.decode('utf-8'))
+			except Exception:
+				yield None
+	fh.seek(0, 0)
+	start = fh.read(20)
+	if len(start) != 20:
+		return
+	fh.seek(-20, 2)
+	end = fh.read(20)
+	for name, generate, extract, header, trailer in formats:
+		if start.startswith(header) and end.endswith(trailer):
+			res = extract(fh)
+			if res:
+				res = decode(res)
+			return res
