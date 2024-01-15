@@ -32,6 +32,8 @@
 	% elif not current and not job.is_build:
 		<div class="warning">Job is not current.</div>
 	% end
+	<h2>job graph</h2>
+	% include('graph', mode='job', key=job)
 	<h2>setup</h2>
 	<div class="box">
 		% if job.is_build:

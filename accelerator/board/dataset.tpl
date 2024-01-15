@@ -15,7 +15,9 @@
 		% tdif('previous', ds.previous)
 		% tdif('hashlabel', ds.hashlabel)
 	</table>
-	<h2>columns:</h2>
+	<h2>dataset graph</h2>
+	% include('graph', mode='dataset', key=ds)
+	<h2>columns</h2>
 	<table id="columns" class="ds-table">
 	<thead>
 		<tr><th>name</th><th>type</th><th>min</th><th>max</th></tr>

@@ -40,6 +40,21 @@
 	--ansi-15: #fff;
 	--ansi-invert-fg: #f5f8ef;
 	--ansi-invert-bg: #245;
+
+	--graphnode-job-default: #8ae;
+	--graphnode-job-top: #acf;
+	--graphnode-ds-default: #c8c;
+	--graphnode-ds-top: #fcf;
+	--graphnode-highlight: #ef8;
+	--graphnode-highlight2: #cf8;
+	--graphnode-nourdlist: #3c8;
+	--graphnode-inanotherurdlist: #ccc;
+	--graphnode-atmaxdepth: #c52;
+
+	--graphpopup-notice: #c64;
+	--graphpopup-bg: #fff;
+	--graphpopup-border: #000;
+	--graphpopup-shadow: #7ac;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -349,6 +364,7 @@ form {
 .box .box {
 	background: var(--bg2);
 }
+
 #output pre, .box table {
 	padding-left: 2em;
 }
@@ -560,4 +576,25 @@ td .spinner {
 }
 .ansi-strike {
 	text-decoration: line-through;
+}
+
+#graphpopup {
+	background: var(--graphpopup-bg);
+	position: absolute;
+	display: none;
+	border: 2px solid var(--graphpopup-border);
+	box-shadow: 0 0 3px 4px var(--graphpopup-shadow) inset;
+}
+#graphpopup td {
+	list-style-type:none;
+	margin: 0;
+	padding: 10px;
+	padding-bottom: 0.1em;
+}
+#graphpopup h1 {
+	font-size: 1.05em;
+	margin-bottom:  0em;
+}
+.gp-notice {
+	color: var(--graphpopup-notice);
 }

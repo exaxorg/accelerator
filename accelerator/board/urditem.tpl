@@ -11,6 +11,10 @@
 				<tr><td>{{ thing }}</td><td>{{ value }}</td></tr>
 			% end
 		% end
+	</table>
+	<h2>urd item graph</h2>
+	% include('graph', mode='urd', key=key)
+	<table class="urd-table">
 		<tr><td>deps</td><td>
 			% for dep, depentry in sorted(entry.deps.items()):
 				<a href="/urd/{{ url_quote(dep) }}/{{ depentry.timestamp }}">
