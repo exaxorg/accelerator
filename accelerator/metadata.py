@@ -141,6 +141,61 @@ def extract_jpeg(fh):
 		fh.seek(pos, 0)
 
 
+def generate_riff(fh, job, size):
+	fh.seek(0)
+	data = fh.read(4)
+	if data != b'RIFF':
+		return
+	data = fh.read(4)
+	if len(data) != 4:
+		return
+	z, = struct.unpack('<I', data)
+	if z + 8 != size:
+		# Incomplete file / garbage after.
+		return
+	payload = job_metadata(job)
+	data = b'ExAx' + struct.pack('<I', len(payload)) + payload
+	if len(data) % 2 == 1:
+		data += b'\0'
+	if z + len(data) >= 0xfffffff8:
+		# File would become too big.
+		return
+	return [
+		(b'RIFF' + struct.pack('<I', z + len(data)), 8),
+		(8, z),
+		(data, len(data)),
+	]
+
+def extract_riff(fh):
+	fh.seek(0)
+	data = fh.read(4)
+	if data != b'RIFF':
+		return
+	data = fh.read(4)
+	if len(data) != 4:
+		return
+	z, = struct.unpack('<I', data)
+	fh.seek(0, 2)
+	if z + 8 != fh.tell():
+		# incomplete file / garbage after
+		return
+	fh.seek(12)
+	while True:
+		fourcc = fh.read(4)
+		data = fh.read(4)
+		if len(data) != 4:
+			return
+		z, = struct.unpack('<I', data)
+		if fourcc == b'ExAx':
+			data = fh.read(z)
+			if len(data) == z:
+				yield data
+		else:
+			fh.seek(z, 1)
+		if z % 2 == 1:
+			fh.seek(1, 1)
+
+
 formats = [
 	(
 		'PNG', generate_png, extract_png,
@@ -151,6 +206,11 @@ formats = [
 		'JPEG', generate_jpeg, extract_jpeg,
 		b'\xff\xd8\xff',
 		b'\xff\xd9',
+	),
+	(
+		'RIFF based format (AVI, WEBP, ...)', generate_riff, extract_riff,
+		b'RIFF',
+		b'',
 	),
 ]
 
