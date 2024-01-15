@@ -37,6 +37,7 @@ from accelerator.unixhttp import call, WaitressServer
 from accelerator.build import fmttime
 from accelerator.configfile import resolve_listen
 from accelerator.error import NoSuchWhateverError
+from accelerator.metadata import insert_metadata
 from accelerator.shell.parser import ArgumentParser, name2job, name2ds
 from accelerator.shell.workdir import job_data, workdir_jids
 from accelerator.compat import setproctitle, url_quote, urlencode
@@ -307,7 +308,7 @@ def run(cfg, from_shell=False, development=False):
 			fh.close()
 
 	# Based on the one in bottle but modified for our needs.
-	def static_file(filename, root):
+	def static_file(filename, root, job=None):
 		root = os.path.abspath(root) + os.sep
 		filename = os.path.abspath(os.path.join(root, filename))
 		if not filename.startswith(root):
@@ -338,7 +339,7 @@ def run(cfg, from_shell=False, development=False):
 			fh.close()
 			return bottle.HTTPResponse(status=304, **headers)
 
-		file_parts = [(0, stats.st_size)]
+		file_parts = insert_metadata(fh, job, stats.st_size)
 		clen = sum(z for _, z in file_parts)
 		headers['Content-Length'] = clen
 
@@ -456,7 +457,12 @@ def run(cfg, from_shell=False, development=False):
 				bottle.response.set_header('Cache-Control', 'no-cache')
 				return json.dumps(results_contents(path))
 		elif path:
-			return static_file(path, root=cfg.result_directory)
+			try:
+				link_dest = os.readlink(os.path.join(cfg.result_directory, path))
+				job, _ = job_and_file(link_dest, None)
+			except OSError:
+				job = None
+			return static_file(path, root=cfg.result_directory, job=job)
 		else:
 			return {'missing': 'result directory %r missing' % (cfg.result_directory,)}
 
@@ -498,7 +504,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
 		job = name2job(cfg, jobid)
-		res = static_file(name, root=job.path)
+		res = static_file(name, root=job.path, job=job)
 		if not res.content_type and res.status_code < 400:
 			# bottle default is text/html, which is probably wrong.
 			res.content_type = 'text/plain'
