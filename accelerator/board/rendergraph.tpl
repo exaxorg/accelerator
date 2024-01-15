@@ -56,6 +56,28 @@
 %		end
 %	end
 
+%	# subjob edges
+%	for src, dst in subjob_edges:
+%		key = src + dst
+	<g id="{{ key + '_subjob' }}">
+%		srcnode = nodes[src]
+%		dstnode = nodes[dst]
+%		srcx, srcy = srcnode.x, srcnode.y
+%		dstx, dsty = dstnode.x, dstnode.y
+%		a = atan2(dsty - srcy, dstx - srcx)
+%		srcx = srcx + srcnode.size * cos(a)
+%		srcy = srcy + srcnode.size * sin(a)
+%		dstx = dstx - dstnode.size * cos(a)
+%		dsty = dsty - dstnode.size * sin(a)
+		<line x1="{{ srcx }}" x2="{{ dstx }}" y1="{{ srcy }}" y2="{{ dsty }}" stroke="#aaeeaa" stroke-width="8"/>
+%		x1 = dstx - arrowlen * cos(a + arrowangle)
+%		y1 = dsty - arrowlen * sin(a + arrowangle)
+%		x2 = dstx - arrowlen * cos(a - arrowangle)
+%		y2 = dsty - arrowlen * sin(a - arrowangle)
+		<polygon points="{{ dstx }},{{ dsty }} {{ x1 }},{{ y1 }} {{ x2 }},{{ y2 }}" stroke="#aaeeaa" stroke-width="8"/>
+	</g>
+%	end
+
 %	# dependency edges
 %	for src, dst, relation in edges:
 %		key = src + dst

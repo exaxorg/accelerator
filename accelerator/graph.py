@@ -80,6 +80,7 @@ class WrapperNode(unicode):
 		self.not_in_urdlist = False
 		self.deps = set()
 		self.subjobs = set()
+		self.contextual_deps = set()
 		self.depdict = {}
 		self.done = False
 		self.in_degrees = 0
@@ -95,6 +96,7 @@ class Graph:
 		self.count = 0
 		self.nodes = {}
 		self.edges = set()
+		self.subjob_edges = set()
 		self.depsfun = depsfun
 
 	def get_or_create_node(self, item):
@@ -109,9 +111,12 @@ class Graph:
 			self.count += 1
 			return n
 
-	def create_edge(self, current, dep, relation):
+	def create_edge(self, current, dep, relation=None):
 		"""create a new edge (from WrapperNode to WrapperNode)"""
-		self.edges.add((current, dep, relation))
+		if relation is not None:
+			self.edges.add((current, dep, relation))
+		else:
+			self.subjob_edges.add((current, dep))
 
 	def level2nodes(self):
 		"""return {level: set_of_WrapperNodes_at_level}"""
@@ -137,6 +142,7 @@ class Graph:
 		for src, dst, rel in self.edges:
 			edges[(src.safename, dst.safename)].add(rel)  # there can be more than one relation between the same two nodes
 		self.edges = tuple((src, dst, ', '.join(sorted(v))) for (src, dst), v in edges.items())
+		self.subjob_edges = tuple((src.safename, dst.safename) for (src, dst) in self.subjob_edges)
 		self.nodes = {n.safename: n for n in self.nodes.values()}
 
 	def depth_first(self, stack):
@@ -157,6 +163,13 @@ class Graph:
 			for dep in sorted(current.deps):
 				stack.append(dep)
 				dep.in_degrees += 1
+			if isinstance(current.payload, Job):
+				current.subjobs = set(self.get_or_create_node(Job(jid)) for jid in current.payload.post.subjobs.keys())
+				for sjob in sorted(current.subjobs):
+					self.create_edge(current, sjob)
+					sjob.contextual_deps.add(current)
+					stack.append(sjob)
+					current.in_degrees += 1
 			current.done = True
 
 	def breadth_first(self, stack):
@@ -195,9 +208,17 @@ def create_graph(inputitem, urdinfo=()):
 		stack = [inputitem, ]
 		graph.depth_first(stack)
 		# Reset the done-flag so it can be re-used in a second recursion.
+		# Also add contextual_deps to deps.
 		for n in graph.nodes.values():
 			n.done = False
-		stack = [inputitem, ]
+			for c in n.contextual_deps:
+				if c not in n.deps:
+					n.deps.add(c)
+				else:
+					c.in_degrees -= 1  # because it is already counted in the "original" deps
+		reached_by_deps = set.union(*(n.deps for n in graph.nodes.values()))
+		starters = set(graph.nodes.values()) - reached_by_deps
+		stack = sorted(starters)
 	graph.breadth_first(stack)
 
 	# add parameters from payload (job/ds) to all WrapperNodes
@@ -277,6 +298,7 @@ def placement(graph):
 	return dict(
 		nodes=graph.nodes,
 		edges=graph.edges,
+		subjob_edges=graph.subjob_edges,
 	)
 
 
