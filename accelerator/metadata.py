@@ -23,6 +23,7 @@
 from __future__ import print_function
 
 import json
+import re
 import socket
 import struct
 import sys
@@ -196,6 +197,53 @@ def extract_riff(fh):
 			fh.seek(1, 1)
 
 
+def generate_isom(fh, job, size):
+	fh.seek(0)
+	data = fh.read(8)
+	if len(data) != 8:
+		return
+	z, fourcc = struct.unpack('>II', data)
+	if fourcc != 0x66747970: # "ftyp"
+		return
+	pos = z
+	while True:
+		if pos == size:
+			# Found the end of the file without problems, let's put our data here.
+			payload = job_metadata(job)
+			data = struct.pack('>I', len(payload) + 8) + b'ExAx' + payload
+			return [
+				(0, size),
+				(data, len(data)),
+			]
+		fh.seek(pos)
+		data = fh.read(8)
+		if len(data) != 8:
+			return
+		z, fourcc = struct.unpack('>II', data)
+		pos += z
+
+def extract_isom(fh):
+	fh.seek(0)
+	data = fh.read(8)
+	if len(data) != 8:
+		return
+	z, fourcc = struct.unpack('>II', data)
+	if fourcc != 0x66747970: # "ftyp"
+		return
+	pos = z
+	while True:
+		fh.seek(pos)
+		data = fh.read(8)
+		if len(data) != 8:
+			return
+		z, fourcc = struct.unpack('>II', data)
+		if fourcc == 0x45784178: # "ExAx"
+			data = fh.read(z - 8)
+			if len(data) == z - 8:
+				yield data
+		pos += z
+
+
 formats = [
 	(
 		'PNG', generate_png, extract_png,
@@ -212,6 +260,24 @@ formats = [
 		b'RIFF',
 		b'',
 	),
+	(
+		'ISO media format (MP4, HEIF, ...)', generate_isom, extract_isom,
+		re.compile(br'\0...ftyp', re.DOTALL),
+		b'',
+	),
+]
+
+def matcher(pattern, where):
+	if hasattr(pattern, 'match'):
+		return pattern.match
+	elif where == 'start':
+		return lambda v: v.startswith(pattern)
+	elif where == 'end':
+		return lambda v: v.endswith(pattern)
+
+formats = [
+	(name, generate, extract, matcher(header, 'start'), matcher(trailer, 'end'))
+	for name, generate, extract, header, trailer in formats
 ]
 
 def insert_metadata(fh, job, size):
@@ -222,7 +288,7 @@ def insert_metadata(fh, job, size):
 		fh.seek(-20, 2)
 		end = fh.read(20)
 		for name, generate, extract, header, trailer in formats:
-			if start.startswith(header) and end.endswith(trailer):
+			if header(start) and trailer(end):
 				try:
 					res = generate(fh, job, size)
 				except Exception:
@@ -246,7 +312,7 @@ def extract_metadata(fh):
 	fh.seek(-20, 2)
 	end = fh.read(20)
 	for name, generate, extract, header, trailer in formats:
-		if start.startswith(header) and end.endswith(trailer):
+		if header(start) and trailer(end):
 			res = extract(fh)
 			if res:
 				res = decode(res)
