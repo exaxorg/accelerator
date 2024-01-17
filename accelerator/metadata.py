@@ -142,6 +142,10 @@ def extract_jpeg(fh):
 		fh.seek(pos, 0)
 
 
+def detect_riff(data, size):
+	if data.startswith(b'RIFF') and len(data) >= 8:
+		return struct.unpack('<I', data[4:8])[0] + 8 == size
+
 def generate_riff(fh, job, size):
 	fh.seek(0)
 	data = fh.read(4)
@@ -257,7 +261,7 @@ formats = [
 	),
 	(
 		'RIFF based format (AVI, WEBP, ...)', generate_riff, extract_riff,
-		b'RIFF',
+		detect_riff,
 		b'',
 	),
 	(
@@ -269,11 +273,13 @@ formats = [
 
 def matcher(pattern, where):
 	if hasattr(pattern, 'match'):
-		return pattern.match
+		return lambda v, _: pattern.match(v)
+	elif callable(pattern):
+		return pattern
 	elif where == 'start':
-		return lambda v: v.startswith(pattern)
+		return lambda v, _: v.startswith(pattern)
 	elif where == 'end':
-		return lambda v: v.endswith(pattern)
+		return lambda v, _: v.endswith(pattern)
 
 formats = [
 	(name, generate, extract, matcher(header, 'start'), matcher(trailer, 'end'))
@@ -288,7 +294,7 @@ def insert_metadata(fh, job, size):
 		fh.seek(-20, 2)
 		end = fh.read(20)
 		for name, generate, extract, header, trailer in formats:
-			if header(start) and trailer(end):
+			if header(start, size) and trailer(end, size):
 				try:
 					res = generate(fh, job, size)
 				except Exception:
@@ -310,9 +316,10 @@ def extract_metadata(fh):
 	if len(start) != 20:
 		return
 	fh.seek(-20, 2)
+	size = fh.tell() + 20
 	end = fh.read(20)
 	for name, generate, extract, header, trailer in formats:
-		if header(start) and trailer(end):
+		if header(start, size) and trailer(end, size):
 			res = extract(fh)
 			if res:
 				res = decode(res)
