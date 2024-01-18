@@ -248,6 +248,41 @@ def extract_isom(fh):
 		pos += z
 
 
+# Simplify parsing by having enough of a header to just look for that instead of proper EBML parsing.
+ebml_signature = b'\xeaExAxMeta\x0e\x0a:'
+
+def generate_ebml(fh, job, size):
+	payload = ebml_signature + job_metadata(job)
+	if len(payload) > 0x3ffe:
+		return
+	# This looks like a valid EBML Void element, but as we are just
+	# placing it after the file this probably does not matter.
+	data = struct.pack('>BH', 0xec, len(payload) | 0x4000) + payload
+	return [
+		(0, size),
+		(data, len(data)),
+	]
+
+def extract_ebml(fh):
+	fh.seek(0, 2)
+	fh.seek(max(0, fh.tell() - 8192), 0)
+	data = fh.read()
+	pos = data.find(ebml_signature)
+	while pos >= 2:
+		z = data[pos - 2:pos]
+		z, = struct.unpack('>H', z)
+		if z & 0xc000 != 0x4000:
+			pos = data.find(ebml_signature, pos + 12)
+			continue
+		z &= 0x3fff
+		if z > 0x3ffe or pos + z > len(data):
+			return
+		pos += len(ebml_signature)
+		z -= len(ebml_signature)
+		yield data[pos:pos + z]
+		pos = data.find(ebml_signature, pos + z)
+
+
 formats = [
 	(
 		'PNG', generate_png, extract_png,
@@ -267,6 +302,11 @@ formats = [
 	(
 		'ISO media format (MP4, HEIF, ...)', generate_isom, extract_isom,
 		re.compile(br'\0...ftyp', re.DOTALL),
+		b'',
+	),
+	(
+		'EBML based format (MKV, WEBM, ...)', generate_ebml, extract_ebml,
+		b'\x1a\x45\xdf\xa3',
 		b'',
 	),
 ]
