@@ -283,6 +283,42 @@ def extract_ebml(fh):
 		pos = data.find(ebml_signature, pos + z)
 
 
+def generate_pdf(fh, job, size):
+	offset = max(0, size - 4096)
+	fh.seek(offset, 0)
+	filetail = fh.read()
+	m = re.search(br'[\r\n]+startxref(?:(?:[ \t\f\v]*%.*)?[\r\n]+)+\d+(?:(?:[ \t\f\v]*%.*)?[\r\n]+)+%%EOF[\r\n]*$', filetail)
+	if not m:
+		# There should be a startxref just before %%EOF, but if there
+		# isn't we'll place our comment directly before the %%EOF marker.
+		m = re.search(br'[\r\n]+%%EOF[\r\n]*$', filetail)
+	if m:
+		pos0 = pos1 = m.start()
+		if not pos0: # in case we started in the middle of a newline
+			return
+		while filetail[pos1] in b'\r\n':
+			pos1 += 1
+		data = b'\n% ExAx:' + job_metadata(job) + b'\n'
+		pos0 += offset
+		pos1 += offset
+		return [
+			(0, pos0),
+			(data, len(data)),
+			(pos1, size - pos1),
+		]
+
+def extract_pdf(fh):
+	fh.seek(0, 2)
+	fh.seek(max(0, fh.tell() - 8192), 0)
+	data = fh.read()
+	signature = b'\n% ExAx:{'
+	pos = data.find(signature)
+	while pos >= 0:
+		endpos = data.find(b'\n', pos + len(signature))
+		yield data[pos + len(signature) - 1:endpos]
+		pos = data.find(signature, pos + 1)
+
+
 formats = [
 	(
 		'PNG', generate_png, extract_png,
@@ -308,6 +344,11 @@ formats = [
 		'EBML based format (MKV, WEBM, ...)', generate_ebml, extract_ebml,
 		b'\x1a\x45\xdf\xa3',
 		b'',
+	),
+	(
+		'PDF', generate_pdf, extract_pdf,
+		re.compile(br'%PDF-\d\.\d'),
+		re.compile(br'.*[\r\n]%%EOF[\r\n]*$', re.DOTALL),
 	),
 ]
 
