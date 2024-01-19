@@ -140,6 +140,9 @@ def uni(s):
 			return s.decode('iso-8859-1')
 	return unicode(s)
 
+def url_quote_more(s):
+	return quote_plus(s).replace('+', '%20')
+
 # This is used in the method launcher to set different titles for each
 # phase/slice. You can use it in the method to override that if you want.
 def setproctitle(title):

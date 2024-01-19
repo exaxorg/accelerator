@@ -26,7 +26,7 @@ import re
 import os
 import shlex
 
-from accelerator.compat import quote_plus, open
+from accelerator.compat import url_quote_more, open
 
 from accelerator.extras import DotDict
 
@@ -60,7 +60,7 @@ def fixup_listen(project_directory, listen):
 	listen, url = listen
 	if not isinstance(listen, tuple):
 		socket = os.path.join(project_directory, listen)
-		url = 'unixhttp://' + quote_plus(os.path.realpath(socket)).replace('+', '%20')
+		url = 'unixhttp://' + url_quote_more(os.path.realpath(socket))
 	return listen, url
 
 

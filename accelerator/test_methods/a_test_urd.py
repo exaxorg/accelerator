@@ -29,7 +29,7 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from accelerator.compat import open, quote_plus
+from accelerator.compat import open, url_quote_more
 from accelerator.error import UrdPermissionError, UrdConflictError
 from accelerator.unixhttp import call
 from subprocess import Popen
@@ -66,7 +66,7 @@ def synthesis(job):
 			break
 		time.sleep(0.1)
 
-	url = 'unixhttp://' + quote_plus(socket_path).replace('+', '%20') + '/'
+	url = 'unixhttp://' + url_quote_more(socket_path) + '/'
 	headers = {'Content-Type': 'application/json', 'Authorization': 'Basic dGVzdDpwYXNz'}
 	def check(url_part, want, post_data=None):
 		got = call(url + url_part, server_name='urd', data=post_data, headers=headers, fmt=json.loads)
