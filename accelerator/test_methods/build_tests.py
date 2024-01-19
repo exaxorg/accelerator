@@ -378,5 +378,9 @@ def main(urd):
 	urd.build('test_shell_grep', command_prefix=command_prefix)
 	urd.build('test_shell_config', command_prefix=command_prefix)
 
+	print()
+	print("Test board")
+	urd.build('test_board_metadata', command_prefix=command_prefix)
+
 	summary = urd.build("test_summary", joblist=urd.joblist)
 	summary.link_result('summary.html')
