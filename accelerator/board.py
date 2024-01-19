@@ -240,7 +240,7 @@ def main(argv, cfg):
 		# from, but the reloader will exec us from the project directory, so we
 		# have to be a little gross.
 		cfg.board_listen = os.path.join(cfg.user_cwd, cfg.board_listen)
-		sys.argv[2:] = [cfg.board_listen]
+		argv[1:] = [cfg.board_listen]
 	run(cfg, from_shell=True)
 
 def run(cfg, from_shell=False):
