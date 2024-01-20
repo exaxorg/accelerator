@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2023 Carl Drougge                       #
+# Modifications copyright (c) 2019-2024 Carl Drougge                       #
 # Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #

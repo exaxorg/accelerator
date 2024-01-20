@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2022 Carl Drougge                                     #
+# Copyright (c) 2020-2024 Carl Drougge                                     #
 # Modifications copyright (c) 2021 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
