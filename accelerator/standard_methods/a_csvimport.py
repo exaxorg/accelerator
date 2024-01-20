@@ -87,7 +87,7 @@ cstuff = csvimport.init()
 def reader_status(status_fd, update):
 	# try to get nicer number formating
 	try:
-		locale.resetlocale(locale.LC_NUMERIC)
+		locale.setlocale(locale.LC_NUMERIC, '')
 	except Exception:
 		pass
 	count = 0

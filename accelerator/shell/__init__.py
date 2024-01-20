@@ -128,7 +128,7 @@ class NoConfig(object):
 def setup(config_fn=None, debug_cmd=False):
 	global cfg
 	try:
-		locale.resetlocale()
+		locale.setlocale(locale.LC_ALL, '')
 	except locale.Error:
 		print("WARNING: Broken locale", file=sys.stderr)
 	# Make sure the accelerator dir in not in sys.path
