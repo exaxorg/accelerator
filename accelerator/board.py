@@ -232,6 +232,7 @@ def ds_json(d):
 
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''runs a web server on listen_on (default localhost:8520, can be socket path) for displaying results (result_directory)''')
+	parser.add_argument('--development', action='store_true', negation='not', help='enable tracebacks, disable caching, ...')
 	parser.add_argument('listen_on', default='localhost:8520', nargs='?', help='host:port or path/to/socket')
 	args = parser.parse_intermixed_args(argv)
 	cfg.board_listen = resolve_listen(args.listen_on)[0]
@@ -241,9 +242,9 @@ def main(argv, cfg):
 		# have to be a little gross.
 		cfg.board_listen = os.path.join(cfg.user_cwd, cfg.board_listen)
 		argv[1:] = [cfg.board_listen]
-	run(cfg, from_shell=True)
+	run(cfg, from_shell=True, development=args.development)
 
-def run(cfg, from_shell=False):
+def run(cfg, from_shell=False, development=False):
 	project = os.path.split(cfg.project_directory)[1]
 	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
 
@@ -547,10 +548,11 @@ def run(cfg, from_shell=False):
 		return bottle.template(tpl, e=e)
 
 	bottle.TEMPLATE_PATH = [os.path.join(os.path.dirname(__file__), 'board')]
-	if from_shell:
-		kw = {'reloader': True}
-	else:
-		kw = {'quiet': True}
+	kw = {}
+	if development:
+		kw['reloader'] = True
+	if not from_shell:
+		kw['quiet'] = True
 	kw['server'] = WaitressServer
 	listen = cfg.board_listen
 	if isinstance(listen, tuple):
