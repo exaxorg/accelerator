@@ -127,6 +127,8 @@ def ax_link(v):
 	else:
 		return ''
 
+_development = False
+
 name2hashed = {}
 hashed = {}
 
@@ -175,6 +177,8 @@ def view(name, subkey=None):
 	def view_decorator(func):
 		@functools.wraps(func)
 		def view_wrapper(**kw):
+			if _development:
+				populate_hashed()
 			res = func(**kw)
 			if isinstance(res, dict):
 				accept = get_best_accept('application/json', 'text/json', 'text/html')
@@ -245,6 +249,9 @@ def main(argv, cfg):
 	run(cfg, from_shell=True, development=args.development)
 
 def run(cfg, from_shell=False, development=False):
+	global _development
+	_development = development
+
 	project = os.path.split(cfg.project_directory)[1]
 	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
 
@@ -541,16 +548,13 @@ def run(cfg, from_shell=False, development=False):
 		tpl = bottle.ERROR_PAGE_TEMPLATE
 		if isinstance(e.exception, NoSuchWhateverError):
 			e.body = str(e.exception)
-		else:
-			# awful hack: replace DEBUG with something that will be true,
-			# so that tracebacks are shown (without needing to turn debug on).
-			tpl = tpl.replace('DEBUG', '__version__')
 		return bottle.template(tpl, e=e)
 
 	bottle.TEMPLATE_PATH = [os.path.join(os.path.dirname(__file__), 'board')]
 	kw = {}
 	if development:
 		kw['reloader'] = True
+		kw['debug'] = True
 	if not from_shell:
 		kw['quiet'] = True
 	kw['server'] = WaitressServer
