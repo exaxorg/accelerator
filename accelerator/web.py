@@ -32,8 +32,6 @@ else:
 	from urlparse import parse_qs
 	from urllib import unquote_plus
 
-import cgi
-
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 	request_queue_size = 512
 
@@ -74,17 +72,14 @@ class BaseWebHandler(BaseHTTPRequestHandler):
 			ctype = self.headers.type
 		else:
 			ctype = self.headers.typeheader
+		data = self.rfile.read(int(length))
 		bare_ctype = ctype.split(";", 1)[0].strip()
-		if bare_ctype in ("application/x-www-form-urlencoded", "multipart/form-data"):
-			env = {"CONTENT_LENGTH": length,
-			       "CONTENT_TYPE"  : ctype,
-			       "REQUEST_METHOD": "POST"
-			      }
-			cgi_args = cgi.parse(self.rfile, environ=env, keep_blank_values=True)
+		if bare_ctype == "application/x-www-form-urlencoded":
+			cgi_args = parse_qs(data, keep_blank_values=True)
 			if PY3:
-				cgi_args = {k: [v[-1].encode('iso-8859-1')] for k, v in cgi_args.items()}
+				cgi_args = {k.decode('ascii'): v for k, v in cgi_args.items()}
 		else:
-			cgi_args = {None: [self.rfile.read(int(length))]}
+			cgi_args = {None: [data]}
 		self.is_head = False
 		self._do_req2(self.path, cgi_args)
 
