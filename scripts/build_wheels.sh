@@ -76,6 +76,8 @@ BUILT=()
 
 /tmp/accelerator/scripts/build_prepare.sh
 
+/tmp/accelerator/scripts/check_encoding.py
+
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
 WHEEL_WILDCARD="${MANYLINUX_VERSION/%20*}*_$AUDITWHEEL_ARCH"
 
