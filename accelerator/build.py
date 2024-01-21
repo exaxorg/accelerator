@@ -886,7 +886,11 @@ def print_user_part_traceback():
 	while tb is not None:
 		code = tb.tb_frame.f_code
 		if code.co_filename == build_fn:
-			tb_cut_at.tb_next = None
+			try:
+				# This is only writable on python 3.7+.
+				tb_cut_at.tb_next = None
+			except (TypeError, AttributeError):
+				pass
 			break
 		tb_cut_at = tb
 		tb = tb.tb_next
