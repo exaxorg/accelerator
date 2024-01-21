@@ -35,7 +35,7 @@ _gray2idx = tuple(ix for _, ix in sorted(
 ))
 
 class Colour:
-	"""Constants and functions for colouring output.
+	r"""Constants and functions for colouring output.
 
 	Available as constants named .COLOUR, functions named .colour and
 	as direct calls on the object taking (value, *attrs).
