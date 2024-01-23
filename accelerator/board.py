@@ -636,6 +636,11 @@ def run(cfg, from_shell=False, development=False):
 		bottle.response.set_header('Cache-Control', 'max-age=604800, immutable')
 		return data
 
+	@bottle.get('/robots.txt')
+	def robots_txt():
+		bottle.response.content_type = 'text/plain'
+		return b'User-agent: *\nDisallow: /\n'
+
 	@bottle.error(500)
 	def error(e):
 		tpl = bottle.ERROR_PAGE_TEMPLATE
