@@ -142,6 +142,40 @@ def extract_jpeg(fh):
 		fh.seek(pos, 0)
 
 
+def generate_gif(fh, job, size):
+	def chunks(data):
+		while data:
+			part = data[:255]
+			data = data[255:]
+			yield struct.pack('<B', len(part)) + part
+	payload = job_metadata(job)
+	# The first chunk of the extension block has to be exactly 11 bytes, so
+	# says the specification. 8 bytes Identifier + 3 bytes Authentication Code.
+	data = b'!\xff\x0bExAxMeta1.0' + b''.join(chunks(payload)) + b'\x00;'
+	return [
+		(b'GIF89a', 6), # might have been GIF87a, which does not support application extension blocks.
+		(6, size - 7),
+		(data, len(data)),
+	]
+
+def extract_gif(fh):
+	def unchunk(pos):
+		while pos + 1 < len(data):
+			z, = struct.unpack('<B', data[pos:pos + 1]) # "z = pos[0]" but python2 compatible.
+			if z == 0:
+				return
+			yield data[pos + 1:pos + z + 1]
+			pos += z + 1
+	fh.seek(0, 2)
+	fh.seek(max(0, fh.tell() - 8192), 0)
+	data = fh.read()
+	signature = b'!\xff\x0bExAxMeta1.0'
+	pos = data.find(signature)
+	while pos >= 0 and pos + 16 < len(data):
+		yield b''.join(unchunk(pos + 14))
+		pos = data.find(signature, pos + 17)
+
+
 def detect_riff(data, size):
 	if data.startswith(b'RIFF') and len(data) >= 8:
 		return struct.unpack('<I', data[4:8])[0] + 8 == size
@@ -329,6 +363,11 @@ formats = [
 		'JPEG', None, generate_jpeg, extract_jpeg,
 		b'\xff\xd8\xff',
 		b'\xff\xd9',
+	),
+	(
+		'GIF', '.gif', generate_gif, extract_gif,
+		re.compile(br'GIF8[79]a'),
+		b';',
 	),
 	(
 		'RIFF based format (AVI, WEBP, ...)', None, generate_riff, extract_riff,
