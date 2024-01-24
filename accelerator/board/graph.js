@@ -83,6 +83,7 @@ function panzoom () {
 		e.preventDefault();
 	}
 	function wheel(e) {
+		if (!e.ctrlKey) return;
 		const scale = (e.deltaY < 0) ? 0.90 : 1/0.90;
 		if ((viewboxScale * scale < 8.) && (viewboxScale * scale > 1./1024.))
 		{
