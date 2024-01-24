@@ -339,7 +339,7 @@ def run(cfg, from_shell=False, development=False):
 			fh.close()
 			return bottle.HTTPResponse(status=304, **headers)
 
-		file_parts = insert_metadata(fh, job, stats.st_size)
+		file_parts = insert_metadata(filename, fh, job, stats.st_size)
 		clen = sum(z for _, z in file_parts)
 		headers['Content-Length'] = clen
 

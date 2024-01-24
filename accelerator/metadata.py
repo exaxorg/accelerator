@@ -321,32 +321,32 @@ def extract_pdf(fh):
 
 formats = [
 	(
-		'PNG', generate_png, extract_png,
+		'PNG', None, generate_png, extract_png,
 		b'\x89PNG\x0d\x0a\x1a\x0a',
 		b'\x00\x00\x00\x00IEND\xae\x42\x60\x82',
 	),
 	(
-		'JPEG', generate_jpeg, extract_jpeg,
+		'JPEG', None, generate_jpeg, extract_jpeg,
 		b'\xff\xd8\xff',
 		b'\xff\xd9',
 	),
 	(
-		'RIFF based format (AVI, WEBP, ...)', generate_riff, extract_riff,
+		'RIFF based format (AVI, WEBP, ...)', None, generate_riff, extract_riff,
 		detect_riff,
 		b'',
 	),
 	(
-		'ISO media format (MP4, HEIF, ...)', generate_isom, extract_isom,
+		'ISO media format (MP4, HEIF, ...)', None, generate_isom, extract_isom,
 		re.compile(br'\0...ftyp', re.DOTALL),
 		b'',
 	),
 	(
-		'EBML based format (MKV, WEBM, ...)', generate_ebml, extract_ebml,
+		'EBML based format (MKV, WEBM, ...)', None, generate_ebml, extract_ebml,
 		b'\x1a\x45\xdf\xa3',
 		b'',
 	),
 	(
-		'PDF', generate_pdf, extract_pdf,
+		'PDF', '.pdf', generate_pdf, extract_pdf,
 		re.compile(br'%PDF-\d\.\d'),
 		re.compile(br'.*[\r\n]%%EOF[\r\n]*$', re.DOTALL),
 	),
@@ -363,18 +363,20 @@ def matcher(pattern, where):
 		return lambda v, _: v.endswith(pattern)
 
 formats = [
-	(name, generate, extract, matcher(header, 'start'), matcher(trailer, 'end'))
-	for name, generate, extract, header, trailer in formats
+	(name, ext, generate, extract, matcher(header, 'start'), matcher(trailer, 'end'))
+	for name, ext, generate, extract, header, trailer in formats
 ]
 
-def insert_metadata(fh, job, size):
+def insert_metadata(filename, fh, job, size):
 	res = None
 	if size > 20 and job:
 		fh.seek(0, 0)
 		start = fh.read(20)
 		fh.seek(-20, 2)
 		end = fh.read(20)
-		for name, generate, extract, header, trailer in formats:
+		for name, ext, generate, extract, header, trailer in formats:
+			if ext and not filename.lower().endswith(ext):
+				continue
 			if header(start, size) and trailer(end, size):
 				try:
 					res = generate(fh, job, size)
@@ -385,7 +387,7 @@ def insert_metadata(fh, job, size):
 				print("Failed to generate %s metadata." % (name,), file=sys.stderr)
 	return res or [(0, size)]
 
-def extract_metadata(fh):
+def extract_metadata(filename, fh):
 	def decode(gen):
 		for data in gen:
 			try:
@@ -399,7 +401,9 @@ def extract_metadata(fh):
 	fh.seek(-20, 2)
 	size = fh.tell() + 20
 	end = fh.read(20)
-	for name, generate, extract, header, trailer in formats:
+	for name, ext, generate, extract, header, trailer in formats:
+		if ext and not filename.lower().endswith(ext):
+			continue
 		if header(start, size) and trailer(end, size):
 			res = extract(fh)
 			if res:

@@ -67,7 +67,7 @@ def main(argv, cfg):
 		else:
 			prefix = ''
 		with open(filename, 'rb') as fh:
-			found = extract_metadata(fh)
+			found = extract_metadata(filename, fh)
 			if not found:
 				res = 1
 				print(prefix + colour('UNSUPPORTED FORMAT', 'sherlock/warning'), file=sys.stderr)
