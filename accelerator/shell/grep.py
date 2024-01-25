@@ -251,6 +251,7 @@ def main(argv, cfg):
 	parser.add_argument('-e', '--regexp',  default=[], action='append', dest='patterns', help=SUPPRESS)
 	parser.add_argument('-d', '--dataset', default=[], action='append', dest='datasets', help=SUPPRESS)
 	parser.add_argument('-n', '--column',  default=[], action='append', dest='columns', help=SUPPRESS)
+	parser.add_argument('+n', '--not-column',          action='append', dest='not_columns', help=SUPPRESS)
 	parser.add_argument('words', nargs='*', help=SUPPRESS)
 	args = parser.parse_intermixed_args(argv)
 
@@ -263,7 +264,12 @@ def main(argv, cfg):
 		print('--numeric not allowed with --fixed-strings', file=sys.stderr)
 		return 1
 
+	if args.columns and args.not_columns:
+		print("Don't use both --column and --not-column", file=sys.stderr)
+		return 1
+
 	columns = args.columns
+	not_columns = set(args.not_columns or ())
 
 	try:
 		args.datasets = [name2ds(cfg, ds) for ds in args.datasets]
@@ -280,7 +286,7 @@ def main(argv, cfg):
 			try:
 				args.datasets.append(name2ds(cfg, word))
 			except NoSuchWhateverError as e:
-				if not args.datasets:
+				if not args.datasets or args.not_columns:
 					print(e, file=sys.stderr)
 					return 1
 				columns.append(word)
@@ -349,11 +355,11 @@ def main(argv, cfg):
 			)
 		))
 
-	def columns_for_ds(ds, columns=columns):
+	def columns_for_ds(ds, columns=columns, not_columns=not_columns):
 		if columns:
 			return [n for n in columns if n in ds.columns]
 		else:
-			return sorted(ds.columns)
+			return sorted(n for n in ds.columns if n not in not_columns)
 
 	if columns or grep_columns:
 		if args.allow_missing_columns:
