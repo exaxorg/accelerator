@@ -223,6 +223,7 @@ def main(argv, cfg):
 	parser.add_argument('-O', '--ordered',      action='store_true', negation='not',  help="output in order (one slice at a time)", )
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', negation='dont', help="datasets are allowed to not have (some) columns", )
 	parser.add_argument('-g', '--grep',         action='append',                      help="grep this column only, can be specified multiple times", metavar='COLUMN')
+	parser.add_argument('+g', '--dont-grep',    action='append',                      help=SUPPRESS)
 	parser.add_argument('-s', '--slice',        action='append',                      help="grep this slice only, can be specified multiple times",  type=int)
 	parser.add_argument('-u', '--unique',       action='append', nargs='?', metavar='COLUMN', help="only show one value [for this set of columns]")
 	parser.add_argument('-D', '--show-dataset', action='store_true', negation='dont', help="show dataset on matching lines", )
@@ -266,6 +267,10 @@ def main(argv, cfg):
 
 	if args.columns and args.not_columns:
 		print("Don't use both --column and --not-column", file=sys.stderr)
+		return 1
+
+	if args.grep and args.dont_grep:
+		print("Don't use both --grep and --dont-grep", file=sys.stderr)
 		return 1
 
 	columns = args.columns
@@ -313,6 +318,7 @@ def main(argv, cfg):
 			return 1
 
 	grep_columns = set(args.grep or ())
+	dont_grep_columns = set(args.dont_grep or ()) or not_columns
 	if grep_columns == set(columns):
 		grep_columns = set()
 
@@ -361,19 +367,10 @@ def main(argv, cfg):
 		else:
 			return sorted(n for n in ds.columns if n not in not_columns)
 
+	grep_columns_for_ds = partial(columns_for_ds, columns=grep_columns, not_columns=dont_grep_columns)
+
 	if columns or grep_columns:
-		if args.allow_missing_columns:
-			keep_datasets = []
-			for ds in datasets:
-				if not columns_for_ds(ds):
-					continue
-				if grep_columns and not columns_for_ds(ds, grep_columns):
-					continue
-				keep_datasets.append(ds)
-			if not keep_datasets:
-				return 0
-			datasets = keep_datasets
-		else:
+		if not args.allow_missing_columns:
 			bad = False
 			need_cols = set(columns)
 			if grep_columns:
@@ -385,6 +382,17 @@ def main(argv, cfg):
 					bad = True
 			if bad:
 				return 1
+	if columns or not_columns or grep_columns or dont_grep_columns:
+		keep_datasets = []
+		for ds in datasets:
+			if not columns_for_ds(ds):
+				continue
+			if not grep_columns_for_ds(ds):
+				continue
+			keep_datasets.append(ds)
+		if not keep_datasets:
+			return 0
+		datasets = keep_datasets
 
 	# For the status reporting, this gives how many lines have been processed
 	# when reaching each ds ix, per slice. Ends with an extra fictional ds,
@@ -1088,8 +1096,8 @@ def main(argv, cfg):
 					it = (v.decode('utf-8', errors) for v in it)
 			return it
 		used_columns = columns_for_ds(ds)
-		used_grep_columns = grep_columns and columns_for_ds(ds, grep_columns)
-		if grep_columns and set(used_grep_columns) != set(used_columns):
+		used_grep_columns = (grep_columns or dont_grep_columns) and grep_columns_for_ds(ds)
+		if used_grep_columns and set(used_grep_columns) != set(used_columns):
 			grep_iter = izip(*(mk_iter(col) for col in used_grep_columns))
 		else:
 			grep_iter = repeat(None)
