@@ -779,6 +779,40 @@ def synthesis(job, slices):
 		], sep='',
 	)
 
+	# test +n and +g
+	# This looks in all columns except float32, but only prints date.
+	grep_text(['+g', 'float32', '42.', d, 'date'], [
+		['0001-01-01'], # matched complex32
+		['0001-01-01'], # matched complex64
+		['0042-01-01'], # matched date
+		['0001-01-01'], # matched datetime
+		# no match in float32, as that is excluded.
+		['0001-01-01'], # matched float64
+	])
+	# Exclude a bunch of columns from printing (and also from matching, as no +g is specified).
+	grep_text(['-H', '+n', 'ascii', '+n', 'bytes', '+n', 'complex32', '+n', 'time', '+n', 'unicode', '+n', 'json', '+n', 'number', '+n', 'int32', '+n', 'float32', '42.', d], [
+		['complex64', 'date',       'datetime',            'float64', 'int64'],
+		['(42+0j)',   '0001-01-01', '0001-01-01 01:01:01', '0.0',     '0'],
+		['0j',        '0042-01-01', '0001-01-01 01:01:01', '0.0',     '0'],
+		['0j',        '0001-01-01', '0042-01-01 01:01:01', '0.0',     '0'],
+		['0j',        '0001-01-01', '0001-01-01 01:01:01', '42.0',    '0'],
+	])
+	# Exclude a bunch of columns from printing, but only float32 from matching
+	grep_text(['-H', '+n', 'ascii', '+n', 'bytes', '+n', 'complex32', '+n', 'time', '+n', 'unicode', '+n', 'json', '+n', 'number', '+n', 'int32', '+g', 'float32', '42.', d], [
+		['complex64', 'date',       'datetime',            'float32', 'float64', 'int64'],
+		['0j',        '0001-01-01', '0001-01-01 01:01:01', '0.0',     '0.0',     '0'], # complex32 is exluded from printing, but still matches.
+		['(42+0j)',   '0001-01-01', '0001-01-01 01:01:01', '0.0',     '0.0',     '0'],
+		['0j',        '0042-01-01', '0001-01-01 01:01:01', '0.0',     '0.0',     '0'],
+		['0j',        '0001-01-01', '0042-01-01 01:01:01', '0.0',     '0.0',     '0'],
+		# no match in float32, as that is excluded.
+		['0j',        '0001-01-01', '0001-01-01 01:01:01', '0.0',     '42.0',    '0'],
+	])
+	# Try excluding something that doesn't exist, and everything in one dataset (b only has int32).
+	grep_text(['+g', 'nonexistant', '+g', 'int32', '--chain', '1', c], [
+		[101, 201],
+		[1.42, 3],
+	])
+
 	# test --lined
 	def mk_lined_ds(name, *lines, **kw):
 		dw = job.datasetwriter(name=name, allow_missing_slices=True, **kw)
