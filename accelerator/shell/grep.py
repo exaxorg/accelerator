@@ -37,6 +37,7 @@ import operator
 import signal
 
 from accelerator.compat import unicode, izip, PY2
+from accelerator.compat import izip_longest
 from accelerator.compat import monotonic
 from accelerator.compat import num_types
 from accelerator.compat import QueueEmpty
@@ -224,6 +225,7 @@ def main(argv, cfg):
 	parser.add_argument('-M', '--allow-missing-columns', action='store_true', negation='dont', help="datasets are allowed to not have (some) columns", )
 	parser.add_argument('-g', '--grep',         action='append',                      help="grep this column only, can be specified multiple times", metavar='COLUMN')
 	parser.add_argument('+g', '--dont-grep',    action='append',                      help=SUPPRESS)
+	parser.add_argument('-r', '--roundrobin',   action='store_true', negation='not',  help="one value at a time across slices")
 	parser.add_argument('-s', '--slice',        action='append',                      help="grep this slice only, can be specified multiple times",  type=int)
 	parser.add_argument('-u', '--unique',       action='append', nargs='?', metavar='COLUMN', help="only show one value [for this set of columns]")
 	parser.add_argument('-D', '--show-dataset', action='store_true', negation='dont', help="show dataset on matching lines", )
@@ -341,6 +343,13 @@ def main(argv, cfg):
 	if len(want_slices) == 1:
 		# it will be automatically ordered, so let's not work for it.
 		args.ordered = False
+		args.roundrobin = False
+
+	if args.list_matching:
+		args.roundrobin = False
+
+	if args.roundrobin:
+		args.ordered = True
 
 	if args.only_matching:
 		if args.list_matching:
@@ -1066,8 +1075,12 @@ def main(argv, cfg):
 	# The first slice runs in the main process (unless -l), everything
 	# else runs from one_slice.
 
-	def grep(ds, sliceno, out):
+	def grep(ix, ds, sliceno, out):
 		out.start(ds)
+		if args.roundrobin and ix % roundrobin_processes != sliceno:
+			# In roundrobin mode each ds is done fully in a single process.
+			out.end(ds)
+			return
 		if len(patterns) == 1:
 			chk = patterns[0].search
 		else:
@@ -1087,7 +1100,16 @@ def main(argv, cfg):
 					kw['callback_interval'] = status_interval[sliceno]
 			if ds.columns[col].type == 'ascii':
 				kw['_type'] = 'unicode'
-			it = ds._column_iterator(sliceno, col, **kw)
+			if args.roundrobin:
+				todo = [ds._column_iterator(s, col, **kw) for s in want_slices]
+				fv = object() # unique marker
+				it = (
+					v for v in
+					chain.from_iterable(izip_longest(*todo, fillvalue=fv))
+					if v is not fv
+				)
+			else:
+				it = ds._column_iterator(sliceno, col, **kw)
 			if ds.columns[col].type == 'bytes':
 				errors = 'replace' if PY2 else 'surrogateescape'
 				if ds.columns[col].none_support:
@@ -1192,9 +1214,9 @@ def main(argv, cfg):
 			q_list.make_writer()
 		try:
 			out = outputter(q_in, q_out)
-			for ds in datasets:
+			for ix, ds in enumerate(datasets):
 				if seen_list is None or ds not in seen_list:
-					grep(ds, sliceno, out)
+					grep(ix, ds, sliceno, out)
 				q_status.put((sliceno, True))
 			out.finish()
 		except QueueEmpty:
@@ -1286,7 +1308,11 @@ def main(argv, cfg):
 		if not args.show_sliceno:
 			seen_list = mp.MpSet()
 	else:
-		separate_process_slices = want_slices[1:]
+		if args.roundrobin:
+			separate_process_slices = list(range(1, min(g.slices, len(datasets))))
+			roundrobin_processes = len(separate_process_slices) + 1
+		else:
+			separate_process_slices = want_slices[1:]
 		if args.ordered or headers:
 			# needs to sync in some way
 			q_in = first_q_out = mp.LockFreeQueue()
@@ -1371,9 +1397,9 @@ def main(argv, cfg):
 							show(ds)
 		else:
 			out = outputter(q_in, q_out, first_slice=True)
-			sliceno = want_slices[0]
-			for ds in datasets:
-				grep(ds, sliceno, out)
+			sliceno = 0 if args.roundrobin else want_slices[0]
+			for ix, ds in enumerate(datasets):
+				grep(ix, ds, sliceno, out)
 				q_status.put((sliceno, True))
 			out.finish()
 	except QueueEmpty:
