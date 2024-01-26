@@ -1203,3 +1203,74 @@ def synthesis(job, slices):
 		[uniq4, 'baz', 'x', 99000], # repeats because the column names are different
 		[uniq4, 'a', 'b', 59000],
 	])
+
+
+	# Test --roundrobin.
+
+	# Test different length slices.
+	dw = job.datasetwriter(name='roundrobin', allow_missing_slices=True)
+	dw.add('a', 'ascii')
+	dw.set_slice(0)
+	dw.write('first 0')
+	dw.write('second 0')
+	dw.write('third 0')
+	dw.write('fourth 0')
+	dw.write('fifth 0')
+	dw.set_slice(1)
+	dw.write('first 1')
+	dw.write('second 1')
+	dw.set_slice(2)
+	dw.write('first 2')
+	dw.write('second 2')
+	dw.write('third 2')
+	roundrobin = dw.finish()
+
+	grep_text(['--roundrobin', '', roundrobin], [
+		['first 0'],
+		['first 1'],
+		['first 2'],
+		['second 0'],
+		['second 1'],
+		['second 2'],
+		['third 0'],
+		['third 2'],
+		['fourth 0'],
+		['fifth 0'],
+	])
+	grep_text(['--roundrobin', '--show-sliceno', '--show-lineno', '-s', '0', '-s', '2', '', roundrobin], [
+		[0, 0, 'first 0'],
+		[2, 0, 'first 2'],
+		[0, 1, 'second 0'],
+		[2, 1, 'second 2'],
+		[0, 2, 'third 0'],
+		[2, 2, 'third 2'],
+		[0, 3, 'fourth 0'],
+		[0, 4, 'fifth 0'],
+	])
+
+	# Test several datasets.
+	dw = job.datasetwriter(name='roundrobin2', previous=roundrobin)
+	dw.add('a', 'int32')
+	w = dw.get_split_write()
+	for ix in range(10000):
+		w(ix)
+	roundrobin2 = dw.finish()
+	# The middle dataset is longer, to catch ordering problems between processes.
+	dw = job.datasetwriter(name='roundrobin3', previous=roundrobin2)
+	dw.add('a', 'int32')
+	w = dw.get_split_write()
+	for ix in (50000, 90000):
+		w(ix)
+	roundrobin3 = dw.finish()
+	grep_text(['--roundrobin', '--show-sliceno', '--show-lineno', '--chain', '', roundrobin3], [
+		[0, 0, 'first 0'],
+		[1, 0, 'first 1'],
+		[2, 0, 'first 2'],
+		[0, 1, 'second 0'],
+		[1, 1, 'second 1'],
+		[2, 1, 'second 2'],
+		[0, 2, 'third 0'],
+		[2, 2, 'third 2'],
+		[0, 3, 'fourth 0'],
+		[0, 4, 'fifth 0'],
+	] + [[n % slices, n // slices, str(n)] for n in range(10000)] + [[0, 0, 50000], [1, 0, 90000]])
