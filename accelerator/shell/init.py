@@ -148,6 +148,8 @@ def git(method_dir):
 		fh.write('/urd.db\n')
 		fh.write('/workdirs\n')
 		fh.write('/results\n')
+		fh.write('/venv\n')
+		fh.write('/.venv\n')
 		fh.write('__pycache__\n')
 		fh.write('*.pyc\n')
 	check_call(['git', 'add', '--', 'accelerator.conf', '.gitignore', method_dir])
@@ -312,7 +314,7 @@ def main(argv, cfg):
 		options.slices = slice_count(first_workdir_path) or default_slices
 
 	if not options.force:
-		if exists(options.directory) and listdir(options.directory):
+		if exists(options.directory) and set(listdir(options.directory)) - {'venv', '.venv'}:
 			raise UserError('Directory %r is not empty.' % (options.directory,))
 		def plausible_jobdir(n):
 			parts = n.rsplit('-', 1)
