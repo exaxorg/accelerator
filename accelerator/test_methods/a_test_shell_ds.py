@@ -32,6 +32,7 @@ options = dict(
 
 import os
 from subprocess import check_output
+from accelerator.extras import quote
 
 def ax_ds(*a):
 	cmd = options.command_prefix + ['ds'] + list(a)
@@ -47,5 +48,6 @@ def synthesis(job):
 	for spec, ds in options.want.items():
 		res = ax_ds(spec)
 		got_ds = res[0]
-		assert ds == ds, 'Spec %r should have given %r but gave %r' % (spec, ds, got_ds,)
+		ds = quote(ds)
+		assert ds == got_ds, 'Spec %r should have given %r but gave %r' % (spec, ds, got_ds,)
 

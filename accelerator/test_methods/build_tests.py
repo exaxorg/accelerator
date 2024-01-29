@@ -362,7 +362,7 @@ def main(urd):
 	want = {spec: job + '/default' for spec, job in want.items()}
 	want.update({
 		d + '/j^': a + '/j', # .parent
-		d + '/j~': b + '/default', # .previous
+		d + '/j~': b + '/j', # .previous
 		'test_shell_data~/j^': a + '/j', # both job and ds movement
 		e + '/j~^': a + '/j', # .previous.parent
 		# some urdlist ones with datasets on
