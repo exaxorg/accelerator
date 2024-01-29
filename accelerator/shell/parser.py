@@ -108,7 +108,7 @@ def urd_call_w_tildes(cfg, path, tildes):
 			res = call(cfg.urd + '/' + key + '/' + timestamps[pos], server_name='urd', retries=0, quiet=True)
 	return res
 
-def name2job(cfg, n):
+def name2job(cfg, n, _want_ds=False):
 	dotted = None
 	if '.' in n:
 		if n.startswith(':') and ':' in n[1:]: # :urd:-list
@@ -137,6 +137,7 @@ def name2job(cfg, n):
 	n, current, tildes = split(n, "job id")
 	job = _name2job(cfg, n, current)
 	job = _name2job_do_tildes(cfg, job, current, tildes)
+	ds = None
 	if dotted:
 		for n in dotted:
 			n, current, tildes = split(n, "param")
@@ -171,8 +172,15 @@ def name2job(cfg, n):
 					raise JobNotFound("Job %s (%s) has %d %s in %r." % (job, job.method, len(job), k, n,))
 				job = job[0]
 			if isinstance(job, Dataset):
+				ds = job
 				job = job.job
+			else:
+				ds = None
+			if tildes:
+				ds = None
 			job = _name2job_do_tildes(cfg, job, current, tildes)
+	if _want_ds and ds:
+		return ds
 	return job
 
 def _name2job_do_tildes(cfg, job, current, tildes):
@@ -284,14 +292,17 @@ def name2ds(cfg, n):
 			if tailslash > 0:
 				name = n[tailslash + 1:]
 				n = n[:tailslash]
-		job = name2job(cfg, n)
+		job = name2job(cfg, n, _want_ds=name is None)
 	elif '/' not in n:
-		job = name2job(cfg, n)
+		job = name2job(cfg, n, _want_ds=True)
 	else:
 		n, name = split_ds_dir(n)
 		job = name2job(cfg, n)
 		name, tildes = split_tildes(name, allow_empty=True)
-	ds = job.dataset(name)
+	if isinstance(job, Dataset):
+		ds = job
+	else:
+		ds = job.dataset(name)
 	if tildes:
 		def follow(key, motion):
 			# follow ds.key count times
