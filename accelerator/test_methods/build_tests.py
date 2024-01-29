@@ -343,6 +343,7 @@ def main(urd):
 		'test_shell_data~3': b, # numbered tildes
 		'test_shell_data~2^': a, # ~~ goes to c, ^ follows .previous to a.
 		d + '^': b, # prefers jobs.previous to .datasets.previous
+		d + '.parent': a, # will be different as a ds
 		':tests.urd:': e,
 		':tests.urd/2021-09-27T03:14:': d,
 		':tests.urd/1:1': b, # 1 is the second entry
@@ -355,12 +356,16 @@ def main(urd):
 		':tests.urd/2021-09-27T03:14+1:.jobs.previous': d,
 		':tests.urd/2021-09-27T03:14+1:.jobs.previous.extra': c,
 		':tests.urd/2021-09-27T03:14+1:.jobs.previous.jobs.extra.datasets.previous': a,
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous.parent': a, # will be different as a ds
 		':tests.urd/2021-09-27T03:14+1:.jobs.previous~.datasets.previous': a,
 	}
 	urd.build('test_shell_job', command_prefix=command_prefix, want=want)
-	# the job is resolved first, so the old specs give the same results
+	# most of the old specs give the same results
 	want = {spec: job + '/default' for spec, job in want.items()}
 	want.update({
+		d + '.parent': a + '/j', # this changes as a ds
+		':tests.urd/2021-09-27T03:14+1:.jobs.previous.parent': a + '/j', # and this too
+		# below here are new things, not overrides.
 		d + '/j^': a + '/j', # .parent
 		d + '/j~': b + '/j', # .previous
 		'test_shell_data~/j^': a + '/j', # both job and ds movement
