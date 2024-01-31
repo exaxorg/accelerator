@@ -113,6 +113,8 @@ def load_config(filename):
 			raise _E('Workdir %s redefined' % (name,))
 		if path in (v[1] for v in cfg['workdirs']):
 			raise _E('Workdir path %r re-used' % (path,))
+		if project_directory == path or project_directory.startswith(path + '/'):
+			raise _E('project directory (%r) is under workdir %s (%r)' % (project_directory, name, path))
 
 	def resolve_urd(val):
 		orig_val = val
