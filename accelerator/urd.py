@@ -39,8 +39,8 @@ import os
 import signal
 
 from accelerator.compat import iteritems, itervalues, unicode
+from accelerator.compat import PY3
 from accelerator.colourwrapper import colour
-from accelerator.extras import DotDict, PY3
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
 
@@ -146,6 +146,38 @@ class TimeStamp(str):
 		return not self <= other
 
 
+# Like a (non-ordered) DotDict that only compares some values when checking equality.
+class Entry(dict):
+	def __eq__(self, other):
+		nonexistant = object()
+		for k in ('timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'key',):
+			if self.get(k, nonexistant) != other.get(k, nonexistant):
+				return False
+		return True
+
+	def __ne__(self, other):
+		return not (self == other)
+
+	def __getattr__(self, name):
+		if name[0] == "_":
+			raise AttributeError(name)
+		try:
+			return self[name]
+		except KeyError:
+			pass # raise new error outside this except clause
+		raise AttributeError(name)
+
+	def __setattr__(self, name, value):
+		if name[0] == "_":
+			raise AttributeError(name)
+		self[name] = value
+
+	def __delattr__(self, name):
+		if name[0] == "_":
+			raise AttributeError(name)
+		del self[name]
+
+
 class DB:
 	def __init__(self, path, verbose=True):
 		self._initialised = False
@@ -205,7 +237,7 @@ class DB:
 		key = line[1]
 		user, build = key.split('/')
 		flags = line[4].split(',') if line[4] else []
-		data = DotDict(timestamp=line[0],
+		data = Entry(timestamp=line[0],
 			user=user,
 			build=build,
 			deps=json.loads(line[2]),
@@ -227,7 +259,7 @@ class DB:
 			assert isinstance(data.deps, dict)
 			for v in itervalues(data.deps):
 				assert isinstance(v, dict)
-				self._validate_data(DotDict(v), False)
+				self._validate_data(Entry(v), False)
 		else:
 			assert set(data) == {'timestamp', 'joblist', 'caption',}
 		assert joblistlike(data.joblist), data.joblist
@@ -347,7 +379,7 @@ class DB:
 				new[ts] = data
 			else:
 				ghost[ts] = data
-		self.log('truncate', DotDict(key=key, timestamp=timestamp))
+		self.log('truncate', Entry(key=key, timestamp=timestamp))
 		self.db[key] = new
 		ghost_db = self.ghost_db[key]
 		for ts, data in iteritems(ghost):
@@ -499,7 +531,7 @@ def add():
 	body = request.body
 	if PY3:
 		body = TextIOWrapper(body, encoding='utf-8')
-	data = DotDict(json.load(body))
+	data = Entry(json.load(body))
 	if data.user != request.auth[0]:
 		abort(401, "Error:  user does not match authentication!")
 	result = db.add(data)
@@ -594,10 +626,6 @@ def main(argv, cfg):
 	if not authdict and not args.allow_passwordless:
 		raise Exception('No users in %r and --allow-passwordless not specified.' % (auth_fn,))
 	db = DB(args.path, not args.quiet)
-
-	# The standard DotDict is now ordered, but that doesn't suit urd.
-	DotDict.__eq__ = dict.__eq__
-	DotDict.__ne__ = dict.__ne__
 
 	bottle.install(jsonify)
 
