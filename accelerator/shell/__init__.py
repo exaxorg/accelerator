@@ -172,6 +172,7 @@ add_command('board-server', '''runs a webserver for displaying results''',      
 add_command('ds',           '''display information about datasets''',           is_debug=True)
 add_command('gc',           '''delete stale and unused jobs''')
 add_command('grep',         '''search for a pattern in one or more datasets''', is_debug=True)
+add_command('hist',         '''show a histogram of column(s) from a dataset''', is_debug=True)
 add_command('init',         '''create a project directory''')
 add_command('job',          '''information about a job''',                      is_debug=True)
 add_command('method',       '''information about methods''')

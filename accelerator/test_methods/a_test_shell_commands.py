@@ -80,6 +80,7 @@ def synthesis(job):
 	chk(['ds', '--', ds], want_in_help=['--list'], want_in_call=['Columns:', 'this is a column'])
 	chk(['gc'], want_in_help=['--dry-run'])
 	chk(['grep', '--', '', ds], want_in_help=['--tab-length'], want_in_call=['this is a value'])
+	chk(['hist', '--', ds, 'this is a column'], want_in_help=['show at most this many'], want_in_call=['this is a value\t1'])
 	chk(['init', '--no-git', job.filename('projdir')], want_in_help=['--no-git'], want_in_call=[''])
 	assert os.path.isdir('projdir/workdirs')
 	chk(['intro'], want_in_call=['ax init --examples', 'ax script'])
