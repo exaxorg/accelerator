@@ -29,6 +29,12 @@ from collections import Counter
 import sys
 
 
+# multiprocessing.Pool insists on pickling the function even when using
+# forking (as we do). Thus we need this top level indirection function.
+_indirected_func = None
+def _indirection(sliceno):
+	return _indirected_func(sliceno)
+
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''show a histogram of column(s) from a dataset.''')
 	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values", type=int)
@@ -51,7 +57,29 @@ def main(argv, cfg):
 		return 1
 
 	columns = args.column[0] if len(args.column) == 1 else args.column
-	hist = Counter(ds.iterate(None, columns))
+	useful_slices = [ix for ix, count in enumerate(ds.lines) if count > 0]
+	if not useful_slices:
+		return
+
+	def one_slice(sliceno):
+		return Counter(ds.iterate(sliceno, columns))
+
+	if len(useful_slices) == 1:
+		hist = one_slice(useful_slices[0])
+	else:
+		global _indirected_func
+		_indirected_func = one_slice
+		from multiprocessing import Pool
+		pool = Pool(len(useful_slices))
+		try:
+			hist = None
+			for part in pool.imap_unordered(_indirection, useful_slices, 1):
+				if hist:
+					hist.update(part)
+				else:
+					hist = part
+		finally:
+			pool.close()
 
 	hist = hist.most_common(args.max_count)
 	for k, v in hist:
