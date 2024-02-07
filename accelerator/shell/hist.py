@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 from accelerator.error import NoSuchWhateverError
 from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import name2ds
+from accelerator import g
 
 from collections import Counter
 import sys
@@ -37,6 +38,9 @@ def _indirection(sliceno):
 
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''show a histogram of column(s) from a dataset.''')
+	parser.add_argument('-c', '--chain',     action='store_true', negation='dont', help="follow dataset chain", )
+	parser.add_argument(      '--chain-length', '--cl',         metavar='LENGTH',  help="follow chain at most this many datasets", type=int)
+	parser.add_argument(      '--stop-ds',   metavar='DATASET', help="follow chain at most to this dataset")
 	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
@@ -49,23 +53,28 @@ def main(argv, cfg):
 		print(e, file=sys.stderr)
 		return 1
 
+	chain = ds.chain(args.chain_length if args.chain else 1, stop_ds=args.stop_ds)
+	if not chain:
+		return
+
 	ok = True
-	for col in args.column:
-		if col not in ds.columns:
-			print("Dataset %s does not have column %s." % (ds.quoted, col,), file=sys.stderr)
-			ok = False
+	for ds in chain:
+		for col in args.column:
+			if col not in ds.columns:
+				print("Dataset %s does not have column %s." % (ds.quoted, col,), file=sys.stderr)
+				ok = False
 	if not ok:
 		return 1
 
 	columns = args.column[0] if len(args.column) == 1 else args.column
-	useful_slices = [ix for ix, count in enumerate(ds.lines) if count > 0]
+	useful_slices = [sliceno for sliceno in range(g.slices) if chain.lines(sliceno) > 0]
 	if args.slice:
 		useful_slices = list(set(useful_slices) & set(args.slice))
 	if not useful_slices:
 		return
 
 	def one_slice(sliceno):
-		return Counter(ds.iterate(sliceno, columns))
+		return Counter(chain.iterate(sliceno, columns))
 
 	if len(useful_slices) == 1:
 		hist = one_slice(useful_slices[0])
