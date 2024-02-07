@@ -38,6 +38,7 @@ def _indirection(sliceno):
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''show a histogram of column(s) from a dataset.''')
 	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values", type=int)
+	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
 	parser.add_argument('column', nargs='+', help='you can specify multiple columns')
 	args = parser.parse_intermixed_args(argv)
@@ -58,6 +59,8 @@ def main(argv, cfg):
 
 	columns = args.column[0] if len(args.column) == 1 else args.column
 	useful_slices = [ix for ix, count in enumerate(ds.lines) if count > 0]
+	if args.slice:
+		useful_slices = list(set(useful_slices) & set(args.slice))
 	if not useful_slices:
 		return
 
