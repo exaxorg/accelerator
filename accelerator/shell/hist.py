@@ -54,12 +54,18 @@ def format_aligned(hist):
 def format_tsv(hist):
 	return hist, '%s\t%d'
 
+formatters = {
+	'aligned': format_aligned,
+	'tsv'    : format_tsv,
+}
+
 
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''show a histogram of column(s) from a dataset.''')
 	parser.add_argument('-c', '--chain',     action='store_true', negation='dont', help="follow dataset chain", )
 	parser.add_argument(      '--chain-length', '--cl',         metavar='LENGTH',  help="follow chain at most this many datasets", type=int)
 	parser.add_argument(      '--stop-ds',   metavar='DATASET', help="follow chain at most to this dataset")
+	parser.add_argument('-f', '--format', choices=sorted(formatters), help="output format, " + ' / '.join(sorted(formatters)), metavar='FORMAT', )
 	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
@@ -112,7 +118,9 @@ def main(argv, cfg):
 		finally:
 			pool.close()
 
-	if sys.stdout.isatty():
+	if args.format:
+		formatter = formatters[args.format]
+	elif sys.stdout.isatty():
 		formatter = format_aligned
 	else:
 		formatter = format_tsv
