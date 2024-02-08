@@ -51,11 +51,15 @@ def format_aligned(hist):
 	hist = [(k, ' ' * (total_len - len(k) - len(v)), v) for k, v in hist]
 	return hist, '%s%s%s'
 
+def format_csv(hist):
+	return hist, '%s,%d'
+
 def format_tsv(hist):
 	return hist, '%s\t%d'
 
 formatters = {
 	'aligned': format_aligned,
+	'csv'    : format_csv,
 	'tsv'    : format_tsv,
 }
 
