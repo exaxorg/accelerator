@@ -92,11 +92,14 @@ def main(argv, cfg):
 	parser.add_argument(      '--chain-length', '--cl',         metavar='LENGTH',  help="follow chain at most this many datasets", type=int)
 	parser.add_argument(      '--stop-ds',   metavar='DATASET', help="follow chain at most to this dataset")
 	parser.add_argument('-f', '--format', choices=sorted(formatters), help="output format, " + ' / '.join(sorted(formatters)), metavar='FORMAT', )
-	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values", type=int)
+	parser.add_argument('-m', '--max-count', metavar='NUM',     default=20, help="show at most this many values (default 20)", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
 	parser.add_argument('column', nargs='+', help='you can specify multiple columns')
 	args = parser.parse_intermixed_args(argv)
+
+	if not args.max_count or args.max_count < 0:
+		args.max_count = None
 
 	try:
 		ds = name2ds(cfg, args.dataset)
@@ -151,8 +154,12 @@ def main(argv, cfg):
 	else:
 		formatter = format_tsv
 
+	total_found = len(hist)
 	hist = hist.most_common(args.max_count)
 	hist, fmt = formatter(hist)
 
 	for item in hist:
 		print(fmt % item)
+
+	if total_found > len(hist):
+		print(colour(fmt_num(total_found) + ' total found', 'hist/warning'), file=sys.stderr)
