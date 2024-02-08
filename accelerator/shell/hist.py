@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from accelerator.compat import fmt_num, num_types
 from accelerator.error import NoSuchWhateverError
 from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import name2ds
@@ -35,6 +36,24 @@ import sys
 _indirected_func = None
 def _indirection(sliceno):
 	return _indirected_func(sliceno)
+
+
+def format_aligned(hist):
+	def fmt_k(k):
+		if isinstance(k, num_types):
+			return fmt_num(k)
+		else:
+			return str(k)
+	hist = [(fmt_k(k), fmt_num(v)) for k, v in hist]
+	klen = max(len(k) for k, v in hist)
+	vlen = max(len(v) for k, v in hist)
+	total_len = klen + vlen + 2
+	hist = [(k, ' ' * (total_len - len(k) - len(v)), v) for k, v in hist]
+	return hist, '%s%s%s'
+
+def format_tsv(hist):
+	return hist, '%s\t%d'
+
 
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''show a histogram of column(s) from a dataset.''')
@@ -93,6 +112,13 @@ def main(argv, cfg):
 		finally:
 			pool.close()
 
+	if sys.stdout.isatty():
+		formatter = format_aligned
+	else:
+		formatter = format_tsv
+
 	hist = hist.most_common(args.max_count)
-	for k, v in hist:
-		print('%s\t%d' % (k, v,))
+	hist, fmt = formatter(hist)
+
+	for item in hist:
+		print(fmt % item)
