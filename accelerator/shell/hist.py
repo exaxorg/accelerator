@@ -150,7 +150,7 @@ def main(argv, cfg):
 	if args.format:
 		formatter = formatters[args.format]
 	elif sys.stdout.isatty():
-		formatter = format_aligned
+		formatter = format_bars
 	else:
 		formatter = format_tsv
 
