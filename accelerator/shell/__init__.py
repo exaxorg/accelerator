@@ -484,6 +484,7 @@ def main():
 		'infohighlight': ('BOLD', 'BRIGHTBLUE',),
 		'separator': ('CYAN', 'UNDERLINE',),
 		'lined/separator': (),
+		'bar': ('BRIGHTBLUE',),
 		'header': ('BRIGHTBLUE', 'BOLD',),
 		'evenlines': ('BLACK', 'WHITEBG',),
 		'oddlines': ('BLACK', 'BRIGHTWHITEBG',),
