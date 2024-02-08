@@ -51,6 +51,26 @@ def format_aligned(hist):
 	hist = [(k, ' ' * (total_len - len(k) - len(v)), v) for k, v in hist]
 	return hist, '%s%s%s'
 
+def format_bars(hist):
+	from accelerator.compat import terminal_size
+	columns = terminal_size()[0]
+	a_hist, a_fmt = format_aligned(hist)
+	max_len = columns - len(''.join(a_hist[0])) - 3
+	if max_len < 2:
+		return a_hist, a_fmt
+	values = [v for k, v in hist]
+	max_v = max(values)
+	if max_v > max_len:
+		rounding = ('', '\u258f', '\u258e', '\u258d', '\u258c', '\u258b', '\u258a', '\u2589', '\u2588')
+		def mkbar(v):
+			size = v * max_len / max_v
+			bonus = int(round((size - int(size)) * 8))
+			return '\u2588' * int(size) + rounding[bonus]
+	else:
+		mkbar = '\u2588'.__mul__
+	hist = [(a_fmt % a, mkbar(v)) for a, v in zip(a_hist, values)]
+	return hist, '%s  %s'
+
 def format_csv(hist):
 	return hist, '%s,%d'
 
@@ -59,6 +79,7 @@ def format_tsv(hist):
 
 formatters = {
 	'aligned': format_aligned,
+	'bars'   : format_bars,
 	'csv'    : format_csv,
 	'tsv'    : format_tsv,
 }
