@@ -29,6 +29,7 @@ from accelerator.shell.parser import name2ds
 from accelerator import g
 
 from collections import Counter
+import math
 import sys
 
 
@@ -147,14 +148,30 @@ def main(argv, cfg):
 			print("Can't bin to infinity.", file=sys.stderr)
 			return 1
 		if args.max_count: # otherwise all values are their own bin
+			is_ints = all(ds.columns[columns].type.startswith('int') for ds in chain)
+			if is_ints and high - low < args.max_count:
+				args.max_count = high - low + 1
 			step = (high - low) / args.max_count
 			def bin_items(sliceno):
 				return Counter((v - low) // step for v in chain.iterate(sliceno, columns))
 			_indirected_func = bin_items
-			def name(ix):
-				a = step * ix + low
-				b = step * (ix + 1) + low
-				return '%s - %s' % (fmt_num(a), fmt_num(b))
+			if is_ints:
+				def name(ix):
+					a = int(math.ceil(step * ix + low))
+					b = step * (ix + 1) + low
+					if b == math.floor(b):
+						b = int(b) - 1
+					else:
+						b = int(b)
+					if a == b:
+						return fmt_num(a)
+					else:
+						return '%s - %s' % (fmt_num(a), fmt_num(b))
+			else:
+				def name(ix):
+					a = step * ix + low
+					b = step * (ix + 1) + low
+					return '%s - %s' % (fmt_num(a), fmt_num(b))
 			bin_names = [name(ix) for ix in range(args.max_count)]
 
 	if len(useful_slices) == 1:
