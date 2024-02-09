@@ -92,7 +92,8 @@ def main(argv, cfg):
 	parser.add_argument(      '--chain-length', '--cl',         metavar='LENGTH',  help="follow chain at most this many datasets", type=int)
 	parser.add_argument(      '--stop-ds',   metavar='DATASET', help="follow chain at most to this dataset")
 	parser.add_argument('-f', '--format', choices=sorted(formatters), help="output format, " + ' / '.join(sorted(formatters)), metavar='FORMAT', )
-	parser.add_argument('-m', '--max-count', metavar='NUM',     default=20, help="show at most this many values (default 20)", type=int)
+	parser.add_argument('-t', '--toplist',   action='store_true', negation='not',  help="don't bin values, show most common")
+	parser.add_argument('-m', '--max-count', metavar='NUM',     default=20, help="show at most this many values / bins (default 20)", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
 	parser.add_argument('column', nargs='+', help='you can specify multiple columns')
@@ -127,14 +128,38 @@ def main(argv, cfg):
 	if not useful_slices:
 		return
 
-	def one_slice(sliceno):
+	global _indirected_func
+	def count_items(sliceno):
 		return Counter(chain.iterate(sliceno, columns))
+	_indirected_func = count_items # default, probably overridden if not args.toplist
+
+	if len(args.column) > 1 or chain.min(columns) is None:
+		args.toplist = True # Can't do anything else.
+
+	if not args.toplist:
+		low, high = chain.min(columns), chain.max(columns)
+		if high == low: # just one value, so let's not try to bin it
+			args.toplist = True
+
+	if not args.toplist:
+		inf = float('inf')
+		if low in (inf, -inf) or high in (inf, -inf):
+			print("Can't bin to infinity.", file=sys.stderr)
+			return 1
+		if args.max_count: # otherwise all values are their own bin
+			step = (high - low) / args.max_count
+			def bin_items(sliceno):
+				return Counter((v - low) // step for v in chain.iterate(sliceno, columns))
+			_indirected_func = bin_items
+			def name(ix):
+				a = step * ix + low
+				b = step * (ix + 1) + low
+				return '%s - %s' % (fmt_num(a), fmt_num(b))
+			bin_names = [name(ix) for ix in range(args.max_count)]
 
 	if len(useful_slices) == 1:
-		hist = one_slice(useful_slices[0])
+		hist = _indirected_func(useful_slices[0])
 	else:
-		global _indirected_func
-		_indirected_func = one_slice
 		from multiprocessing import Pool
 		pool = Pool(len(useful_slices))
 		try:
@@ -154,9 +179,17 @@ def main(argv, cfg):
 	else:
 		formatter = format_tsv
 
-	total_found = len(hist)
-	hist = hist.most_common(args.max_count)
-	hist, fmt = formatter(hist)
+	if args.toplist:
+		total_found = len(hist)
+		hist = hist.most_common(args.max_count)
+		hist, fmt = formatter(hist)
+	else:
+		total_found = 0 # so we don't print about it later
+		if args.max_count:
+			hist[args.max_count - 1] += hist[args.max_count] # top value should not be in a separate bin
+			hist, fmt = formatter([(name, hist[ix]) for ix, name in enumerate(bin_names)])
+		else:
+			hist, fmt = formatter([(k, hist[k]) for k in sorted(hist)])
 
 	for item in hist:
 		print(fmt % item)
