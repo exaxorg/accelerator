@@ -1026,6 +1026,8 @@ def main(argv, cfg):
 		if args.format == 'json':
 			dumps = json.JSONEncoder(ensure_ascii=False, default=json_default).encode
 			def show(lineno, items):
+				if args.show_sliceno and args.roundrobin:
+					(prefix['sliceno'], lineno), items = items
 				if only_matching == 'part':
 					items = [filter_item(unicode(item)) for item in items]
 				if only_matching == 'columns':
@@ -1049,6 +1051,9 @@ def main(argv, cfg):
 				return ''.join(parts)
 			def show(lineno, items):
 				data = list(prefix)
+				if args.show_sliceno and args.roundrobin:
+					(sliceno, lineno), items = items
+					data[-1] = unicode(sliceno)
 				if args.show_lineno:
 					data.append(unicode(lineno))
 				show_items = map(unicode, items)
@@ -1117,13 +1122,28 @@ def main(argv, cfg):
 				else:
 					it = (v.decode('utf-8', errors) for v in it)
 			return it
+		def mk_slicelineno_iter():
+			# Same principle as the --roundrobin handling in mk_iter()
+			# but for (sliceno, lineno).
+			todo = [
+				izip(repeat(sliceno), range(ds.lines[sliceno]))
+				for sliceno in want_slices
+			]
+			fv = object() # unique marker
+			return (
+				v for v in
+				chain.from_iterable(izip_longest(*todo, fillvalue=fv))
+				if v is not fv
+			)
 		used_columns = columns_for_ds(ds)
 		used_grep_columns = (grep_columns or dont_grep_columns) and grep_columns_for_ds(ds)
 		if used_grep_columns and set(used_grep_columns) != set(used_columns):
 			grep_iter = izip(*(mk_iter(col) for col in used_grep_columns))
 		else:
-			grep_iter = repeat(None)
+			grep_iter = None
 		lines_iter = izip(*(mk_iter(col) for col in used_columns))
+		if args.show_sliceno and args.roundrobin:
+			lines_iter = izip(mk_slicelineno_iter(), lines_iter)
 		if args.before_context:
 			before = deque((), args.before_context)
 		else:
@@ -1166,6 +1186,9 @@ def main(argv, cfg):
 				item_fixup = str
 			unique_columns_ix = ds2unique_columns_ix[ds]
 			def should_output_precheck(items):
+				if args.show_sliceno and args.roundrobin:
+					# items is [(sliceno, lineno), actual_items]
+					items = items[1]
 				items = tuple(
 					item_fixup(item)
 					for care, item in zip(care_mask, items)
@@ -1178,8 +1201,14 @@ def main(argv, cfg):
 				return thing
 			out.should_output_precheck = should_output_precheck
 		to_show = 0
-		for lineno, (grep_items, items) in enumerate(izip(grep_iter, lines_iter)):
-			if maybe_invert(any(chk(fmtfix(item)) for item in grep_items or items)):
+		for lineno, items in enumerate(lines_iter):
+			if grep_iter:
+				grep_items = next(grep_iter)
+			elif args.show_sliceno and args.roundrobin:
+				grep_items = items[1]
+			else:
+				grep_items = items
+			if maybe_invert(any(chk(fmtfix(item)) for item in grep_items)):
 				if q_list:
 					try:
 						q_list.put((ds, sliceno))
