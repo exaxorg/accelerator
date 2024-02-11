@@ -408,13 +408,23 @@ def main(argv, cfg):
 	# i.e. the total number of lines for that slice. And then the same again,
 	# to simplify the code in the status shower.
 	total_lines_per_slice_at_ds = [[0] * g.slices]
-	for ds in datasets:
-		total_lines_per_slice_at_ds.append([a + b for a, b in zip(total_lines_per_slice_at_ds[-1], ds.lines)])
+	if args.roundrobin:
+		# In the roundrobin case the "sliceno" is the index of the iterating
+		# process, not the real sliceno.
+		roundrobin_processes = min(g.slices, len(datasets)) # will be set again later to the same value
+		status_slices = list(range(roundrobin_processes))
+		for ds, fake_sliceno in zip(datasets, cycle(range(roundrobin_processes))):
+			total_lines_per_slice_at_ds.append(list(total_lines_per_slice_at_ds[-1]))
+			total_lines_per_slice_at_ds[-1][fake_sliceno] += sum(ds.lines[s] for s in want_slices)
+	else:
+		status_slices = want_slices
+		for ds in datasets:
+			total_lines_per_slice_at_ds.append([a + b for a, b in zip(total_lines_per_slice_at_ds[-1], ds.lines)])
 	total_lines_per_slice_at_ds.append(total_lines_per_slice_at_ds[-1])
 	status_interval = {
 		# twice per percent, but not too often or too seldom
 		sliceno: min(max(total_lines_per_slice_at_ds[-1][sliceno] // 200, 10), 5000)
-		for sliceno in want_slices
+		for sliceno in status_slices
 	}
 
 	# never and always override env settings, auto (default) sets from env/tty
@@ -546,7 +556,7 @@ def main(argv, cfg):
 	q_status = mp.LockFreeQueue()
 	def status_collector():
 		q_status.make_reader()
-		status = {sliceno: [0, 0] for sliceno in want_slices}
+		status = {sliceno: [0, 0] for sliceno in status_slices}
 		#            [ds_ix, done_lines]
 		total_lines = sum(total_lines_per_slice_at_ds[-1])
 		previous = [0]
@@ -560,7 +570,7 @@ def main(argv, cfg):
 			ds_ixes = []
 			progress_lines = []
 			progress_fraction = []
-			for sliceno in want_slices:
+			for sliceno in status_slices:
 				ds_ix, done_lines = status[sliceno]
 				ds_ixes.append(ds_ix)
 				max_possible = min(done_lines + status_interval[sliceno], total_lines_per_slice_at_ds[ds_ix + 1][sliceno])
@@ -575,7 +585,7 @@ def main(argv, cfg):
 			bad_cutoff = progress_total - 0.1
 			if verbose:
 				show_ds = (len(datasets) > 1 and min(ds_ixes) != max(ds_ixes))
-				for sliceno, ds_ix, p in zip(want_slices, ds_ixes, progress_fraction):
+				for sliceno, ds_ix, p in zip(status_slices, ds_ixes, progress_fraction):
 					if ds_ix == len(datasets):
 						msg = 'DONE'
 					else:
@@ -1096,7 +1106,10 @@ def main(argv, cfg):
 			kw = {}
 			if first[0]:
 				first[0] = False
-				lines = ds.lines[sliceno]
+				if args.roundrobin:
+					lines = sum(ds.lines[s] for s in want_slices)
+				else:
+					lines = ds.lines[sliceno]
 				if lines > status_interval[sliceno]:
 					def cb(n):
 						q_status.put((sliceno, False))
