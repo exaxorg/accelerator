@@ -51,7 +51,7 @@ def format_aligned(hist):
 	vlen = max(len(v) for k, v in hist)
 	total_len = klen + vlen + 2
 	hist = [(k, ' ' * (total_len - len(k) - len(v)), v) for k, v in hist]
-	return hist, '%s%s%s'
+	return hist, colour('%s', 'hist/range') + '%s' + colour('%s', 'hist/count')
 
 def format_bars(hist):
 	from accelerator.compat import terminal_size

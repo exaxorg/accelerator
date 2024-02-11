@@ -485,6 +485,8 @@ def main():
 		'separator': ('CYAN', 'UNDERLINE',),
 		'lined/separator': (),
 		'bar': ('BRIGHTBLUE',),
+		'count': (),
+		'range': ('BOLD',),
 		'header': ('BRIGHTBLUE', 'BOLD',),
 		'evenlines': ('BLACK', 'WHITEBG',),
 		'oddlines': ('BLACK', 'BRIGHTWHITEBG',),
