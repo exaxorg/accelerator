@@ -45,7 +45,7 @@ def format_aligned(hist):
 		if isinstance(k, num_types):
 			return fmt_num(k)
 		else:
-			return str(k)
+			return str(k).expandtabs()
 	hist = [(fmt_k(k), fmt_num(v)) for k, v in hist]
 	klen = max(len(k) for k, v in hist)
 	vlen = max(len(v) for k, v in hist)
