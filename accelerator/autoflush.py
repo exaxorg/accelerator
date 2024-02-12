@@ -19,10 +19,11 @@
 ############################################################################
 
 class AutoFlush:
-	__slots__ = ('fh', 'isatty')
+	__slots__ = ('fh', 'isatty', 'encoding',)
 	def __init__(self, fh):
 		self.fh = fh
 		self.isatty = fh.isatty
+		self.encoding = getattr(fh, 'encoding', '?')
 	def write(self, data):
 		self.fh.write(data)
 		self.fh.flush()
