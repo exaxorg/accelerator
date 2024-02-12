@@ -73,11 +73,19 @@ def format_bars(hist):
 	hist = [(a_fmt % a, mkbar(v)) for a, v in zip(a_hist, values)]
 	return hist, '%s  ' + colour('%s', 'hist/bar')
 
+def _escape(hist, char):
+	def q(s):
+		if char in s or s.startswith('"'):
+			return '"' + s.replace('"', '""') + '"'
+		else:
+			return s
+	return [(q(str(k)), v) for k, v in hist]
+
 def format_csv(hist):
-	return hist, '%s,%d'
+	return _escape(hist, ','), '%s,%d'
 
 def format_tsv(hist):
-	return hist, '%s\t%d'
+	return _escape(hist, '\t'), '%s\t%d'
 
 formatters = {
 	'aligned': format_aligned,
