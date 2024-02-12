@@ -84,6 +84,9 @@ def _escape(hist, char):
 def format_csv(hist):
 	return _escape(hist, ','), '%s,%d'
 
+def format_ssv(hist):
+	return _escape(hist, ';'), '%s;%d'
+
 def format_tsv(hist):
 	return _escape(hist, '\t'), '%s\t%d'
 
@@ -91,6 +94,7 @@ formatters = {
 	'aligned': format_aligned,
 	'bars'   : format_bars,
 	'csv'    : format_csv,
+	'ssv'    : format_ssv,
 	'tsv'    : format_tsv,
 }
 
