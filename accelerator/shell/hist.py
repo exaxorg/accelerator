@@ -144,10 +144,24 @@ def main(argv, cfg):
 	if not useful_slices:
 		return
 
-	global _indirected_func
+	def mp_run(part_func, collect_func):
+		if len(useful_slices) == 1:
+			return collect_func(None, part_func(useful_slices[0]))
+		from multiprocessing import Pool
+		global _indirected_func
+		_indirected_func = part_func
+		pool = Pool(len(useful_slices))
+		try:
+			collected = None
+			for part in pool.imap_unordered(_indirection, useful_slices, 1):
+				collected = collect_func(collected, part)
+			return collected
+		finally:
+			pool.close()
+
 	def count_items(sliceno):
 		return Counter(chain.iterate(sliceno, columns))
-	_indirected_func = count_items # default, probably overridden if not args.toplist
+	hist_func = count_items # default, probably overridden if not args.toplist
 
 	if len(args.column) > 1 or chain.min(columns) is None:
 		args.toplist = True # Can't do anything else.
@@ -169,7 +183,7 @@ def main(argv, cfg):
 			step = (high - low) / args.max_count
 			def bin_items(sliceno):
 				return Counter((v - low) // step for v in chain.iterate(sliceno, columns))
-			_indirected_func = bin_items
+			hist_func = bin_items
 			if is_ints:
 				def name(ix):
 					a = int(math.ceil(step * ix + low))
@@ -189,20 +203,13 @@ def main(argv, cfg):
 					return '%s - %s' % (fmt_num(a), fmt_num(b))
 			bin_names = [name(ix) for ix in range(args.max_count)]
 
-	if len(useful_slices) == 1:
-		hist = _indirected_func(useful_slices[0])
-	else:
-		from multiprocessing import Pool
-		pool = Pool(len(useful_slices))
-		try:
-			hist = None
-			for part in pool.imap_unordered(_indirection, useful_slices, 1):
-				if hist:
-					hist.update(part)
-				else:
-					hist = part
-		finally:
-			pool.close()
+	def collect_hist(hist, part):
+		if not hist:
+			return part
+		hist.update(part)
+		return hist
+
+	hist = mp_run(hist_func, collect_hist)
 
 	if args.format:
 		formatter = formatters[args.format]
