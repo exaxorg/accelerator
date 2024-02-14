@@ -225,6 +225,16 @@ def main(argv, cfg):
 
 	hist = mp_run(hist_func, collect_hist)
 
+	# NaN != NaN, so they are not collected in a single key (unless they are the same object).
+	nan_count = 0
+	for k, v in list(hist.items()):
+		if isinstance(k, float) and math.isnan(k):
+			nan_count += v
+			del hist[k]
+	if nan_count:
+		hist[float('NaN')] = nan_count
+	# Now all NaNs are under a single key.
+
 	if args.format:
 		formatter = formatters[args.format]
 	elif sys.stdout.isatty():
@@ -239,6 +249,8 @@ def main(argv, cfg):
 	else:
 		total_found = 0 # so we don't print about it later
 		if args.max_count:
+			if nan_count:
+				print(colour('WARNING: Ignored %d NaN values.' % (nan_count,), 'hist/warning'), file=sys.stderr)
 			hist[args.max_count - 1] += hist[args.max_count] # top value should not be in a separate bin
 			hist, fmt = formatter([(name, hist[ix]) for ix, name in enumerate(bin_names)])
 		else:
