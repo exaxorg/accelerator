@@ -487,6 +487,7 @@ def main():
 		'bar': ('BRIGHTBLUE',),
 		'count': (),
 		'range': ('BOLD',),
+		'empty': ('RESET', 'FAINT',), # many terminals ignore faint, so reset to un-bold.
 		'header': ('BRIGHTBLUE', 'BOLD',),
 		'evenlines': ('BLACK', 'WHITEBG',),
 		'oddlines': ('BLACK', 'BRIGHTWHITEBG',),

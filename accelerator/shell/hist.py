@@ -46,11 +46,16 @@ def format_aligned(hist):
 			return fmt_num(k)
 		else:
 			return str(k).expandtabs()
+	empty = [v == 0 for k, v in hist]
 	hist = [(fmt_k(k), fmt_num(v)) for k, v in hist]
 	klen = max(len(k) for k, v in hist)
 	vlen = max(len(v) for k, v in hist)
 	total_len = klen + vlen + 2
 	hist = [(k, ' ' * (total_len - len(k) - len(v)), v) for k, v in hist]
+	hist = [
+		(colour(k, 'hist/empty') if e else k, s, colour(v, 'hist/empty') if e else v)
+		for e, (k, s, v) in zip(empty, hist)
+	]
 	return hist, colour('%s', 'hist/range') + '%s' + colour('%s', 'hist/count')
 
 def format_bars(hist):
