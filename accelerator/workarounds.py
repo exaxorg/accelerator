@@ -69,6 +69,13 @@ class SignalWrapper(object):
 		tc_changed = list(self.tc_original)
 		tc_changed[3] &= ~(termios.ICANON | termios.IEXTEN)
 		self.use_input = True
+		from threading import Thread
+		t = Thread(
+			target=self._input_thread,
+			name='SignalWrapper input thread',
+		)
+		t.daemon = True
+		t.start()
 		termios.tcsetattr(0, termios.TCSADRAIN, tc_changed)
 
 	def cleanup(self):
@@ -82,14 +89,6 @@ class SignalWrapper(object):
 			self.clean = True
 
 	def check(self):
-		if self.use_input:
-			with nonblocking(0):
-				while True:
-					try:
-						if ord(os.read(0, 1)) in self.key_values:
-							self.signal_set = True
-					except OSError:
-						break
 		if self.signal_set:
 			self.signal_set = False
 			return True
@@ -98,6 +97,16 @@ class SignalWrapper(object):
 
 	def signal_arrived(self, sig, frame):
 		self.signal_set = True
+
+	def _input_thread(self):
+		from time import sleep
+		while True:
+			try:
+				if ord(os.read(0, 1)) in self.key_values:
+					self.signal_set = True
+			except OSError:
+				# stdin is probably nonblocking, so sleep for a bit.
+				sleep(0.25)
 
 @contextmanager
 def nonblocking(fd):
