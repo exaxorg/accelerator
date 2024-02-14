@@ -22,7 +22,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from accelerator.colourwrapper import colour
-from accelerator.compat import fmt_num, num_types
+from accelerator.compat import fmt_num, num_types, int_types
 from accelerator.error import NoSuchWhateverError
 from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import name2ds
@@ -177,7 +177,21 @@ def main(argv, cfg):
 			print("Can't bin to infinity.", file=sys.stderr)
 			return 1
 		if args.max_count: # otherwise all values are their own bin
-			is_ints = all(ds.columns[columns].type.startswith('int') for ds in chain)
+			non_ints = chain.filter(lambda ds: not ds.columns[columns].type.startswith('int'))
+			is_ints = not non_ints
+			if non_ints and all(ds.columns[columns].type == 'number' for ds in non_ints):
+				class Failure(Exception):
+					pass
+				def check_int(sliceno):
+					return all(isinstance(v, int_types) for v in non_ints.iterate(sliceno, columns))
+				def collect_intness(dummy, good):
+					if not good:
+						raise Failure() # abort the other slices, for speed
+				try:
+					mp_run(check_int, collect_intness)
+					is_ints = True
+				except Failure:
+					is_ints = False
 			if is_ints and high - low < args.max_count:
 				args.max_count = high - low + 1
 			step = (high - low) / args.max_count
