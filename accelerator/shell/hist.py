@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 from accelerator.colourwrapper import colour
 from accelerator.compat import fmt_num, num_types, int_types
 from accelerator.error import NoSuchWhateverError
+from accelerator.extras import quote
 from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import name2ds
 from accelerator import g
@@ -117,7 +118,7 @@ def main(argv, cfg):
 	parser.add_argument('-m', '--max-count', metavar='NUM',     default=20, help="show at most this many values / bins (default 20)", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
-	parser.add_argument('column', nargs='+', help='you can specify multiple columns')
+	parser.add_argument('column', nargs='*', help='you can specify multiple columns')
 	args = parser.parse_intermixed_args(argv)
 
 	if not args.max_count or args.max_count < 0:
@@ -132,6 +133,19 @@ def main(argv, cfg):
 	chain = ds.chain(args.chain_length if args.chain else 1, stop_ds=args.stop_ds)
 	if not chain:
 		return
+
+	if not args.column:
+		# Can we guess?
+		columns_in_all = set(chain[0].columns)
+		for ds in chain:
+			columns_in_all.intersection_update(ds.columns)
+		if len(columns_in_all) == 1:
+			args.column = list(columns_in_all)
+		else:
+			print('Specify at least one column, choose from:', file=sys.stderr)
+			for colname in sorted(columns_in_all):
+				print('    ' + quote(colname), file=sys.stderr)
+			return 1
 
 	ok = True
 	for ds in chain:
