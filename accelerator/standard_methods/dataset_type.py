@@ -2271,9 +2271,9 @@ static PyObject *py_strptime_i(PyObject *dummy, PyObject *args, PyObject *kwds)
 	PyObject *res = _py_strptime(args, kwds, &remaining);
 	if (!res) return 0;
 #if PY_MAJOR_VERSION < 3
-	return Py_BuildValue("(Os)", res, remaining);
+	return Py_BuildValue("(Ns)", res, remaining);
 #else
-	return Py_BuildValue("(Oy)", res, remaining);
+	return Py_BuildValue("(Ny)", res, remaining);
 #endif
 }
 '''
