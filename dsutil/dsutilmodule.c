@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2017 eBay Inc.
- * Modifications copyright (c) 2018-2023 Carl Drougge
+ * Modifications copyright (c) 2018-2024 Carl Drougge
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -734,7 +734,7 @@ static PyObject *ReadNumber_iternext(Read *self)
 	if (len >= 0x80) {
 		int64_t v = (len & 0x7f) - 5;
 		HC_CHECK(hash_int64(&v));
-		return pyInt_FromS64(v);
+		return pyInt_FromS32(v);
 	}
 	if (len == 1) {
 		len = 8;
