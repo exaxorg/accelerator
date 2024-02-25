@@ -24,6 +24,7 @@ from __future__ import unicode_literals
 import gzip
 from random import randint
 import struct
+from accelerator._dsutil import siphash24
 from accelerator.dsutil import typed_writer
 from accelerator.subjobs import build
 
@@ -57,6 +58,10 @@ def synthesis(job, slices):
 		# special values
 		[None, '=b', 0],
 		[0.1, '=bd', 1, 0.1],
+		[9.2, '=bd', 1, 9.2],
+		[3.3, '=bd', 1, 3.3],
+		[1.4, '=bd', 1, 1.4],
+		[-0.5, '=bd', 1, -0.5],
 	]
 
 	# We also want to verify the encoding of larger values, so here is a
@@ -121,8 +126,55 @@ def synthesis(job, slices):
 
 	# csvimport and dataset_type the same thing,
 	# verify we got the same bytes
-	jid = build('csvimport', filename=job.filename('data.csv'))
-	jid = build('dataset_type', source=jid, column2type={'num': 'number'}, defaults={'num': None})
-	with gzip.open(jid.dataset().column_filename('num'), 'rb') as fh:
+	csvimport = build('csvimport', filename=job.filename('data.csv'))
+	jid = build('dataset_type', source=csvimport, column2type={'num': 'number'}, defaults={'num': None})
+	ds_typed = jid.dataset()
+	with gzip.open(ds_typed.column_filename('num'), 'rb') as fh:
 		got_bytes = fh.read()
 	assert want_bytes == got_bytes, "csvimport + dataset_type (%s) gave different bytes" % (jid,)
+
+	# Also test the hashing is as expected, both in DatasetWriter, dataset_type and dataset_hashpart.
+	def hash_num(num):
+		if not num:
+			return 0
+		if isinstance(num, float):
+			enc = struct.pack('=d', num)
+		elif -0x8000000000000000 <= num < 0x8000000000000000:
+			enc = struct.pack('=q', num)
+		else:
+			enc = encode_as_big_number(num)[1:] # excluding the length
+		return siphash24(enc)
+
+	# Test some actual values to be the expected ones.
+	# Don't hard code anything that doesn't use the big encoding, as that is
+	# endian dependant.
+	dw_hash = typed_writer('number').hash
+	assert dw_hash(0xBEEFC0DEBEEFC0DEBEEFC0DE1337) == 0x938a366370bb5bb5
+	# But the special cased 0 values are ok to test.
+	assert dw_hash(0) == 0
+	assert dw_hash(0.0) == 0
+	assert dw_hash(None) == 0
+	# And we can check that number and the int and float types agree.
+	assert dw_hash(42) == typed_writer('int32').hash(42)
+	assert dw_hash(42) == typed_writer('float32').hash(42.0) # int and intable float should agree.
+	assert dw_hash(4.2) == typed_writer('float64').hash(4.2)
+	assert dw_hash(0xBEEFC0DEB16) == typed_writer('int64').hash(0xBEEFC0DEB16)
+
+	dw = job.datasetwriter(name='hashed', hashlabel='num')
+	dw.add('num', 'number', none_support=True)
+	write = dw.get_split_write()
+	per_slice = [set() for _ in range(slices)]
+	for v in just_values:
+		write(v)
+		per_slice[dw_hash(v) % slices].add(v)
+		assert hash_num(v) == dw_hash(v), v
+	ds_local = dw.finish()
+	ds_hashed = build('dataset_hashpart', source=ds_typed, hashlabel='num').dataset()
+	ds_typehashed = build('dataset_type', source=csvimport, column2type={'num': 'number'}, defaults={'num': None}, hashlabel='num').dataset()
+	for sliceno in range(slices):
+		for hashname, ds in [
+			('DatasetWriter', ds_local),
+			('dataset_hashpart', ds_hashed),
+			('dataset_type', ds_typehashed),
+		]:
+			assert set(ds.iterate(sliceno, 'num')) == per_slice[sliceno], 'wrong in slice %d in %s (hashed by %s)' % (sliceno, ds, hashname)
