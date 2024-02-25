@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import gzip
+from random import randint
 import struct
 from accelerator.dsutil import typed_writer
 from accelerator.subjobs import build
@@ -58,6 +59,33 @@ def synthesis(job, slices):
 		[0.1, '=bd', 1, 0.1],
 	]
 
+	# We also want to verify the encoding of larger values, so here is a
+	# python implementation of the expected encoding and a few values to try.
+	def encode_as_big_number(num):
+		len_bytes = num.bit_length() // 8 + 1;
+		digits = []
+		for _ in range(len_bytes):
+			digits.append(num & 0xff)
+			num >>= 8
+		assert 8 < len(digits) < 127
+		digits.insert(0, len(digits))
+		return b''.join(struct.pack('=B', d) for d in digits)
+
+	values.extend([
+		# Smallest values that use the big encoding.
+		[0x8000000000000000],
+		[-0x8000000000000001],
+	])
+	for e in range(64, 1007):
+		num = 2 ** e
+		for offset in (-2, -1, 0, 1, 2):
+			values.append([offset + num])
+			values.append([offset - num])
+		values.append([randint(3, num // 2) + num])
+		values.append([randint(3, num // 2) - num])
+	# And finally the biggest possible values.
+	values.extend([[(2 ** 1007) - 1], [-(2 ** 1007) + 1]])
+
 	# Verify each value through a manual typed_writer.
 	# Also write to a dataset, a csv and a value2bytes dict.
 	value2bytes = {}
@@ -70,7 +98,10 @@ def synthesis(job, slices):
 			value = v[0]
 			write(value)
 			csv_fh.write('%s\n' % (value,))
-			want_bytes = struct.pack(*v[1:])
+			if len(v) == 1:
+				want_bytes = encode_as_big_number(v[0])
+			else:
+				want_bytes = struct.pack(*v[1:])
 			value2bytes[value] = want_bytes
 			with typed_writer('number')('tmp', compression='gzip', none_support=True) as w:
 				w.write(value)
