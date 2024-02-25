@@ -790,7 +790,11 @@ static PyObject *ReadNumber_iternext(Read *self)
 		return pyInt_FromS64(v);
 	}
 	HC_CHECK(hash(buf, len));
+#if PY_VERSION_HEX < 0x030d00a4
 	return _PyLong_FromByteArray(buf, len, 1, 1);
+#else
+	return PyLong_FromNativeBytes(buf, len, 1);
+#endif
 }
 
 static inline PyObject *unfmt_datetime(const uint32_t i0, const uint32_t i1)
@@ -1660,9 +1664,14 @@ MKWRITER_C(WriteTime    , uint64_t, uint64_t, fmt_time,     1, !value, MINMAX_ST
 static int WriteNumber_serialize_Long(PyObject *obj, char *buf, const char *msg, const char *error_extra)
 {
 	PyErr_Clear();
+#if PY_VERSION_HEX < 0x030d00a4
 	const size_t len_bits = _PyLong_NumBits(obj);
 	if (len_bits == (size_t)-1 && PyErr_Occurred()) return 1;
 	const size_t len_bytes = len_bits / 8 + 1;
+#else
+	const Py_ssize_t len_bytes = PyLong_AsNativeBytes(obj, NULL, 0, 1);
+	if (len_bytes <= 0) return 1;
+#endif
 	if (len_bytes >= NUMBER_MAX_BYTES) {
 		PyErr_Format(PyExc_OverflowError,
 		             "%s does not fit in %d bytes%s",
@@ -1672,8 +1681,12 @@ static int WriteNumber_serialize_Long(PyObject *obj, char *buf, const char *msg,
 	}
 	buf[0] = len_bytes;
 	unsigned char *ptr = (unsigned char *)buf + 1;
+#if PY_VERSION_HEX < 0x030d00a4
 	PyLongObject *lobj = (PyLongObject *)obj;
 	return _PyLong_AsByteArray(lobj, ptr, len_bytes, 1, 1) < 0;
+#else
+	return PyLong_AsNativeBytes(obj, ptr, len_bytes, 1) != len_bytes;
+#endif
 }
 
 static int init_WriteNumber(PyObject *self_, PyObject *args, PyObject *kwds)

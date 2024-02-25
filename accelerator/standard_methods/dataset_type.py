@@ -855,13 +855,22 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 			if (!i) PyErr_Clear();
 			Py_DECREF(s);
 			if (!i) return 0;
+#if PY_VERSION_HEX < 0x030d00a4
 			const size_t len_bits = _PyLong_NumBits(i);
 			err1(len_bits == (size_t)-1);
 			size_t len_bytes = len_bits / 8 + 1;
+#else
+			Py_ssize_t len_bytes = PyLong_AsNativeBytes(i, NULL, 0, 1);
+			err1(len_bytes <= 0);
+#endif
 			err1(len_bytes >= GZNUMBER_MAX_BYTES);
 			if (len_bytes < 8) len_bytes = 8; // Could happen for "42L" or similar.
 			*outptr = len_bytes;
+#if PY_VERSION_HEX < 0x030d00a4
 			err1(_PyLong_AsByteArray((PyLongObject *)i, outptr + 1, len_bytes, 1, 1) < 0);
+#else
+			err1(PyLong_AsNativeBytes(i, outptr + 1, len_bytes, 1) != len_bytes);
+#endif
 			*r_o = i;
 			return len_bytes + 1;
 err:
