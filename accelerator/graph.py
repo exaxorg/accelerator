@@ -2,6 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2024 Anders Berkeman                                       #
+# Modifications copyright (c) 2024 Carl Drougge                            #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -22,7 +23,7 @@ from collections import defaultdict
 from datetime import datetime
 from accelerator import JobWithFile, Job
 from accelerator.dataset import Dataset
-from accelerator.compat import unicode
+from accelerator.compat import unicode, FileNotFoundError
 
 MAXANGLE = 45 * pi / 180
 
@@ -90,6 +91,11 @@ class WrapperNode(unicode):
 		self.atmaxdepth = False  # Implemented in frontend but not in current backend.
 		self.is_build = False
 
+def try_subjobs(n):
+	try:
+		return n.payload.post.subjobs
+	except FileNotFoundError:
+		return {}
 
 class Graph:
 	def __init__(self, depsfun):
@@ -164,7 +170,7 @@ class Graph:
 				stack.append(dep)
 				dep.in_degrees += 1
 			if isinstance(current.payload, Job):
-				current.subjobs = set(self.get_or_create_node(Job(jid)) for jid in current.payload.post.subjobs.keys())
+				current.subjobs = set(self.get_or_create_node(Job(jid)) for jid in try_subjobs(current).keys())
 				for sjob in sorted(current.subjobs):
 					self.create_edge(current, sjob)
 					sjob.contextual_deps.add(current)
@@ -232,7 +238,7 @@ def create_graph(inputitem, urdinfo=()):
 		if isinstance(n.payload, Job):
 			n.files = sorted(n.payload.files())
 			n.datasets = sorted(n.payload.datasets)
-			n.subjobs = tuple((jid, Job(jid).method) for jid in n.payload.post.subjobs)
+			n.subjobs = tuple((jid, Job(jid).method) for jid in try_subjobs(n))
 			n.parent = njob.params.get('parent')
 			n.is_build = n.payload.params.get('is_build', False)
 			if urdinfo:

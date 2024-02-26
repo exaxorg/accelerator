@@ -151,7 +151,10 @@ class Job(unicode):
 
 	def files(self, pattern='*'):
 		from fnmatch import filter
-		return set(filter(self.post.files, pattern))
+		try:
+			return set(filter(self.post.files, pattern))
+		except FileNotFoundError:
+			return set()
 
 	def withfile(self, filename, sliced=False, extra=None):
 		return JobWithFile(self, filename, sliced, extra)
