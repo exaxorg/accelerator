@@ -871,6 +871,20 @@ static inline int convert_number_do(const char *inptr, char * const outptr_, con
 #else
 			err1(PyLong_AsNativeBytes(i, outptr + 1, len_bytes, 1) != len_bytes);
 #endif
+#if %(big_endian)d
+			if (len_bytes == 8) {
+				// We ended up not using the big encoding, so the number
+				// should be native endian. This can happen for numbers
+				// that are not accepted by strtol (for some other reason
+				// than size) but which PyNumber_Long does accept.
+				for (int ix = 1; ix < 5; ix++) {
+					// The first char is the length, swap [1:9].
+					unsigned char tmp = outptr[9 - ix];
+					outptr[9 - ix] = outptr[ix];
+					outptr[ix] = tmp;
+				}
+			}
+#endif
 			*r_o = i;
 			return len_bytes + 1;
 err:
@@ -1120,7 +1134,7 @@ protos = []
 funcs = [noneval_data]
 
 proto = proto_template % ('number',)
-code = convert_number_template % dict(proto=proto, strtol_f=strtol_f, longobj_f=longobj_f)
+code = convert_number_template % dict(proto=proto, strtol_f=strtol_f, longobj_f=longobj_f, big_endian=(sys.byteorder == 'big'))
 protos.append(proto + ';')
 funcs.append(code)
 
