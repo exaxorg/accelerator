@@ -578,6 +578,9 @@ td .spinner {
 	text-decoration: line-through;
 }
 
+#graph {
+	height: 400px;
+}
 #graphpopup {
 	background: var(--graphpopup-bg);
 	position: absolute;
@@ -597,4 +600,15 @@ td .spinner {
 }
 .gp-notice {
 	color: var(--graphpopup-notice);
+}
+#gp-method {
+	font-style: italic;
+	font-weight: bold;
+	text-align: center;
+}
+#gp-timestamp {
+	text-align: center;
+}
+#gp-help {
+	float: right;
 }

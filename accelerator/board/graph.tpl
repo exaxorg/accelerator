@@ -1,7 +1,7 @@
 <script language="javascript" src="{{ name2hashed['graph.js'] }}"></script>
 
 
-<div id="graph" class="box" style="height: 400px;">
+<div id="graph" class="box">
 	<script>
 		(function () {
 			const e = document.querySelector('#graph');
@@ -24,7 +24,7 @@
 
 
 <div id="graphpopup" class="box">
-	<div id="gp-method" style="font-style: italic; font-weight: bold; text-align: center"></div>
+	<div id="gp-method"></div>
 	<hr><br>
 	<div id="gp-atmaxdepth" style="display: none"><font color="var(--popup-atmaxdepth)">
 		<b>Affected by recursion limit,<br>not all edges drawn!<br>&nbsp</b>
@@ -63,6 +63,6 @@
 	% end
 	<br>
 	<hr>
-	<a id="gp-source">Source</a> &nbsp; <a id="gp-help" style="float: right;">Documentation</a>
-	<div id="gp-timestamp" style="text-align: center;"></div>
+	<a id="gp-source">Source</a> &nbsp; <a id="gp-help">Documentation</a>
+	<div id="gp-timestamp"></div>
 </div>
