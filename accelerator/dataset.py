@@ -1664,6 +1664,10 @@ class DatasetList(_ListTypePreserver):
 		"""
 		return len(self.with_column(column, types, none_support))
 
+	def filter(self, predicate):
+		"""Same list but only with datasets for which predicate(ds) is true."""
+		return self.__class__(ds for ds in self if predicate(ds))
+
 	def with_column(self, column, types=None, none_support=None):
 		"""Chain without any datasets that don't contain column.
 		Optionally only considers column to exists if it is of a desired type,
