@@ -1675,12 +1675,10 @@ class DatasetList(_ListTypePreserver):
 		"""
 		if isinstance(types, str_types):
 			types = (types,)
-		res = self.__class__()
-		for ds in self:
+		def predicate(ds):
 			col = ds.columns.get(column)
-			if col and (not types or col.type in types) and (none_support is None or col.none_support == none_support):
-				res.append(ds)
-		return res
+			return col and (not types or col.type in types) and (none_support is None or col.none_support == none_support)
+		return self.filter(predicate)
 
 	def none_support(self, column):
 		"""If any dataset in the chain has None support for this column"""
@@ -1692,15 +1690,13 @@ class DatasetList(_ListTypePreserver):
 
 	def range(self, colname, start=None, stop=None):
 		"""Filter out only datasets where colname has values in range(start, stop)"""
-		res = self.__class__()
-		for ds in self:
+		def predicate(ds):
 			if colname not in ds.columns:
 				raise DatasetUsageError('Dataset %s does not have column %r' % (ds.quoted, colname,))
 			col = ds.columns[colname]
 			if col.min is not None:
-				if (stop is None or col.min < stop) and (start is None or col.max >= start):
-					res.append(ds)
-		return res
+				return (stop is None or col.min < stop) and (start is None or col.max >= start)
+		return self.filter(predicate)
 
 
 class DatasetChain(DatasetList):
