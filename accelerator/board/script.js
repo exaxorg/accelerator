@@ -2,7 +2,7 @@ const parseANSI = (function () {
 	// Two digit hex str
 	const hex2 = (n) => ('0' + n.toString(16)).slice(-2);
 
-	// Make a CSS colour from an index or (24bit RGB << 8)
+	// Make a CSS colour from an index (or return string untouched).
 	function idx2colour(idx) {
 		if (typeof idx === 'string') return idx;
 		if (idx < 16) {
