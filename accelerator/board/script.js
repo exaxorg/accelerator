@@ -106,6 +106,30 @@ const parseANSI = (function () {
 				groups.finish_group();
 			}
 		};
+		const make_span = (text) => {
+			const span = document.createElement('SPAN');
+			if (settings.fg !== null || settings.bg !== null || settings.attr.size) {
+				let style = '';
+				let fg = settings.fg;
+				let bg = settings.bg;
+				// I couldn't find a way to do this in CSS, so workaround it is.
+				// I can't even find what the actual background is unless set here.
+				if (settings.attr.has(7)) {
+					bg = settings.fg;
+					if (bg === null) bg = 'var(--ansi-invert-bg)';
+					fg = settings.bg;
+					if (fg === null) fg = 'var(--ansi-invert-fg)';
+				}
+				if (fg !== null) style += 'color: ' + idx2colour(fg) + ';';
+				if (bg !== null) style += 'background: ' + idx2colour(bg) + ';';
+				if (style) span.style = style;
+				for (const a of settings.attr) {
+					span.classList.add('ansi-' + attr2name[a]);
+				}
+			}
+			span.innerText = text;
+			el.appendChild(span);
+		};
 		for (const part of parts.slice(1)) {
 			let group = [];
 			const groups = [group];
@@ -133,30 +157,7 @@ const parseANSI = (function () {
 					}
 				}
 			}
-			if (ix < part.length) {
-				const span = document.createElement('SPAN');
-				if (settings.fg !== null || settings.bg !== null || settings.attr.size) {
-					let style = '';
-					let fg = settings.fg;
-					let bg = settings.bg;
-					// I couldn't find a way to do this in CSS, so workaround it is.
-					// I can't even find what the actual background is unless set here.
-					if (settings.attr.has(7)) {
-						bg = settings.fg;
-						if (bg === null) bg = 'var(--ansi-invert-bg)';
-						fg = settings.bg;
-						if (fg === null) fg = 'var(--ansi-invert-fg)';
-					}
-					if (fg !== null) style += 'color: ' + idx2colour(fg) + ';';
-					if (bg !== null) style += 'background: ' + idx2colour(bg) + ';';
-					if (style) span.style = style;
-					for (const a of settings.attr) {
-						span.classList.add('ansi-' + attr2name[a]);
-					}
-				}
-				span.innerText = part.slice(ix);
-				el.appendChild(span);
-			}
+			if (ix < part.length) make_span(part.slice(ix));
 		}
 	}
 	return parseANSI;
