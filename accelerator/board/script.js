@@ -65,6 +65,33 @@ const parseANSI = (function () {
 		return null;
 	}
 
+	function split_params(s) {
+		let group = [];
+		const groups = [group];
+		let num = 0;
+		let ix = 0;
+		collect: for (const c of s) {
+			if (c >= '0' && c <= '9') {
+				num = num * 10 + parseInt(c, 10);
+			} else {
+				group.push(num);
+				num = 0;
+				switch (c) {
+					case ':':
+						break;
+					case ';':
+						group = [];
+						groups.push(group);
+						break;
+					default:
+						break collect;
+				}
+			}
+			ix += c.length; // of course a character can have length > 1
+		}
+		return [groups, ix];
+	}
+
 	// Parse SGR sequences in text, replace el contents with results.
 	function parseANSI(el, text) {
 		if (!text) return;
@@ -131,31 +158,10 @@ const parseANSI = (function () {
 			el.appendChild(span);
 		};
 		for (const part of parts.slice(1)) {
-			let group = [];
-			const groups = [group];
-			let num = 0;
-			let ix = 0;
-			collect: for (const c of part) {
-				ix += c.length; // of course a character can have length > 1
-				if (c >= '0' && c <= '9') {
-					num = num * 10 + parseInt(c, 10);
-				} else {
-					group.push(num);
-					num = 0;
-					switch (c) {
-						case ':':
-							break;
-						case ';':
-							group = [];
-							groups.push(group);
-							break;
-						case 'm':
-							apply(groups_iter(groups));
-							// fallthrough
-						default:
-							break collect;
-					}
-				}
+			let [groups, ix] = split_params(part);
+			if (part[ix] === 'm') {
+				apply(groups_iter(groups));
+				ix++;
 			}
 			if (ix < part.length) make_span(part.slice(ix));
 		}
