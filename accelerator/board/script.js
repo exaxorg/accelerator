@@ -92,10 +92,133 @@ const parseANSI = (function () {
 		return [groups, ix];
 	}
 
+	class Sixel {
+		constructor(sixeldata, trailing_text) {
+			this.sixeldata = sixeldata;
+			this.trailing_text = trailing_text;
+		}
+		draw2(dest) {
+			let xpos = 0;
+			let maxx = 0;
+			let ypos = 0;
+			let repeat_cnt = 1;
+			let repeat_mode = false;
+			const palette = {};
+			let colour_mode = false;
+			let colour_collect;
+			let r = 0, g = 0, b = 0;
+			for (const c of this.sixeldata) {
+				const cc = c.charCodeAt(0);
+				if (cc < 48 || cc > 57) {
+					repeat_mode = false;
+					if (colour_mode && c !== ';') {
+						colour_mode = false;
+						const ix = colour_collect[0];
+						if (colour_collect.length >= 5 && colour_collect[1] === 2) {
+							palette[ix] = [
+								(colour_collect[2] * 2.55) & 255,
+								(colour_collect[3] * 2.55) & 255,
+								(colour_collect[4] * 2.55) & 255,
+							];
+						}
+						if (palette[ix]) [r, g, b] = palette[ix];
+					}
+				}
+				if (repeat_mode) {
+					repeat_cnt = (repeat_cnt * 10) + cc - 48;
+				} else if (colour_mode) {
+					if (c === ';') {
+						colour_collect.push(0);
+					} else {
+						colour_collect[colour_collect.length - 1] = (colour_collect[colour_collect.length - 1] * 10) + cc - 48;
+					}
+				} else if (cc >= 63 && cc <= 126) {
+					if (dest && xpos < dest.width) {
+						const bits = cc - 63;
+						let offset = dest.width * ypos * 4;
+						for (let y = 0; y < 6; y++) {
+							if (bits & (1 << y)) {
+								const start = xpos * 4 + offset;
+								const xend = Math.min(xpos + repeat_cnt, dest.width);
+								const end = xend * 4 + offset;
+								for (let off = start; off < end; ) {
+									dest.data[off++] = r;
+									dest.data[off++] = g;
+									dest.data[off++] = b;
+									dest.data[off++] = 255;
+								}
+							}
+							offset += dest.width * 4;
+						}
+					}
+					xpos += repeat_cnt;
+					repeat_cnt = 1;
+				} else if (c === '!') {
+					repeat_mode = true;
+					repeat_cnt = 0;
+				} else if (c === '#') {
+					colour_collect = [0];
+					colour_mode = true;
+				} else if (c === '$' || c === '-') {
+					maxx = Math.max(maxx, xpos);
+					xpos = 0;
+					if (c === '-') {
+						ypos += 6;
+						if (dest && dest.height <= ypos) break;
+					}
+				}
+			}
+			if (xpos) ypos += 6;
+			return [maxx, ypos];
+		}
+		draw() {
+			const canvas = document.createElement('CANVAS');
+			const [width, height] = this.draw2(null);
+			canvas.width = width;
+			canvas.height = height;
+			const ctx = canvas.getContext('2d');
+			const dest = ctx.createImageData(width, height);
+			this.draw2(dest);
+			ctx.putImageData(dest, 0, 0);
+			return canvas;
+		}
+	}
+
+	function split_sixel(s) {
+		let pos = 0;
+		const end = s.indexOf('\x1b\\');
+		if (end === -1) return ['', s];
+		// Skip initial (useless) parameters, up until "q" or failure.
+		for (const c of s) {
+			pos++;
+			if (c === 'q') return [s.slice(pos, end), s.slice(end + 2)];
+			if (c === ';' || '0123456789'.indexOf(c) >= 0) continue;
+			break; // Unknown character, give up.
+		}
+		return ['', s];
+	}
+
+	function find_sixels(a) {
+		const res = [];
+		for (const s of a) {
+			const parts = s.split('\x1bP');
+			res.push(parts[0]);
+			for (const sixeldata of parts.slice(1)) {
+				const [sixel_part, tail_part] = split_sixel(sixeldata);
+				if (sixel_part) {
+					res.push(new Sixel(sixel_part, tail_part))
+				} else {
+					res.push(tail_part);
+				}
+			}
+		}
+		return res;
+	}
+
 	// Parse SGR sequences in text, replace el contents with results.
 	function parseANSI(el, text) {
 		if (!text) return;
-		const parts = text.split('\x1b[');
+		const parts = find_sixels(text.split('\x1b['));
 		el.innerText = parts[0];
 		const attr2name = [null, 'bold', 'faint', 'italic', 'underline', 'blink-slow', 'blink-fast', 'invert', 'hide', 'strike'];
 		const reset_extra = {1: 2, 2: 1, 5: 6, 6: 5};
@@ -158,12 +281,17 @@ const parseANSI = (function () {
 			el.appendChild(span);
 		};
 		for (const part of parts.slice(1)) {
-			let [groups, ix] = split_params(part);
-			if (part[ix] === 'm') {
-				apply(groups_iter(groups));
-				ix++;
+			if (part instanceof Sixel) {
+				el.appendChild(part.draw());
+				if (part.trailing_text) make_span(part.trailing_text);
+			} else {
+				let [groups, ix] = split_params(part);
+				if (part[ix] === 'm') {
+					apply(groups_iter(groups));
+					ix++;
+				}
+				if (ix < part.length) make_span(part.slice(ix));
 			}
-			if (ix < part.length) make_span(part.slice(ix));
 		}
 	}
 	return parseANSI;

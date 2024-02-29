@@ -601,6 +601,9 @@ td .spinner {
 .ansi-strike {
 	text-decoration: line-through;
 }
+canvas {
+	display: block;
+}
 
 #graph {
 	height: 400px;
