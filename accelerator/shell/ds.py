@@ -26,6 +26,7 @@ import locale
 from datetime import datetime, time, date
 from math import ceil, floor, log10, isinf, isnan
 
+from accelerator.compat import fmt_num
 from accelerator.compat import terminal_size
 from .parser import name2ds, name2job, ArgumentParser
 from accelerator.colourwrapper import colour
@@ -143,7 +144,7 @@ def main(argv, cfg):
 						lines = sum(sum(x.lines) for x in ds.chain())
 					else:
 						lines = sum(ds.lines)
-					v.append((ds.quoted, '{:n}'.format(lines)))
+					v.append((ds.quoted, fmt_num(lines)))
 				len_n, len_l = colwidth(v)
 				template = "{0:%d}  ({1:>%d})" % (len_n, len_l)
 				for name, numlines in sorted(v):
@@ -240,8 +241,8 @@ def main(argv, cfg):
 					except Exception:
 						# source job might be deleted
 						pass
-			print("    {0:n} columns".format(len(ds.columns)))
-		print("    {0:n} lines".format(sum(ds.lines)))
+			print("    {0} columns".format(fmt_num(len(ds.columns))))
+		print("    {0} lines".format(fmt_num(sum(ds.lines))))
 
 		if ds.previous or args.chain:
 			chain = ds.chain()
@@ -251,25 +252,25 @@ def main(argv, cfg):
 				if in_job == len(chain):
 					in_job = ' (all within job)'
 				else:
-					in_job = ' ({0:n} within job)'.format(in_job)
+					in_job = ' ({0} within job)'.format(fmt_num(in_job))
 			else:
 				in_job = ''
-			print("    {0} length {1:n}{2}, from {3} to {4}".format(full_name, len(chain), in_job, chain[0], chain[-1]))
+			print("    {0} length {1}{2}, from {3} to {4}".format(full_name, fmt_num(len(chain)), in_job, chain[0], chain[-1]))
 			if args.non_empty_chain:
 				chain = [ds for ds in chain if sum(ds.lines)]
-				print("    Filtered chain length {0:n}".format(len(chain)))
+				print("    Filtered chain length {0}".format(fmt_num(len(chain))))
 			if args.chain:
-				data = tuple((ix, "%s/%s" % (x.job, x.name), "{:n}".format(sum(x.lines))) for ix, x in enumerate(chain))
+				data = tuple((ix, "%s/%s" % (x.job, x.name), fmt_num(sum(x.lines))) for ix, x in enumerate(chain))
 				max_n, max_l = colwidth(x[1:] for x in data)
 				template = "{0:3}: {1:%d} ({2:>%d})" % (max_n, max_l)
 				printcolwise(data, template, lambda x: (x[0], x[1], x[2]), minrows=8, indent=8)
 
 		if args.slices or args.chainedslices:
 			if args.chainedslices and ds.previous:
-				data = ((ix, '{:n}'.format(sum(x)), sum(x)) for ix, x in enumerate(zip(*(x.lines for x in ds.chain()))))
+				data = ((ix, fmt_num(sum(x)), sum(x)) for ix, x in enumerate(zip(*(x.lines for x in ds.chain()))))
 				print('    Balance, lines per slice, full chain:')
 			else:
-				data = ((ix, '{:n}'.format(x), x) for ix, x in enumerate(ds.lines))
+				data = ((ix, fmt_num(x), x) for ix, x in enumerate(ds.lines))
 				if ds.previous:
 					print('    Balance, lines per slice, tip dataset:')
 				else:
@@ -282,6 +283,6 @@ def main(argv, cfg):
 			print("    Max to average ratio: " + locale.format_string("%2.3f", (max(x[2] for x in data) / ((s or 1e20) / len(data)),) ))
 
 		if ds.previous:
-			print("    {0:n} total lines in chain".format(sum(sum(ds.lines) for ds in chain)))
+			print("    {0} total lines in chain".format(fmt_num(sum(sum(ds.lines) for ds in chain))))
 
 	finish(badinput)
