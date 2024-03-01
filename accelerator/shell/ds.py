@@ -23,7 +23,6 @@ from __future__ import division, print_function
 
 import sys
 import locale
-from datetime import datetime, time, date
 from math import ceil
 
 from accelerator.compat import fmt_num, num_types
@@ -33,7 +32,6 @@ from accelerator.colourwrapper import colour
 from accelerator.error import NoSuchWhateverError
 from accelerator.extras import quote
 
-MINMAXWIDTH = 13 # minimum number of characters reserved for min/max values
 COLUMNS, LINES = terminal_size()
 
 
@@ -177,19 +175,6 @@ def main(argv, cfg):
 		if ds.hashlabel is not None:
 			print("    Hashlabel:", quote(ds.hashlabel))
 
-		def prettyminmax(minval, maxval):
-			if args.suppress_minmax:
-				return ''
-			s = '[%%%ds, %%%ds]' % (MINMAXWIDTH, MINMAXWIDTH)
-			if minval is None:
-				return ''
-			elif isinstance(minval, num_types):
-				return s % (fmt_num(minval), fmt_num(maxval))
-			elif isinstance(minval, (date, time, datetime)):
-				return s % (minval, maxval)
-			else:
-				return s % (minval, maxval)
-
 		if not args.suppress_columns:
 			print("    Columns:")
 			name2typ = {n: c.type + '+None' if c.none_support else c.type for n, c in ds.columns.items()}
@@ -203,10 +188,24 @@ def main(argv, cfg):
 				template = '        {2} {0:%d}  {1:%d}  {3}' % (len_n, len_t,)
 				locations = {}
 			chain = ds.chain(-1 if args.chainedslices or args.chain else 1)
-			for n, c in sorted(ds.columns.items()):
+
+			def fmt_minmax(val):
+				if isinstance(val, num_types):
+					return fmt_num(val)
+				else:
+					return str(val)
+			minlen = max(len(fmt_minmax(chain.min(n))) for n in ds.columns)
+			maxlen = max(len(fmt_minmax(chain.max(n))) for n in ds.columns)
+			minmax_template = '[%%%ds, %%%ds]' % (min(18, minlen), min(18, maxlen),)
+			def prettyminmax(n):
 				minval, maxval = chain.min(n), chain.max(n)
+				if args.suppress_minmax or minval is None:
+					return ''
+				return minmax_template % (fmt_minmax(minval), fmt_minmax(maxval),)
+
+			for n, c in sorted(ds.columns.items()):
 				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
-				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), format_location(locations.get(n)), c.compression).rstrip())
+				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(n), format_location(locations.get(n)), c.compression).rstrip())
 				if args.location:
 					try:
 						tf = typed_from(ds, locations[n])
