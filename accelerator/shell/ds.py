@@ -202,14 +202,9 @@ def main(argv, cfg):
 			else:
 				template = '        {2} {0:%d}  {1:%d}  {3}' % (len_n, len_t,)
 				locations = {}
-			chain = False
-			if args.chainedslices or args.chain:
-				chain = ds.chain()
+			chain = ds.chain(-1 if args.chainedslices or args.chain else 1)
 			for n, c in sorted(ds.columns.items()):
-				if chain:
-					minval, maxval = chain.min(n), chain.max(n)
-				else:
-					minval, maxval = c.min, c.max
+				minval, maxval = chain.min(n), chain.max(n)
 				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
 				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(minval, maxval), format_location(locations.get(n)), c.compression).rstrip())
 				if args.location:
