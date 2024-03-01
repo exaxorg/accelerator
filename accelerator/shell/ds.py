@@ -24,9 +24,9 @@ from __future__ import division, print_function
 import sys
 import locale
 from datetime import datetime, time, date
-from math import ceil, floor, log10, isinf, isnan
+from math import ceil
 
-from accelerator.compat import fmt_num
+from accelerator.compat import fmt_num, num_types
 from accelerator.compat import terminal_size
 from .parser import name2ds, name2job, ArgumentParser
 from accelerator.colourwrapper import colour
@@ -183,29 +183,8 @@ def main(argv, cfg):
 			s = '[%%%ds, %%%ds]' % (MINMAXWIDTH, MINMAXWIDTH)
 			if minval is None:
 				return ''
-			elif isinstance(minval, float):
-				def intdigits(x):
-					if isinf(x) or isnan(x):
-						return 3
-					return min(MINMAXWIDTH - 2, floor(log10(abs(x)) + 1)) if x else (MINMAXWIDTH - 2)//2
-				ints = max(intdigits(minval), intdigits(maxval))
-				if ints > 0:
-					format = "%% %d.%df" % (ints, MINMAXWIDTH - ints - 2)
-				elif ints < -4:
-					format = "%% .%de" % (MINMAXWIDTH - 7,)
-				else:
-					format = "%% .%df" % (MINMAXWIDTH - 3,)
-				def format_or_int(v):
-					try:
-						i = int(v)
-						if v == i:
-							return i
-					except (OverflowError, ValueError):
-						pass
-					return locale.format_string(format, v)
-				return s % (format_or_int(minval), format_or_int(maxval))
-			elif isinstance(minval, int):
-				return s % (minval, maxval)
+			elif isinstance(minval, num_types):
+				return s % (fmt_num(minval), fmt_num(maxval))
 			elif isinstance(minval, (date, time, datetime)):
 				return s % (minval, maxval)
 			else:
