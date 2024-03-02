@@ -6,7 +6,7 @@
 		% for thing in ('timestamp', 'user', 'build', 'caption',):
 			<tr><td>{{ thing }}</td><td id="urd-{{ thing }}">{{ entry.pop(thing) }}</td></tr>
 		% end
-		% for thing in sorted(entry):
+		% for thing, value in sorted(entry.items()):
 			% if thing not in ('joblist', 'deps',):
 				<tr><td>{{ thing }}</td><td>{{ value }}</td></tr>
 			% end
