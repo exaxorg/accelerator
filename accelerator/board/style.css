@@ -100,6 +100,25 @@
 		--ansi-15: #fff;
 		--ansi-invert-fg: #3a2b1a;
 		--ansi-invert-bg: #cde;
+
+		--graphnode-job-default: #57f;
+		--graphnode-job-top: #13e;
+		--graphnode-ds-default: #83a;
+		--graphnode-ds-top: #628;
+		--graphnode-highlight: #381;
+		--graphnode-highlight2: #592;
+		--graphnode-nourdlist: #286;
+		--graphnode-inanotherurdlist: #555;
+		--graphnode-atmaxdepth: #b41;
+		--graph-fg: #ddc;
+		--graph-edge: #ddc;
+		--graph-subjobedge: #595;
+		--graph-edgetext: #7cf;
+
+		--graphpopup-notice: #f64;
+		--graphpopup-bg: #222;
+		--graphpopup-border: #125;
+		--graphpopup-shadow: #27a;
 	}
 }
 
