@@ -8,8 +8,8 @@
 % topnodesize = 39
 % textrowspace = 15
 % fontsize = 12
-% edgetextcolor = '#224488'
-% edgefontsize = 9
+% edgetextcolor = 'var(--graph-edgetext)'
+% edgefontsize = 'var(--graph-edgefontsize)'
 %
 % it = iter(nodes.values())
 % n = next(it)
@@ -28,7 +28,7 @@
 		cx="{{ item.x }}"
 		cy="{{ item.y }}"
 		r="{{ item.size }}"
-		stroke="black"
+		stroke="var(--graph-fg)"
 		stroke-width="2"
 		fill="var({{ item.color }})"
 		fill-opacity="100%"
@@ -44,13 +44,13 @@
 		cy="{{ item.y }}"
 		fill="none"
 		r="{{ item.size - 3.4 }}"
-		stroke="black"
+		stroke="var(--graph-fg)"
 		stroke-width="2"
 		fill-opacity="100%"
 	/>
 	% end
 	% if type == 'job':
-	<text x="{{ item.x }}" y="{{ item.y + 5 }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + 5 }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		{{ ''.join(('D' if item.datasets else '', 'F' if item.files else '', 'S' if item.subjobs else '')) }}
 	</text>
 	% end
@@ -78,10 +78,10 @@
 			{{ dumps(item.is_build) }}
 		)"
 	/>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/job/' + url_quote(item.jobid) }}">{{ item.jobid }}</a>
 	</text>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/job/' + url_quote(item.jobid) +'/method.tar.gz/' }}">{{ item.name }}</a>
 	</text>
 	% else:
@@ -96,19 +96,19 @@
 			{{ dumps(item.is_build) }}
 		)"
 	/>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/dataset/' + url_quote(item.ds) }}">{{ item.ds }}</a>
 	</text>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/job/' + url_quote(item.jobid) +'/method.tar.gz/' }}">{{ item.name }}</a>
 	</text>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 3 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="black">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 3 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		{{ item.lines }}
 	</text>
 	% end
 % end
 
-% def renderedge(src, dst, stroke='black', width='2'):
+% def renderedge(src, dst, stroke='var(--graph-edge)', width='2'):
 %	srcnode = nodes[src]
 %	dstnode = nodes[dst]
 %	srcx, srcy = srcnode.x, srcnode.y
@@ -123,7 +123,7 @@
 %	y1 = dsty - arrowlen * sin(a + arrowangle)
 %	x2 = dstx - arrowlen * cos(a - arrowangle)
 %	y2 = dsty - arrowlen * sin(a - arrowangle)
-		<polygon points="{{ dstx }},{{ dsty }} {{ x1 }},{{ y1 }} {{ x2 }},{{ y2 }}" stroke="{{ stroke }}" stroke-width="{{ width }}"/>
+		<polygon points="{{ dstx }},{{ dsty }} {{ x1 }},{{ y1 }} {{ x2 }},{{ y2 }}" stroke="{{ stroke }}" fill="{{ stroke }}" stroke-width="{{ width }}"/>
 %	return srcx, srcy, a
 % end
 
@@ -175,7 +175,7 @@
 %	for src, dst in subjob_edges:
 %		key = src + dst
 	<g id="{{ key + '_subjob' }}">
-%		renderedge(src, dst, "#aaeeaa", "8")
+%		renderedge(src, dst, "var(--graph-subjobedge)", "8")
 	</g>
 %	end
 
@@ -183,7 +183,7 @@
 %	for src, dst, relation in edges:
 %		key = src + dst
 	<g id="{{ key }}">
-%		srcx, srcy, a = renderedge(src, dst, "black", "2")
+%		srcx, srcy, a = renderedge(src, dst)
 %		mx = srcx + 4 * cos(a) - 6 * sin(a)
 %		my = srcy + 4 * sin(a) + 6 * cos(a)
 		<text x="{{ mx }}" y="{{ my }}" transform="rotate({{ a * 180 / pi + 180 }}, {{ mx }}, {{ my }})" text-anchor="end" font-size="{{ edgefontsize }}" fill="{{ edgetextcolor }}">

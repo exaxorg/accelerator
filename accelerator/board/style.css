@@ -50,6 +50,11 @@
 	--graphnode-nourdlist: #3c8;
 	--graphnode-inanotherurdlist: #ccc;
 	--graphnode-atmaxdepth: #c52;
+	--graph-fg: #222;
+	--graph-edge: #222;
+	--graph-subjobedge: #aea;
+	--graph-edgetext: #248;
+	--graph-edgefontsize: 9px;
 
 	--graphpopup-notice: #c64;
 	--graphpopup-bg: #fff;
