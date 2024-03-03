@@ -109,7 +109,7 @@ def main(argv, cfg):
 	parser.add_argument('-q', '--suppress-errors',  action='store_true', negation='dont', help='silently ignores bad input datasets/jobids')
 	parser.add_argument('-s', '--slices',           action='store_true', negation='no',   help='list relative number of lines per slice in sorted order')
 	parser.add_argument('-S', '--chainedslices',    action='store_true', negation='no',   help='same as -s but for full chain')
-	parser.add_argument('-w', '--location',         action='store_true', negation='no',   help='show where (ds/filename) each column is stored')
+	parser.add_argument('-w', '--location',         action='store_true', negation='no',   help='show original location of each column')
 	parser.add_argument("dataset", nargs='+', help='the job part of the dataset name can be specified in the same ways as for "ax job". you can use ds~ or ds~N to follow the chain N steps backwards, or ^ to follow .parent. this requires specifying the ds-name, so wd-1~ will not do this, but wd-1/default~ will.')
 	args = parser.parse_intermixed_args(argv)
 	args.chain = args.chain or args.non_empty_chain
