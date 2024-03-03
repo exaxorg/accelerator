@@ -173,7 +173,21 @@ const parseANSI = (function () {
 		}
 		draw() {
 			const canvas = document.createElement('CANVAS');
-			const [width, height] = this.draw2(null);
+			let width = 0;
+			let height = 0;
+			if (this.sixeldata[0] === '"') { // Raster Attributes
+				const groups = split_params(this.sixeldata.slice(1))[0];
+				if (groups.length >= 4) {
+					// We will truncate anything outside the defined size,
+					// because that works with how these are used these days.
+					width = groups[2][0] || 0;
+					height = groups[3][0] || 0;
+				}
+			}
+			if (width < 1 || height < 1) {
+				// No size from Raster Attributes, dummy decode the image to find out the size.
+				[width, height] = this.draw2(null);
+			}
 			canvas.width = width;
 			canvas.height = height;
 			const ctx = canvas.getContext('2d');
