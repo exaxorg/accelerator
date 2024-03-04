@@ -238,15 +238,15 @@ def extract_riff(fh):
 			fh.seek(1, 1)
 
 
-def generate_isom(fh, job, size):
-	fh.seek(0)
+def generate_isom(fh, job, size, pos=0):
+	fh.seek(pos)
 	data = fh.read(8)
 	if len(data) != 8:
 		return
 	z, fourcc = struct.unpack('>II', data)
 	if fourcc != 0x66747970: # "ftyp"
 		return
-	pos = z
+	pos += z
 	while True:
 		if pos == size:
 			# Found the end of the file without problems, let's put our data here.
@@ -263,15 +263,15 @@ def generate_isom(fh, job, size):
 		z, fourcc = struct.unpack('>II', data)
 		pos += z
 
-def extract_isom(fh):
-	fh.seek(0)
+def extract_isom(fh, pos=0):
+	fh.seek(pos)
 	data = fh.read(8)
 	if len(data) != 8:
 		return
 	z, fourcc = struct.unpack('>II', data)
 	if fourcc != 0x66747970: # "ftyp"
 		return
-	pos = z
+	pos += z
 	while True:
 		fh.seek(pos)
 		data = fh.read(8)
@@ -356,6 +356,37 @@ def extract_pdf(fh):
 		pos = data.find(signature, pos + 1)
 
 
+def generate_jxl_naked(fh, job, size):
+	fh.seek(0)
+	data = fh.read(2)
+	if data != b'\xff\x0a':
+		return
+	# Naked JPEG XL does not allow extra blocks, so we have to box it.
+	header = b'\0\0\0\x0cJXL \r\n\x87\n\0\0\0\x14ftypjxl \0\0\0\0jxl ' + \
+		struct.pack('>I', size + 8) + b'jxlc'
+	payload = job_metadata(job)
+	data = struct.pack('>I', len(payload) + 8) + b'ExAx' + payload
+	return [
+		(header, len(header)),
+		(0, size),
+		(data, len(data)),
+	]
+
+def generate_jxl_boxed(fh, job, size):
+	fh.seek(0)
+	data = fh.read(12)
+	if data != b'\0\0\0\x0cJXL \r\n\x87\n':
+		return
+	return generate_isom(fh, job, size, 12)
+
+def extract_jxl(fh):
+	fh.seek(0)
+	data = fh.read(12)
+	if data != b'\0\0\0\x0cJXL \r\n\x87\n':
+		return
+	return extract_isom(fh, 12)
+
+
 formats = [
 	(
 		'PNG', None, generate_png, extract_png,
@@ -391,6 +422,16 @@ formats = [
 		'PDF', '.pdf', generate_pdf, extract_pdf,
 		re.compile(br'%PDF-\d\.\d'),
 		re.compile(br'.*[\r\n]%%EOF[\r\n]*$', re.DOTALL),
+	),
+	(
+		'JPEG XL (naked codestream)', '.jxl', generate_jxl_naked, None,
+		b'\xff\x0a',
+		b'',
+	),
+	(
+		'JPEG XL (boxed)', None, generate_jxl_boxed, extract_jxl,
+		re.compile(b'\0\0\0\x0cJXL \r\n\x87\n\0...ftyp', re.DOTALL),
+		b'',
 	),
 ]
 
@@ -444,6 +485,8 @@ def extract_metadata(filename, fh):
 	size = fh.tell() + 20
 	end = fh.read(20)
 	for name, ext, generate, extract, header, trailer in formats:
+		if not extract:
+			continue
 		if ext and not filename.lower().endswith(ext):
 			continue
 		if header(start, size) and trailer(end, size):
