@@ -25,7 +25,7 @@ import sys
 
 from accelerator.colourwrapper import colour
 from accelerator.job import Job
-from accelerator.metadata import extract_metadata, b64hash
+from accelerator.metadata import extract_metadata, b64hash_setup
 from .parser import ArgumentParser
 
 
@@ -42,7 +42,7 @@ def validate(data):
 			warnings.append("path mismatch (%r != %r)" % (job.path, data.job,))
 	else:
 		warnings.append("unknown job")
-	h = b64hash(data.job + '/setup.json')
+	h = b64hash_setup(data.job + '/setup.json')
 	if h != data.setup_hash:
 		if h:
 			warnings.append("does not match job on disk")

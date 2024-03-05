@@ -40,21 +40,24 @@ else:
 		return zlib.crc32(data) & 0xffffffff
 
 
-def b64hash(filename):
+def b64hash_setup(filename):
 	from base64 import b64encode
 	from hashlib import sha1
 	try:
 		with open(filename, 'rb') as fh:
-			return b64encode(sha1(fh.read()).digest(), b'_-').rstrip(b'=').decode('ascii')
+			data = fh.read()
 	except FileNotFoundError:
 		return None
+	# Try to remove the part that differs between finished and unfinished jobs.
+	data = data.split(b'\n\n', 1)[-1]
+	return b64encode(sha1(data).digest(), b'_-').rstrip(b'=').decode('ascii')
 
 def job_metadata(job):
 	d = {
 		'job': job.path,
 		'method': job.method,
 		'time': int(job.params.starttime), # who needs sub-second precision?
-		'setup_hash': b64hash(job.filename('setup.json')),
+		'setup_hash': b64hash_setup(job.filename('setup.json')),
 		'host': socket.gethostname(),
 	}
 	res = json.dumps(d)

@@ -177,6 +177,7 @@ def _encode_with_compact(data, compact_keys, extra_indent=0, separator='\n', spe
 	if compact:
 		res = '{\n%s%s%s' % ('\n'.join(compact), separator, res[1:],)
 	if special:
+		# It's important to have two newlines here, as b64hash_setup() relies on that.
 		res = '%s,\n\n%s\n}' % (res[:-2], ',\n'.join(special),)
 	res = res.replace('\n', ('\n' + ' ' * extra_indent * 4))
 	return res
