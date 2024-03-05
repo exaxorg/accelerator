@@ -109,6 +109,9 @@ def synthesis(job):
 		('c.pdf', b'%PDF-1.0\n% ExAx:' + extra_metadata + b'\nnotxref\n9\rstartxref\r\n9\r\n%%EOF', 26 + len(extra_metadata), b'}\nstartxref\r\n9\r\n%%EOF', True),
 		('d.pdf', b'%PDF-1.777\r\n% ExAx:' + extra_metadata + b'\nstartxref\r\n9ad\r%%EOF\r\n', 34 + len(extra_metadata), b'}\n%%EOF\r\n', True), # bad startxref - data after
 		('e.pdf', b'%PDF-3.9\n' + b'.' * 8000 + b'!\rstartxref\n17\n%%EOF\n', b'%PDF-3.9\n' + b'.' * 8000 + b'!\n% ExAx:{', b'}\nstartxref\n17\n%%EOF\n', False), # >4k
+		('a.jxl', b'\xff\x0a...naked JPEG XL...', b'\0\0\0\x0cJXL \r\n\x87\n\0\0\0\x14ftypjxl \0\0\0\0jxl \0\0\0\x1djxlc\xff\x0a...naked JPEG XL...', b'}', False),
+		('b.jxl', b'\0\0\0\x0cJXL \r\n\x87\n\0\0\0\x14ftypjxl \0\0\0\0jxl \0\0\0\x0ajxlc\xff\x0a', 42, b'}', False),
+		('c.jxl', b'\0\0\0\x0cJXL \r\n\x87\n\0\0\0\x14ftypjxl \0\0\0\0jxl \0\0\0\x0ajxlc\xff\x0a' + mk_meta('>I', b'ExAx', offset=4), 50 + len(extra_metadata), b'}', True),
 	]
 
 	for filename, contents, want_head, want_tail, has_extra_block in files:
