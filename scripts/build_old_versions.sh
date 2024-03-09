@@ -38,7 +38,7 @@ else
 fi
 /opt/python/cp37-cp37m/bin/pip install "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0"
 
-/accelerator/scripts/build_zlib-ng.sh
+/accelerator/scripts/build_zlib-ng.sh /zlib-ng 74253725f884e2424a0dd8ae3f69896d5377f325 # 2.1.6, no need to keep this updated.
 
 mkdir /tmp/old_versions
 cd /tmp/old_versions
