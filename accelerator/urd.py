@@ -220,6 +220,8 @@ class DB:
 				line[-1] = json.dumps(line[-1]) # caption is json encoded in v4
 		else:
 			assert logfileversion == '4', logfileversion
+		if line[2] == 'add' and len(line) < 10:
+			line.append('null')
 		self._parsed[writets] = line[2:]
 
 	def _playback_parsed(self):
@@ -244,6 +246,7 @@ class DB:
 			joblist=json.loads(line[3]),
 			flags=flags,
 			caption=json.loads(line[5]),
+			build_job=json.loads(line[6])
 		)
 		self.add(data)
 
@@ -253,9 +256,10 @@ class DB:
 
 	def _validate_data(self, data, with_deps=True):
 		if with_deps:
-			assert set(data) == {'timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'flags',}
+			assert set(data) == {'timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'flags', 'build_job',}
 			assert isinstance(data.user, unicode)
 			assert isinstance(data.build, unicode)
+			assert isinstance(data.build_job, unicode)
 			assert isinstance(data.deps, dict)
 			for v in itervalues(data.deps):
 				assert isinstance(v, dict)
@@ -273,12 +277,13 @@ class DB:
 			json_deps = json.dumps(data.deps)
 			json_joblist = json.dumps(data.joblist)
 			json_caption = json.dumps(data.caption)
+			json_build_job = json.dumps(data.build_job)
 			key = '%s/%s' % (data.user, data.build,)
 			flags = ','.join(data.flags)
 			for s in key, json_deps, json_joblist, json_caption, data.user, data.build, data.timestamp, flags:
 				assert '\t' not in s, s
 				assert '\n' not in s, s
-			logdata = [json_deps, json_joblist, flags, json_caption,]
+			logdata = [json_deps, json_joblist, flags, json_caption, json_build_job,]
 		elif action == 'truncate':
 			key = data.key
 			logdata = []

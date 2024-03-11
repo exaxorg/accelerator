@@ -76,23 +76,23 @@ def synthesis(job):
 	check('test/ing/since/0', ['2023-01', '2023-02', '2023-06'])
 	check('test/ing/since/2023-01-01', ['2023-02', '2023-06'])
 	check('test/ing/since/2023-02', ['2023-06'])
-	check('test/ing/first'  , dict(timestamp='2023-01', user='test', build='ing', joblist=[['something', 'job-0']], caption="it's a caption", deps={}))
-	check('test/ing/2023-01', dict(timestamp='2023-01', user='test', build='ing', joblist=[['something', 'job-0']], caption="it's a caption", deps={}))
-	check('test/two/2023-02', dict(timestamp='2023-02', user='test', build='two', joblist=[['something', 'job-1']], caption=r'"caption\nwithout escaping"', deps={}))
-	check('test/ing/2023-02', dict(timestamp='2023-02', user='test', build='ing', joblist=[['something', 'job-2']], caption='', deps={'test/ing': dict(caption="it's a caption", joblist=[['something', 'job-0']], timestamp='2023-01'), 'test/two': dict(caption=r'"caption\nwithout escaping"', joblist=[['something', 'job-1']], timestamp='2023-02')}))
-	check('test/ing/2023-06', dict(timestamp='2023-06', user='test', build='ing', joblist=[['something', 'job-3']], caption="caption\nwith lines\nand\ttab\nand \"quotes\" and | too", deps={}))
-	check('test/ing/latest' , dict(timestamp='2023-06', user='test', build='ing', joblist=[['something', 'job-3']], caption="caption\nwith lines\nand\ttab\nand \"quotes\" and | too", deps={}))
-	# Test not overriding, with keys in different order
-	check('add', dict(new=False, changed=False, is_ghost=False), b'{"timestamp": "2023-01", "user": "test", "build": "ing", "deps": {}, "joblist": [["something", "job-0"]], "caption": "it\'s a caption"}')
-	check('add', dict(new=False, changed=False, is_ghost=False), b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "it\'s a caption", "deps": {}, "joblist": [["something", "job-0"]]}')
+	check('test/ing/first'  , dict(timestamp='2023-01', user='test', build='ing', build_job=None, joblist=[['something', 'job-0']], caption="it's a caption", deps={}))
+	check('test/ing/2023-01', dict(timestamp='2023-01', user='test', build='ing', build_job=None, joblist=[['something', 'job-0']], caption="it's a caption", deps={}))
+	check('test/two/2023-02', dict(timestamp='2023-02', user='test', build='two', build_job=None, joblist=[['something', 'job-1']], caption=r'"caption\nwithout escaping"', deps={}))
+	check('test/ing/2023-02', dict(timestamp='2023-02', user='test', build='ing', build_job=None, joblist=[['something', 'job-2']], caption='', deps={'test/ing': dict(caption="it's a caption", joblist=[['something', 'job-0']], timestamp='2023-01'), 'test/two': dict(caption=r'"caption\nwithout escaping"', joblist=[['something', 'job-1']], timestamp='2023-02')}))
+	check('test/ing/2023-06', dict(timestamp='2023-06', user='test', build='ing', build_job=None, joblist=[['something', 'job-3']], caption="caption\nwith lines\nand\ttab\nand \"quotes\" and | too", deps={}))
+	check('test/ing/latest' , dict(timestamp='2023-06', user='test', build='ing', build_job=None, joblist=[['something', 'job-3']], caption="caption\nwith lines\nand\ttab\nand \"quotes\" and | too", deps={}))
+	# Test not overriding, with keys in different order and a build_job.
+	check('add', dict(new=False, changed=False, is_ghost=False), b'{"timestamp": "2023-01", "user": "test", "build": "ing", "deps": {}, "joblist": [["something", "job-0"]], "caption": "it\'s a caption", "build_job": "build_job-0"}')
+	check('add', dict(new=False, changed=False, is_ghost=False), b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "it\'s a caption", "deps": {}, "joblist": [["something", "job-0"]], "build_job": "build_job-0"}')
 	# Changing something should not be allowed.
 	try:
-		check('add', None, b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "new caption", "deps": {}, "joblist": [["something else", "job-0"]]}')
+		check('add', None, b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "new caption", "deps": {}, "joblist": [["something else", "job-0"]], "build_job": "build_job-1"}')
 		raise Exception("Changing should not be allowed without the update flag")
 	except UrdConflictError:
 		pass
 	# And now change something with the update flag
-	check('add', dict(new=False, changed=True, is_ghost=False, deps=1), b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "new caption", "deps": {}, "joblist": [["something else", "job-0"]], "flags": ["update"]}')
+	check('add', dict(new=False, changed=True, is_ghost=False, deps=1), b'{"user": "test", "build": "ing", "timestamp": "2023-01", "caption": "new caption", "deps": {}, "joblist": [["something else", "job-0"]], "flags": ["update"], "build_job": "build_job-1"}')
 	# And that should ghost the 2023-02 entry that depended on the old version
 	check('test/ing/since/0', ['2023-01', '2023-06'])
 
@@ -102,14 +102,14 @@ def synthesis(job):
 
 	# Try with a user mismatch
 	try:
-		check('add', dict(new=True, changed=False, is_ghost=False), b'{"user": "wrong", "build": "ing", "timestamp": "2023-06-01", "caption": "", "deps": {}, "joblist": [["something", "job-0"]]}')
+		check('add', dict(new=True, changed=False, is_ghost=False), b'{"user": "wrong", "build": "ing", "timestamp": "2023-06-01", "caption": "", "deps": {}, "joblist": [["something", "job-0"]], "build_job": "build_job-1"}')
 		raise Exception("Wrong user was accepted")
 	except UrdPermissionError:
 		pass
 	# And with the wrong password
 	headers['Authorization'] = 'Basic dGVzdDpwYXxx'
 	try:
-		check('add', dict(new=True, changed=False, is_ghost=False), b'{"user": "test", "build": "ing", "timestamp": "2023-06-01", "caption": "", "deps": {}, "joblist": [["something", "job-0"]]}')
+		check('add', dict(new=True, changed=False, is_ghost=False), b'{"user": "test", "build": "ing", "timestamp": "2023-06-01", "caption": "", "deps": {}, "joblist": [["something", "job-0"]], "build_job": "build_job-1"}')
 		raise Exception("Wrong password was accepted")
 	except UrdPermissionError:
 		pass
@@ -120,7 +120,7 @@ def synthesis(job):
 	with open('urd.db/test/ing.urd', 'r', encoding='ascii') as fh:
 		assert fh.read(len(TEST_LOG_ing)) == TEST_LOG_ing
 		want_it = iter([
-			'add\t2023-01\ttest/ing\t{}\t[["something else", "job-0"]]\tupdate\t"new caption"\n',
+			'add\t2023-01\ttest/ing\t{}\t[["something else", "job-0"]]\tupdate\t"new caption"\t"build_job-1"\n',
 			'truncate\t2023-02\ttest/ing\n',
 			'END'
 		])

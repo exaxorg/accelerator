@@ -386,6 +386,7 @@ class UrdResponse(dict):
 		d.setdefault('timestamp', '0')
 		d.setdefault('joblist', JobList())
 		d.setdefault('deps', {})
+		d.setdefault('build_job', None)
 		dict.__init__(self, d)
 
 	__setitem__ = dict.__setitem__
@@ -565,6 +566,7 @@ class Urd(object):
 			deps=self._deps,
 			caption=caption,
 			timestamp=timestamp,
+			build_job=g.job,
 		)
 		if self._update:
 			data.flags = ['update']
