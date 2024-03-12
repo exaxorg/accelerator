@@ -6,6 +6,10 @@
 		% for thing in ('timestamp', 'user', 'build', 'caption',):
 			<tr><td>{{ thing }}</td><td id="urd-{{ thing }}">{{ entry.pop(thing) }}</td></tr>
 		% end
+		% if entry.build_job:
+			<tr><td>build_job</td><td id="urd-build_job"><a href="/job/{{ url_quote(entry.build_job) }}">{{ entry.build_job }}</a></td></tr>
+		% end
+		% entry.pop('build_job')
 		% for thing, value in sorted(entry.items()):
 			% if thing not in ('joblist', 'deps',):
 				<tr><td>{{ thing }}</td><td>{{ value }}</td></tr>
