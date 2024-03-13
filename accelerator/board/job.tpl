@@ -144,8 +144,8 @@
 					})
 					.then(text => {
 						el.appendChild(h3);
-						parseANSI(pre, text);
 						el.appendChild(pre);
+						parseANSI(pre, text);
 						el.className = '';
 					})
 					.catch(error => {

@@ -230,6 +230,7 @@ const parseANSI = (function () {
 	}
 
 	// Parse SGR sequences in text, replace el contents with results.
+	// May add extra elements after el, so el must have a parent.
 	function parseANSI(el, text) {
 		if (!text) return;
 		const parts = find_sixels(text.split('\x1b['));
@@ -296,7 +297,10 @@ const parseANSI = (function () {
 		};
 		for (const part of parts.slice(1)) {
 			if (part instanceof Sixel) {
-				el.appendChild(part.draw());
+				const sixel_el = part.draw();
+				el.insertAdjacentElement('afterend', sixel_el);
+				el = document.createElement('PRE');
+				sixel_el.insertAdjacentElement('afterend', el);
 				if (part.trailing_text) make_span(part.trailing_text);
 			} else {
 				let [groups, ix] = split_params(part);
