@@ -22,6 +22,8 @@ CONTAINERS=(manylinux_2_28_{x86_64,aarch64} manylinux2014_i686 manylinux2010_{x8
 
 # Adjust the paths to suit you.
 # /out must have old_versions.*.tar.gz and wheelhouse/ in it.
+# The size needed in /tmp is mostly for the workdirs during the tests.
+# This is currently slightly less than 1G with 4k pages, slightly more than 2G with 16k pages.
 DOCKER_ARGS=(-it -v ~/axbuild:/out:rw -v ~/axbuild/accelerator:/accelerator:ro --tmpfs "/tmp:exec,size=3G")
 
 if [[ "$1" = "update" ]]; then
