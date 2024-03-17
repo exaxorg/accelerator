@@ -434,9 +434,13 @@ def main(argv, config):
 	os.environ['BD_STATUS_FD'] = str(statmsg_wr.fileno())
 	def buf_up(fh, opt):
 		sock = socket.fromfd(fh.fileno(), socket.AF_UNIX, socket.SOCK_DGRAM)
-		sock.setsockopt(socket.SOL_SOCKET, opt, 256 * 1024)
-		# does not close fh, because fromfd dups the fd (but not the underlying socket)
-		sock.close()
+		try:
+			sock.setsockopt(socket.SOL_SOCKET, opt, 256 * 1024)
+		except OSError:
+			pass
+		finally:
+			# does not close fh, because fromfd dups the fd (but not the underlying socket)
+			sock.close()
 	buf_up(statmsg_wr, socket.SO_SNDBUF)
 	buf_up(statmsg_rd, socket.SO_RCVBUF)
 
