@@ -146,10 +146,12 @@ def synthesis(job, slices):
 		return siphash24(enc)
 
 	# Test some actual values to be the expected ones.
-	# Don't hard code anything that doesn't use the big encoding, as that is
-	# endian dependant.
+	# Don't hard code anything that doesn't use the big encoding, as not
+	# only the hash value but the hashed data is endian dependant there.
 	dw_hash = typed_writer('number').hash
-	assert dw_hash(0xBEEFC0DEBEEFC0DEBEEFC0DE1337) == 0x938a366370bb5bb5
+	def endianfix(v):
+		return struct.unpack('<Q', struct.pack('=Q', v))[0]
+	assert endianfix(dw_hash(0xBEEFC0DEBEEFC0DEBEEFC0DE1337)) == 0x938a366370bb5bb5
 	# But the special cased 0 values are ok to test.
 	assert dw_hash(0) == 0
 	assert dw_hash(0.0) == 0
