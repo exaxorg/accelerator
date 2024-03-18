@@ -222,6 +222,8 @@ def load_methods(all_packages, data):
 					return repr(v)
 			for name, default in (('options', {},), ('datasets', (),), ('jobs', (),),):
 				params[name] = d = getattr(mod, name, default)
+				if not isinstance(d, type(default)):
+					raise MsgException("%s should be a %s" % (name, type(default).__name__,))
 				if d:
 					items = {v[0] if isinstance(v, list) else v for v in params[name]}
 					if isinstance(d, dict):
