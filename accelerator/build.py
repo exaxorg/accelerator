@@ -88,12 +88,8 @@ class Automata:
 
 	def _reset(self):
 		self.job_method = None
-		self.clear_record()
+		self.joblist = JobList()
 		self._all_record = {}
-
-	def clear_record(self):
-		self.record = defaultdict(JobList)
-		self.jobs = self.record[None]
 
 	def _url_json(self, *path, **kw):
 		from accelerator.unixhttp import call
@@ -251,7 +247,7 @@ class Automata:
 	def list_workdirs(self):
 		return self._url_json('list_workdirs')
 
-	def call_method(self, method, options={}, datasets={}, jobs={}, record_in=None, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
+	def call_method(self, method, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
 		if method not in self._method_info:
 			raise BuildError('Unknown method %s' % (method,))
 		info = self._method_info[method]
@@ -282,7 +278,7 @@ class Automata:
 			print("Called from %s line %d" % (stk[1], stk[2],))
 			exit()
 		jid = Job(jid, record_as or method)
-		self.record[record_in].append(jid)
+		self.joblist.append(jid)
 		for d in res.jobs.values():
 			if d.link not in self._all_record:
 				self._all_record[d.link] = bool(d.make)
@@ -466,8 +462,11 @@ class Urd(object):
 		self._a._reset()
 		self._current = None
 		self.workdir = None
-		self.joblist = self._a.jobs
 		self._warnings = []
+
+	@property
+	def joblist(self):
+		return self._a.joblist
 
 	def _path(self, path):
 		if '/' not in path:
@@ -539,8 +538,7 @@ class Urd(object):
 		self._current_caption = caption
 		self._update = update
 		self._deps = {}
-		self._a.clear_record()
-		self.joblist = self._a.jobs
+		self._a.joblist = JobList()
 		self._latest_joblist = None
 
 	def abort(self):
