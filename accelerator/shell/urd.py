@@ -155,8 +155,9 @@ def fmt(res, entry):
 			deps = fmt_caption(*deps[0], indent=11 + len(deps[0][0]))
 	else:
 		deps = ''
-	return "timestamp: %s\ncaption  : %s\ndeps     : %s\n%s" % (
+	return "timestamp: %s\nbuild job: %s\ncaption  : %s\ndeps     : %s\n%s" % (
 		res['timestamp'],
+		res['build_job'],
 		fix_caption(res['caption'], 8),
 		deps,
 		joblist.pretty,
