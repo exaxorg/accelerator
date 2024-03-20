@@ -40,7 +40,7 @@ def build(method, options={}, datasets={}, jobs={}, name=None, caption=None, **k
 	if not _a:
 		_a = Automata(g.server_url, subjob_cookie=g.subjob_cookie)
 		_a.update_method_info()
-		_a.record[None] = _a.jobs = globals()['jobs']
+		_a.joblist = globals()['jobs']
 		_bad_kws = set(getarglist(_a.call_method))
 	bad_kws = _bad_kws & set(kw)
 	if bad_kws:

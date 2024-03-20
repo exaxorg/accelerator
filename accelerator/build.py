@@ -33,7 +33,7 @@ import time
 import traceback
 from operator import itemgetter
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, timedelta
 from base64 import b64encode
 from importlib import import_module
 from argparse import RawTextHelpFormatter
@@ -51,7 +51,7 @@ from accelerator.job import Job, CurrentJob
 from accelerator.launch import _FinishJob
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
-from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError
+from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError, UrdError
 from accelerator import g
 
 
@@ -531,14 +531,19 @@ class Urd(object):
 		url = '/'.join((self._url, 'list'))
 		return self._call(url, fmt=json.loads)
 
-	def begin(self, path, timestamp=None, caption=None, update=False):
-		assert not self._current, 'Tried to begin %s while running %s' % (path, self._current,)
+	def _test_auth(self):
 		if not self._auth_tested:
 			try:
 				self._call('%s/test/%s' % (self._url, self._user,), True)
 			except UrdPermissionError:
-				raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
+				return False
 			self._auth_tested = True
+		return True
+
+	def begin(self, path, timestamp=None, caption=None, update=False):
+		assert not self._current, 'Tried to begin %s while running %s' % (path, self._current,)
+		if not self._test_auth():
+			raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
 		self._current = self._path(path)
 		self._current_timestamp = _tsfix(timestamp)
 		self._current_caption = caption
@@ -801,6 +806,22 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 		dataset.finish_datasets()
 	if save_res is not None:
 		job.save(save_res, temp=False)
+
+	if not res and urd.joblist_all:
+		if urd._test_auth():
+			# like utcfromtimestamp, but not deprecated.
+			ts = datetime(1970, 1, 1) + timedelta(seconds=setup.starttime)
+			ts = str(ts).replace(' ', 'T')
+			urd.begin('__auto__', ts)
+			urd._a.joblist = urd.joblist_all # fake it
+			setup.options['urd-list'] = '%s/%s' % (urd._current, ts)
+			try:
+				urd.finish('__auto__')
+			except UrdError as e:
+				del setup.options['urd-list']
+				print(colour("__auto__ list not saved: " + str(e), 'build/warning'), file=sys.stderr)
+		else:
+			print(colour("__auto__ list not saved: UrdPermissionError", 'build/warning'), file=sys.stderr)
 
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
