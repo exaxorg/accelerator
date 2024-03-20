@@ -88,6 +88,7 @@ class Automata:
 
 	def _reset(self):
 		self.job_method = None
+		self.joblist_all = JobList()
 		self.joblist = JobList()
 		self._all_record = {}
 
@@ -278,6 +279,7 @@ class Automata:
 			print("Called from %s line %d" % (stk[1], stk[2],))
 			exit()
 		jid = Job(jid, record_as or method)
+		self.joblist_all.append(jid)
 		self.joblist.append(jid)
 		for d in res.jobs.values():
 			if d.link not in self._all_record:
@@ -463,6 +465,10 @@ class Urd(object):
 		self._current = None
 		self.workdir = None
 		self._warnings = []
+
+	@property
+	def joblist_all(self):
+		return self._a.joblist_all
 
 	@property
 	def joblist(self):
