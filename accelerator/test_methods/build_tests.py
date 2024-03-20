@@ -387,5 +387,5 @@ def main(urd):
 	print("Test board")
 	urd.build('test_board_metadata', command_prefix=command_prefix)
 
-	summary = urd.build("test_summary", joblist=urd.joblist)
+	summary = urd.build("test_summary", joblist=urd.joblist_all)
 	summary.link_result('summary.html')
