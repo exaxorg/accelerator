@@ -38,6 +38,7 @@ from __future__ import print_function
 from __future__ import division
 
 from contextlib import contextmanager
+from errno import ENOTCONN
 from functools import partial
 from time import sleep
 from traceback import print_exc
@@ -292,5 +293,8 @@ def _send(typ, message, pid=None):
 			_send_sock.send(msg)
 			return
 		except socket.error as e:
+			if e.errno == ENOTCONN:
+				# The server is dead, no use retrying.
+				return
 			print('Failed to send statmsg (type %s, try %d): %s' % (typ, ix, e))
 			sleep(0.1 + ix)
