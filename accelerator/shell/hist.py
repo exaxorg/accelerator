@@ -237,7 +237,7 @@ def main(argv, cfg):
 				def name(ix):
 					a = int(math.ceil(step * ix + low))
 					b = step * (ix + 1) + low
-					if b == math.floor(b):
+					if b == math.floor(b) and ix < args.max_count - 1:
 						b = int(b) - 1
 					else:
 						b = int(b)
