@@ -172,6 +172,8 @@ def main(argv, cfg):
 	if not ok:
 		return 1
 
+	varying_bucket_size = False
+
 	columns = args.column[0] if len(args.column) == 1 else args.column
 	useful_slices = [sliceno for sliceno in range(g.slices) if chain.lines(sliceno) > 0]
 	if args.slice:
@@ -249,6 +251,8 @@ def main(argv, cfg):
 			if is_ints and high - low < args.max_count:
 				args.max_count = high - low + 1
 			step = (high - low) / args.max_count
+			if is_ints and (high - low + 1) / args.max_count != math.ceil(step):
+				varying_bucket_size = True
 			def bin_items(sliceno):
 				return merge_nans(Counter((v - low) // step for v in chain.iterate(sliceno, columns)))
 			hist_func = bin_items
@@ -302,6 +306,9 @@ def main(argv, cfg):
 
 	for item in hist:
 		print(fmt % item)
+
+	if varying_bucket_size:
+		print(colour('WARNING: varying bucket size.', 'hist/warning'), file=sys.stderr)
 
 	if total_found > len(hist):
 		print(colour(fmt_num(total_found) + ' total found', 'hist/warning'), file=sys.stderr)
