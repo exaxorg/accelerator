@@ -4,7 +4,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2024 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
+# Modifications copyright (c) 2023-2024 Pablo Correa Gómez                 #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -80,6 +80,7 @@ class Job(unicode):
 	.dataset to get a named Dataset.
 	.output to get what the job printed.
 	.link_result to put a link in result_directory that points to a file in this job.
+	.link_to_here to expose a subjob result in its parent.
 
 	Decays to a (unicode) string when pickled.
 	"""
@@ -275,6 +276,14 @@ class Job(unicode):
 			pass
 		os.symlink(source_fn, dest_fn + '_')
 		os.rename(dest_fn + '_', dest_fn)
+
+	def link_to_here(self, filename='result.pickle'):
+		from accelerator.g import job
+		src = self.filename(filename)
+		assert os.path.exists(src)
+		dst = job.filename(filename)
+		os.symlink(src, dst)
+		job.register_file(dst)
 
 	def chain(self, length=-1, reverse=False, stop_job=None):
 		"""Like Dataset.chain but for jobs."""
