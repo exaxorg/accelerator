@@ -131,14 +131,14 @@ def main(argv, cfg):
 	parser.add_argument(      '--stop-ds',   metavar='DATASET', help="follow chain at most to this dataset")
 	parser.add_argument('-f', '--format', choices=sorted(formatters), help="output format, " + ' / '.join(sorted(formatters)), metavar='FORMAT', )
 	parser.add_argument('-t', '--toplist',   action='store_true', negation='not',  help="don't bin values, show most common")
-	parser.add_argument('-m', '--max-count', metavar='NUM',     default=20, help="show at most this many values / bins (default 20)", type=int)
+	parser.add_argument('-m', '--max-count', metavar='NUM',     help="show at most this many values or bins (default ~ 20)", type=int)
 	parser.add_argument('-s', '--slice',     action='append',   help="this slice only, can be specified multiple times", type=int)
 	parser.add_argument('dataset', help='can be specified in the same ways as for "ax ds"')
 	parser.add_argument('column', nargs='*', help='you can specify multiple columns')
 	args = parser.parse_intermixed_args(argv)
 
-	if not args.max_count or args.max_count < 0:
-		args.max_count = None
+	if args.max_count and args.max_count < 0:
+		args.max_count = 0
 
 	try:
 		ds = name2ds(cfg, args.dataset)
@@ -211,7 +211,7 @@ def main(argv, cfg):
 		if low in (inf, -inf) or high in (inf, -inf):
 			print("Can't bin to infinity.", file=sys.stderr)
 			return 1
-		if args.max_count: # otherwise all values are their own bin
+		if args.max_count != 0: # otherwise all values are their own bin
 			non_ints = chain.filter(lambda ds: not ds.columns[columns].type.startswith('int'))
 			is_ints = not non_ints
 			if non_ints and all(ds.columns[columns].type == 'number' for ds in non_ints):
@@ -227,6 +227,25 @@ def main(argv, cfg):
 					is_ints = True
 				except Failure:
 					is_ints = False
+			if args.max_count is None:
+				range_len = high - low + is_ints
+				cands = (20, 21, 19, 22, 18, 23, 17, 24, 16, 25, 15, 14, 13,)
+				if is_ints:
+					# try to find something that gives equal sized buckets.
+					args.max_count = 20 # fallback
+					for cand in cands:
+						if range_len / cand == range_len // cand:
+							args.max_count = cand
+							break
+				else:
+					# find the shortest string representation of the step,
+					# as that is likely to look better in the labels.
+					best = (1e1000, 20)
+					for cand in cands:
+						score = len(str(range_len / cand))
+						if score < best[0]:
+							best = (score, cand)
+					args.max_count = best[1]
 			if is_ints and high - low < args.max_count:
 				args.max_count = high - low + 1
 			step = (high - low) / args.max_count
@@ -269,7 +288,7 @@ def main(argv, cfg):
 
 	if args.toplist:
 		total_found = len(hist)
-		hist = hist.most_common(args.max_count)
+		hist = hist.most_common(args.max_count or None)
 		hist, fmt = formatter(hist)
 	else:
 		total_found = 0 # so we don't print about it later
