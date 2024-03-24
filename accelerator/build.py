@@ -823,6 +823,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 		else:
 			print(colour("__auto__ list not saved: UrdPermissionError", 'build/warning'), file=sys.stderr)
 
+	wanted_saved_files = dict(saved_files) # before setup.json is added (again).
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}
 	setupfile.save_setup(job, setup)
@@ -832,7 +833,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 			starttime=setup.starttime,
 			endtime=setup.endtime,
 			exectime=setup.exectime,
-			files=finish_job_files(job, saved_files),
+			files=finish_job_files(job, wanted_saved_files),
 			subjobs=urd._a._all_record,
 			version=1,
 		)
