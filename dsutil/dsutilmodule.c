@@ -269,6 +269,8 @@ typedef struct {
 static unsigned char NaNval_double[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
 static const unsigned char BE_NaNval_double[8] = {0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+static PyObject *pyNaN = 0;
+
 static const uint8_t hash_k[16] = {94, 70, 175, 255, 152, 30, 237, 97, 252, 125, 174, 76, 165, 112, 16, 9};
 
 int siphash(uint8_t *out, const uint8_t *in, uint64_t inlen, const uint8_t *k);
@@ -727,10 +729,19 @@ static PyObject *pyComplex_From32(complex32 v)
 	return PyComplex_FromDoubles(v.real, v.imag);
 }
 
+static PyObject *pyFloat_FromDouble(double v)
+{
+	if (isnan(v)) {
+		Py_INCREF(pyNaN);
+		return pyNaN;
+	}
+	return PyFloat_FromDouble(v);
+}
+
 MKITER(ReadComplex64, complex64, PyComplex_FromCComplex, hash_complex64, complex64, 1)
 MKITER(ReadComplex32, complex32, pyComplex_From32      , hash_complex32, complex32, 1)
-MKITER(ReadFloat64  , double   , PyFloat_FromDouble    , hash_double   , double   , 1)
-MKITER(ReadFloat32  , float    , PyFloat_FromDouble    , hash_double   , double   , 1)
+MKITER(ReadFloat64  , double   , pyFloat_FromDouble    , hash_double   , double   , 1)
+MKITER(ReadFloat32  , float    , pyFloat_FromDouble    , hash_double   , double   , 1)
 MKITER(ReadInt64    , int64_t  , pyInt_FromS64         , hash_int64    , int64_t  , 1)
 MKITER(ReadInt32    , int32_t  , pyInt_FromS32         , hash_int64    , int64_t  , 1)
 MKITER(ReadBool     , uint8_t  , PyBool_FromLong       , hash_bool     , uint8_t  , 1)
@@ -776,7 +787,7 @@ static PyObject *ReadNumber_iternext(Read *self)
 		double v;
 		memcpy(&v, buf, sizeof(v));
 		HC_CHECK(hash_double(&v));
-		return PyFloat_FromDouble(v);
+		return pyFloat_FromDouble(v);
 	}
 	if (len == 2) {
 		int16_t v16;
@@ -2200,6 +2211,8 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 		);
 		return INITERR;
 	}
+	pyNaN = PyFloat_FromDouble(NAN);
+	if (!pyNaN) return INITERR;
 	PyDateTime_IMPORT;
 #if PY_MAJOR_VERSION >= 3
 	PyObject *m = PyModule_Create(&moduledef);
