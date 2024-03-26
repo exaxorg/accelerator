@@ -45,6 +45,7 @@ NaN = float('NaN')
 def merge_nans(hist):
 	# NaN != NaN, so they are not collected in a single key.
 	# Unless they are the same object, like our global above.
+	# dsutil also uses only a single (different) NaN object.
 	# (But that does not survive pickling.)
 	nan_count = 0
 	for k, v in list(hist.items()):
@@ -197,7 +198,7 @@ def main(argv, cfg):
 			pool.close()
 
 	def count_items(sliceno):
-		return merge_nans(Counter(chain.iterate(sliceno, columns)))
+		return Counter(chain.iterate(sliceno, columns))
 	hist_func = count_items # default, probably overridden if not args.toplist
 
 	if len(args.column) > 1 or chain.min(columns) is None:
