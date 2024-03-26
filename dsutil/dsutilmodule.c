@@ -265,6 +265,10 @@ typedef struct {
 	float real, imag;
 } complex32;
 
+// These are the most likely normal NaNs (on x86 at least)
+static unsigned char NaNval_double[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf8, 0x7f};
+static const unsigned char BE_NaNval_double[8] = {0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
 static const uint8_t hash_k[16] = {94, 70, 175, 255, 152, 30, 237, 97, 252, 125, 174, 76, 165, 112, 16, 9};
 
 int siphash(uint8_t *out, const uint8_t *in, uint64_t inlen, const uint8_t *k);
@@ -298,14 +302,21 @@ static uint64_t hash_int64(const int64_t *ptr)
 }
 static uint64_t hash_double(const double *ptr)
 {
-	int64_t i = *ptr;
-	if (i == *ptr) return hash_int64(&i);
+	if (isnan(*ptr)) {
+		ptr = (const double *)NaNval_double;
+	} else {
+		int64_t i = *ptr;
+		if (i == *ptr) return hash_int64(&i);
+	}
 	return hash(ptr, sizeof(*ptr));
 }
 static uint64_t hash_complex64(const complex64 *ptr)
 {
 	if (ptr->imag == 0.0) return hash_double(&ptr->real);
-	return hash(ptr, sizeof(*ptr));
+	complex64 v = *ptr;
+	if (isnan(v.real)) memcpy(&v.real, NaNval_double, sizeof(v.real));
+	if (isnan(v.imag)) memcpy(&v.imag, NaNval_double, sizeof(v.imag));
+	return hash(&v, sizeof(v));
 }
 static uint64_t hash_complex32(const complex32 *ptr)
 {
@@ -2171,12 +2182,16 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 			memcpy(&noneval_float, &BE_noneval_float, sizeof(noneval_float));
 			memcpy(&noneval_complex64, &BE_noneval_complex64, sizeof(noneval_complex64));
 			memcpy(&noneval_complex32, &BE_noneval_complex32, sizeof(noneval_complex32));
+			memcpy(&NaNval_double, &BE_NaNval_double, sizeof(NaNval_double));
 		} else {
 			// wat?
 			good = 0;
 		}
 		VERIFY_FLOATNONE(double);
 		VERIFY_FLOATNONE(float);
+		double dblNaN;
+		memcpy(&dblNaN, &NaNval_double, sizeof(NaNval_double));
+		good &= !!isnan(dblNaN);
 	}
 	if (!good) {
 		PyErr_SetString(PyExc_OverflowError,
