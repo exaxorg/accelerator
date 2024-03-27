@@ -590,6 +590,7 @@ hidden_convfuncs = {
 	'null_1'             : 1,
 	'null_4'             : 4,
 	'null_8'             : 8,
+	'null_16'            : 16,
 	'null_number'        : 0,
 }
 
