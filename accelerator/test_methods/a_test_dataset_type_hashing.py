@@ -145,6 +145,8 @@ def synthesis(job, slices):
 		'ascii'   : ('ascii', True),
 		'bool'    : ('bool', True),
 		'bytes'   : ('bytes', True),
+		'complex32':('complex32', True),
+		'complex64':('complex64', True),
 		'date'    : ('date', True),
 		'datetime': ('datetime', True),
 		'float32' : ('float32', True),
@@ -158,9 +160,9 @@ def synthesis(job, slices):
 	})
 	write = dw.get_split_write()
 	data = {
-		'42': ('ascii string', True, b'bytes string', date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
-		None: (          None, None,            None,               None,                              None, None,      None, None, None,    None,  None,            None,             None),
-		'18': ('ASCII STRING', False, b'BYTES STRING', date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
+		'42': ('ascii string', True, b'bytes string',  1+2j, 2+3j, date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
+		None: (          None, None,            None,  None, None,               None,                             None, None,      None, None, None,     None,  None,            None,             None),
+		'18': ('ASCII STRING', False, b'BYTES STRING', 3-4j, 4-5j, date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
 	}
 	write('42', *data['42'])
 	write(None, *data[None])
@@ -170,6 +172,8 @@ def synthesis(job, slices):
 	type2type = {
 		'ascii'   : 'unicode:ascii',
 		'bool'    : 'unicode:ascii',
+		'complex32':'unicode:ascii',
+		'complex64':'unicode:ascii',
 		'date'    : 'unicode:ascii',
 		'datetime': 'unicode:ascii',
 		'time'    : 'unicode:ascii',
