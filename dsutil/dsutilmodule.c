@@ -316,6 +316,7 @@ static uint64_t hash_complex64(const complex64 *ptr)
 {
 	if (ptr->imag == 0.0) return hash_double(&ptr->real);
 	complex64 v = *ptr;
+	if (v.real == -0.0) v.real = 0.0; // Equal value, but different hash.
 	if (isnan(v.real)) memcpy(&v.real, NaNval_double, sizeof(v.real));
 	if (isnan(v.imag)) memcpy(&v.imag, NaNval_double, sizeof(v.imag));
 	return hash(&v, sizeof(v));
