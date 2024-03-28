@@ -287,6 +287,7 @@ def main(urd):
 	urd.build("test_dataset_unroundrobin")
 	urd.build("test_dataset_unroundrobin_trigger")
 	urd.build("test_number")
+	urd.build("test_nan")
 
 	print()
 	print("Test dataset_checksum")
