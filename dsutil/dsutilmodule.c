@@ -323,9 +323,13 @@ static uint64_t hash_complex64(const complex64 *ptr)
 }
 static uint64_t hash_complex32(const complex32 *ptr)
 {
+	// These are volatile so the compiler will actually truncate to
+	// float precision, regardless of where ptr comes from.
+	volatile float a = ptr->real;
+	volatile float b = ptr->imag;
 	complex64 v64;
-	v64.real = ptr->real;
-	v64.imag = ptr->imag;
+	v64.real = a;
+	v64.imag = b;
 	return hash_complex64(&v64);
 }
 
@@ -1517,7 +1521,8 @@ is_none:                                                                        
 			obj = self->default_obj;                                         	\
 		}                                                                        	\
 		if (self->slices) {                                                      	\
-			const HT h_value = value;                                        	\
+			volatile T v_value = value;                                      	\
+			const HT h_value = v_value;                                      	\
 			const unsigned int sliceno = hash(&h_value) % self->slices;      	\
 			if (sliceno != self->sliceno) Py_RETURN_FALSE;                   	\
 		}                                                                        	\
@@ -1544,7 +1549,7 @@ is_none:                                                                        
 		if (withnone && obj == Py_None) {                                        	\
 			h = 0;                                                           	\
 		} else {                                                                 	\
-			const T value = conv(obj);                                       	\
+			volatile T value = conv(obj);                                    	\
 			if (PyErr_Occurred()) return 0;                                  	\
 			const HT h_value = value;                                        	\
 			h = hash(&h_value);                                              	\
