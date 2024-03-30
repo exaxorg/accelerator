@@ -206,3 +206,66 @@ class ReadPickle(object):
 	def __exit__(self, type, value, traceback):
 		self.close()
 _type2iter['pickle'] = ReadPickle
+
+
+class _SanityError(Exception):
+	pass
+
+def _sanity_check_float_hashing():
+	# Optimisers like to not actually convert to f32 precision when they can.
+	# We need to actually convert for float32 and complex32 hashers to work.
+	# _dsutil uses "volatile float" for this, but optimisers love to be broken,
+	# so test for that.
+	# (All formats hash as doubles, so that numbers that do match hash equal.)
+
+	import struct
+	exact       = 1.5               # exactly representable as an f32
+	f64_inexact = 1.1               # not exactly representable as an f32
+	f32_inexact = 1.100000023841858 # what 1.1f should round to.
+	bin_exact = struct.pack('=d', exact)
+	bin_f64_inexact = struct.pack('=d', f64_inexact)
+	bin_f32_inexact = struct.pack('=d', f32_inexact)
+
+	def check(typ, msg, want, *a):
+		for ix, v in enumerate(a):
+			if v != want:
+				raise _SanityError("%s did not hash %s value correctly. (%d)" % (typ, msg, ix,))
+
+	# Test that the float types (including number) hash floats the same,
+	# and that float32 rounds as expected.
+	h_f32 = _convfuncs['float32'].hash
+	h_f64 = _convfuncs['float64'].hash
+	h_num = _convfuncs['number'].hash
+	hash_exact = _dsutil.siphash24(bin_exact)
+	hash_f64_inexact = _dsutil.siphash24(bin_f64_inexact)
+	hash_f32_inexact = _dsutil.siphash24(bin_f32_inexact)
+	check('float types', 'exact', hash_exact, h_f32(exact), h_f64(exact), h_num(exact))
+	check('float64 types', 'inexact', hash_f64_inexact, h_f64(f64_inexact), h_num(f64_inexact))
+	check('float types', 'inexact', hash_f32_inexact, h_f32(f64_inexact), h_f32(f32_inexact), h_f64(f32_inexact), h_num(f32_inexact))
+
+	# Same thing but for the complex types.
+	h_c32 = _convfuncs['complex32'].hash
+	h_c64 = _convfuncs['complex64'].hash
+	e_e = complex(exact, exact)
+	e_f64i = complex(exact, f64_inexact)
+	e_f32i = complex(exact, f32_inexact)
+	f64i_e = complex(f64_inexact, exact)
+	f32i_e = complex(f32_inexact, exact)
+	hash_e_e = _dsutil.siphash24(bin_exact + bin_exact)
+	hash_e_f64i = _dsutil.siphash24(bin_exact + bin_f64_inexact)
+	hash_e_f32i = _dsutil.siphash24(bin_exact + bin_f32_inexact)
+	hash_f64i_e = _dsutil.siphash24(bin_f64_inexact + bin_exact)
+	hash_f32i_e = _dsutil.siphash24(bin_f32_inexact + bin_exact)
+	check('complex types', '(exact+exactj)', hash_e_e, h_c32(e_e), h_c64(e_e))
+	check('complex64', '(exact+inexactj)', hash_e_f64i, h_c64(e_f64i))
+	check('complex types', '(exact+inexactj)', hash_e_f32i, h_c32(e_f64i), h_c32(e_f32i), h_c64(e_f32i))
+	check('complex64', '(inexact+exactj)', hash_f64i_e, h_c64(f64i_e))
+	check('complex types', '(inexact+exactj)', hash_f32i_e, h_c32(f64i_e), h_c32(f32i_e), h_c64(f32i_e))
+
+try:
+	_sanity_check_float_hashing()
+	_fail = None
+except _SanityError as e:
+	_fail = str(e)
+if _fail:
+	raise Exception("_dsutil module miscompiled: " + _fail)
