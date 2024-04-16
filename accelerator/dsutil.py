@@ -262,6 +262,21 @@ def _sanity_check_float_hashing():
 	check('complex64', '(inexact+exactj)', hash_f64i_e, h_c64(f64i_e))
 	check('complex types', '(inexact+exactj)', hash_f32i_e, h_c32(f64i_e), h_c32(f32i_e), h_c64(f32i_e))
 
+	# Test the same things, but with a value that looks like an int when
+	# correctly rounded to float32. (The complex values use a 0 imaginary
+	# component to trigger "like float" hashing.)
+	intlike_v = 8765432.1 # rounds to 8765432.0 as an f32
+	int_v     = int(intlike_v)
+	bin_int = struct.pack('=Q', int_v)
+	hash_int = _dsutil.siphash24(bin_int)
+	check('float32/complex32', 'int-like float', hash_int, h_f32(intlike_v), h_c32(complex(intlike_v, 0)))
+	check('float64/complex64', 'int-like float', hash_int, h_f64(float(int_v)), h_c64(complex(int_v, 0)))
+	check('number', 'int-like float', hash_int, h_num(float(int_v)))
+	# Should probably check that the int types get it right too.
+	h_i32 = _convfuncs['int32'].hash
+	h_i64 = _convfuncs['int64'].hash
+	check('int types', 'normal', hash_int, h_i64(int_v), h_i32(int_v), h_num(int_v))
+
 try:
 	_sanity_check_float_hashing()
 	_fail = None
