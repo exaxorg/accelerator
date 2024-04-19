@@ -365,6 +365,41 @@ class CurrentJob(Job):
 		from accelerator.extras import saved_files
 		saved_files[filename] = 0
 
+	def register_files(self, pattern='**/*' if PY3 else '*'):
+		"""Bulk register files matching a pattern.
+		Tries to exclude internal files automatically.
+		Does not register temp-files.
+		The default pattern registers everything (recursively, unless python 2).
+		Returns which files were registered.
+		"""
+		from accelerator.extras import saved_files
+		from glob import iglob
+		pattern = os.path.normpath(pattern)
+		assert not pattern.startswith('/')
+		assert not pattern.startswith('../')
+		forbidden = ('setup.json', 'post.json', 'method.tar.gz',)
+		res = set()
+		if PY3:
+			files = iglob(pattern, recursive=True)
+		else:
+			# No recursive support on python 2.
+			files = iglob(pattern)
+		for fn in files:
+			if (
+				fn in forbidden or
+				fn.startswith('DS/') or
+				fn.startswith('OUTPUT/') or
+				fn.startswith('Analysis.') or
+				not os.path.isfile(fn)
+			):
+				continue
+			key = self.filename(fn)
+			# Don't override temp-ness of already registered files.
+			if key not in saved_files:
+				saved_files[key] = False
+				res.add(fn)
+		return res
+
 	def input_filename(self, *parts):
 		return os.path.join(self.input_directory, *parts)
 
