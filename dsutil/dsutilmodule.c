@@ -827,7 +827,7 @@ static PyObject *ReadNumber_iternext(Read *self)
 static inline PyObject *unfmt_datetime(const uint32_t i0, const uint32_t i1)
 {
 	if (!i0) Py_RETURN_NONE;
-	const int Y = i0 >> 14 & 0x2fff;
+	const int Y = i0 >> 14 & 0x3fff;
 	const int m = i0 >> 10 & 0x0f;
 	const int d = i0 >> 5 & 0x1f;
 	const int H = i0 & 0x1f;
