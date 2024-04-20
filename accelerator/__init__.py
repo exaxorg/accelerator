@@ -21,8 +21,8 @@ try:
 	# setup.py needs to import some things, let's not break that.
 	# When adding types to _dsutil switch this to one of those
 	# (to make building with a previous version installed work).
-	from ._dsutil import ReadComplex64
-	del ReadComplex64
+	from ._dsutil import _set_utctz
+	del _set_utctz
 	# also protect from failing with old installations without strptime
 	from .standard_methods._dataset_type import strptime
 	del strptime

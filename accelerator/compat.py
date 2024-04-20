@@ -91,6 +91,35 @@ if sys.version_info[0] == 2:
 		    return "'%s'" % (v.replace("'", "'\"'\"'"),)
 		else:
 			return v or "''"
+	import datetime
+	_timedelta_0 = datetime.timedelta(0)
+	class timezone(datetime.tzinfo):
+		__slots__ = ()
+		def __new__(cls, offset, name=None):
+			if UTC is None: # when constructing the singleton
+				return datetime.tzinfo.__new__(cls)
+			if name is not None or offset != _timedelta_0:
+				raise ValueError("This python 2 compat class only supports UTC.")
+			return UTC
+		def dst(self, dt):
+			return _timedelta_0
+		def utcoffset(self, dt):
+			return _timedelta_0
+		def tzname(self, dt):
+			return b'UTC'
+		def __reduce__(self):
+			return _utc_pickle
+		def __repr__(self):
+			return b'accelerator.compat.UTC'
+		def __str__(self):
+			return b'UTC'
+	UTC = None
+	UTC = timezone(None)
+	timezone.__module__ = b'datetime' # so it pickles the way we want
+	datetime.timezone = timezone
+	_utc_pickle = (timezone, (_timedelta_0,)) # same thing the python 3 version pickles as
+	del timezone
+	del datetime
 else:
 	PY2 = False
 	PY3 = True
@@ -126,6 +155,9 @@ else:
 		return getfullargspec(func).args
 	from shutil import get_terminal_size as terminal_size
 	from shlex import quote as shell_quote
+	import datetime
+	UTC = datetime.timezone.utc
+	del datetime
 
 def first_value(d):
 	return next(itervalues(d) if isinstance(d, dict) else iter(d))

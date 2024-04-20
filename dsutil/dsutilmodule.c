@@ -270,6 +270,10 @@ static unsigned char NaNval_double[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf
 static const unsigned char BE_NaNval_double[8] = {0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static PyObject *pyNaN = 0;
+static PyObject *pyUTCTZ = Py_None;
+static PyObject *pytimedelta_0 = 0;
+static PyObject *pystr_replace = 0;
+static PyObject *pystr_tzinfo = 0;
 
 static const uint8_t hash_k[16] = {94, 70, 175, 255, 152, 30, 237, 97, 252, 125, 174, 76, 165, 112, 16, 9};
 
@@ -286,6 +290,7 @@ static uint64_t hash_datetime(const void *ptr)
 	struct { uint32_t i0, i1; } tmp;
 	memcpy(&tmp, ptr, 8);
 	// ignore .fold, because python does.
+	// also ignores UTC flag, even though python does not.
 	tmp.i0 &= 0xfffffff;
 	return hash(&tmp, 8);
 }
@@ -824,6 +829,22 @@ static PyObject *ReadNumber_iternext(Read *self)
 #endif
 }
 
+// Unfortunately python does not expose a C constructor for (date)times
+// that can set tzinfo.
+static PyObject *empty_tuple = 0;
+static PyObject *set_utc_kw = 0;
+static inline PyObject *dt_set_utc(PyObject *dt)
+{
+	PyObject *res = 0;
+	PyObject *replace = PyObject_GetAttr(dt, pystr_replace);
+	err1(!replace);
+	res = PyObject_Call(replace, empty_tuple, set_utc_kw);
+	Py_DECREF(replace);
+err:
+	Py_DECREF(dt);
+	return res;
+}
+
 static inline PyObject *unfmt_datetime(const uint32_t i0, const uint32_t i1)
 {
 	if (!i0) Py_RETURN_NONE;
@@ -836,10 +857,12 @@ static inline PyObject *unfmt_datetime(const uint32_t i0, const uint32_t i1)
 	const int u = i1 & 0xfffff;
 #if PY_VERSION_HEX >= 0x03060000
 	const int fold = !!(i0 & 0x10000000);
-	return PyDateTime_FromDateAndTimeAndFold(Y, m, d, H, M, S, u, fold);
+	PyObject *res = PyDateTime_FromDateAndTimeAndFold(Y, m, d, H, M, S, u, fold);
 #else
-	return PyDateTime_FromDateAndTime(Y, m, d, H, M, S, u);
+	PyObject *res = PyDateTime_FromDateAndTime(Y, m, d, H, M, S, u);
 #endif
+	if (i0 & 0x20000000) res = dt_set_utc(res);
+	return res;
 }
 
 static PyObject *ReadDateTime_iternext(Read *self)
@@ -884,10 +907,12 @@ static inline PyObject *unfmt_time(const uint32_t i0, const uint32_t i1)
 	const int u = i1 & 0xfffff;
 #if PY_VERSION_HEX >= 0x03060000
 	const int fold = !!(i0 & 0x10000000);
-	return PyTime_FromTimeAndFold(H, M, S, u, fold);
+	PyObject *res = PyTime_FromTimeAndFold(H, M, S, u, fold);
 #else
-	return PyTime_FromTime(H, M, S, u);
+	PyObject *res = PyTime_FromTime(H, M, S, u);
 #endif
+	if (i0 & 0x20000000) res = dt_set_utc(res);
+	return res;
 }
 
 static PyObject *ReadTime_iternext(Read *self)
@@ -1395,6 +1420,8 @@ static inline uint64_t minmax_value_datetime(uint64_t value) {
 	struct { uint32_t i0, i1; } tmp;
 	memcpy(&tmp, &value, sizeof(value));
 	// ignore .fold, because python does.
+	// also ignores UTC flag, because aware and unaware datetimes are not
+	// comparable, so merging slices would break if only some had UTC set.
 	return ((uint64_t)(tmp.i0 & 0xfffffff) << 32) | tmp.i1;
 }
 
@@ -1635,6 +1662,19 @@ MKWRITER_C(WriteFloat32  , float    , double   , PyFloat_AsDouble      , 1, valu
 MKWRITER(WriteInt64      , int64_t  , int64_t  , pyLong_AsS64          , 1,                                   , minmax_set_Int64  , hash_int64    );
 MKWRITER(WriteInt32      , int32_t  , int64_t  , pyLong_AsS32          , 1,                                   , minmax_set_Int32  , hash_int64    );
 MKWRITER(WriteBool       , uint8_t  , uint8_t  , pyLong_AsBool         , 1,                                   , minmax_set_Bool   , hash_bool     );
+
+static inline int check_utc(PyObject *dt, PyObject *tz)
+{
+	if (tz == Py_None) return 0;
+	if (tz == pyUTCTZ) return 1;
+	PyObject *res = PyObject_CallMethod(dt, "utcoffset", NULL);
+	if (!res) return -1;
+	if (PyObject_RichCompareBool(res, pytimedelta_0, Py_EQ) != 1) {
+		PyErr_SetString(PyExc_ValueError, "non-UTC timezone is not supported");
+		return -1;
+	}
+	return 1;
+}
 static uint64_t fmt_datetime(PyObject *dt)
 {
 	if (!PyDateTime_Check(dt)) {
@@ -1654,6 +1694,16 @@ static uint64_t fmt_datetime(PyObject *dt)
 #if PY_VERSION_HEX > 0x03060000
 	if (PyDateTime_DATE_GET_FOLD(dt)) r.i.i0 |= 0x10000000;
 #endif
+#if PY_VERSION_HEX > 0x030a00b0
+	const int utc = check_utc(dt, PyDateTime_DATE_GET_TZINFO(dt));
+#else
+	PyObject *tz = PyObject_GetAttr(dt, pystr_tzinfo);
+	if (!tz) return 0;
+	const int utc = check_utc(dt, tz);
+	Py_DECREF(tz);
+#endif
+	if (utc == -1) return 0;
+	if (utc == 1) r.i.i0 |= 0x20000000;
 	return r.res;
 }
 static uint32_t fmt_date(PyObject *dt)
@@ -1683,6 +1733,16 @@ static uint64_t fmt_time(PyObject *dt)
 #if PY_VERSION_HEX > 0x03060000
 	if (PyDateTime_TIME_GET_FOLD(dt)) r.i.i0 |= 0x10000000;
 #endif
+#if PY_VERSION_HEX > 0x030a00b0
+	const int utc = check_utc(dt, PyDateTime_TIME_GET_TZINFO(dt));
+#else
+	PyObject *tz = PyObject_GetAttr(dt, pystr_tzinfo);
+	if (!tz) return 0;
+	const int utc = check_utc(dt, tz);
+	Py_DECREF(tz);
+#endif
+	if (utc == -1) return 0;
+	if (utc == 1) r.i.i0 |= 0x20000000;
 	return r.res;
 }
 MKWRITER_C(WriteDateTime, uint64_t, uint64_t, fmt_datetime, 1, !value, MINMAX_STD, minmax_value_datetime, minmax_set_DateTime, hash_datetime);
@@ -2146,9 +2206,20 @@ static PyObject *siphash24(PyObject *dummy, PyObject *args)
 	return pyInt_FromU64(res);
 }
 
+static PyObject *_set_utctz(PyObject *dummy, PyObject *obj)
+{
+	pyUTCTZ = obj;
+	Py_INCREF(pyUTCTZ);
+	set_utc_kw = PyDict_New();
+	if (!set_utc_kw) return 0;
+	if (PyDict_SetItem(set_utc_kw, pystr_tzinfo, pyUTCTZ)) return 0;
+	Py_RETURN_NONE;
+}
+
 static PyMethodDef module_methods[] = {
 	{"hash", generic_hash, METH_O, "hash(v) - The hash a writer for type(v) would have used to slice v"},
 	{"siphash24", siphash24, METH_VARARGS, "siphash24(v, k=...) - SipHash-2-4 of v, defaults to the same k as the slicing hash"},
+	{"_set_utctz", _set_utctz, METH_O, 0},
 	{0}
 };
 
@@ -2220,6 +2291,14 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC INITFUNC(void)
 	pyNaN = PyFloat_FromDouble(NAN);
 	if (!pyNaN) return INITERR;
 	PyDateTime_IMPORT;
+	pytimedelta_0 = PyDelta_FromDSU(0, 0, 0);
+	if (!pytimedelta_0) return INITERR;
+	pystr_replace = PyUnicode_FromString("replace");
+	if (!pystr_replace) return INITERR;
+	pystr_tzinfo = PyUnicode_FromString("tzinfo");
+	if (!pystr_tzinfo) return INITERR;
+	empty_tuple = PyTuple_New(0);
+	if (!empty_tuple) return INITERR;
 #if PY_MAJOR_VERSION >= 3
 	PyObject *m = PyModule_Create(&moduledef);
 #else

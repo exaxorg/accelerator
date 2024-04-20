@@ -284,3 +284,8 @@ except _SanityError as e:
 	_fail = str(e)
 if _fail:
 	raise Exception("_dsutil module miscompiled: " + _fail)
+
+
+from accelerator.compat import UTC
+_dsutil._set_utctz(UTC)
+del UTC
