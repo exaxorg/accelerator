@@ -823,6 +823,11 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 		else:
 			print(colour("__auto__ list not saved: UrdPermissionError", 'build/warning'), file=sys.stderr)
 
+	if not res:
+		# If nothing was registered (except temp files), register everything not in subdirs.
+		if all(saved_files.values()):
+			job.register_files('*')
+
 	wanted_saved_files = dict(saved_files) # before setup.json is added (again).
 	setup.endtime = time.time()
 	setup.exectime = {'total': setup.endtime - setup.starttime}

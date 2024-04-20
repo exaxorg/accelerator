@@ -396,6 +396,9 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 			synthesis_res = synthesis_func(**args_for(synthesis_func))
 		except _FinishJob as finish:
 			synthesis_res = finish.result
+		# If nothing was registered (except temp files), register everything not in subdirs.
+		if all(saved_files.values()):
+			g.job.register_files('*')
 		if synthesis_res is not None:
 			blob.save(synthesis_res, temp=False)
 		dataset.finish_datasets()
