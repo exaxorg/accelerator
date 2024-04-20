@@ -1420,9 +1420,7 @@ static inline uint64_t minmax_value_datetime(uint64_t value) {
 	struct { uint32_t i0, i1; } tmp;
 	memcpy(&tmp, &value, sizeof(value));
 	// ignore .fold, because python does.
-	// also ignores UTC flag, because aware and unaware datetimes are not
-	// comparable, so merging slices would break if only some had UTC set.
-	return ((uint64_t)(tmp.i0 & 0xfffffff) << 32) | tmp.i1;
+	return ((uint64_t)(tmp.i0 & 0x2fffffff) << 32) | tmp.i1;
 }
 
 #define MK_MINMAX_SET(name, parse)                                                       	\
@@ -1442,14 +1440,16 @@ MK_MINMAX_SET(DateTime, unfmt_datetime((*(uint64_t *)cmp_value) >> 32, *(uint64_
 MK_MINMAX_SET(Date    , unfmt_date(*(uint32_t *)cmp_value));
 MK_MINMAX_SET(Time    , unfmt_time((*(uint64_t *)cmp_value) >> 32, *(uint64_t *)cmp_value));
 
-#define MINMAX_STD(T, v, minmax_set)                                                         	\
+#define MINMAX_mask(T, mask, v, minmax_set)                                                  	\
 	T cmp_value = v;                                                                     	\
-	if (!self->min_obj || (cmp_value < self->min_u.as_ ## T)) {                          	\
+	if (!self->min_obj || ((cmp_value mask) < (self->min_u.as_ ## T mask))) {            	\
 		minmax_set(&self->min_obj, obj, &self->min_u, &cmp_value, sizeof(cmp_value));	\
 	}                                                                                    	\
-	if (!self->max_obj || (cmp_value > self->max_u.as_ ## T)) {                          	\
+	if (!self->max_obj || ((cmp_value mask) > (self->max_u.as_ ## T mask))) {            	\
 		minmax_set(&self->max_obj, obj, &self->max_u, &cmp_value, sizeof(cmp_value));	\
 	}
+#define MINMAX_STD(T, v, minmax_set) MINMAX_mask(T,                       , v, minmax_set)
+#define MINMAX_DT(T, v, minmax_set)  MINMAX_mask(T, & 0xfffffffffffffffULL, v, minmax_set)
 #define MINMAX_FLOAT(T, v, minmax_set)                                                       	\
 	T cmp_value = v;                                                                     	\
 	T min_value = self->min_u.as_ ## T;                                                  	\
@@ -1745,9 +1745,9 @@ static uint64_t fmt_time(PyObject *dt)
 	if (utc == 1) r.i.i0 |= 0x20000000;
 	return r.res;
 }
-MKWRITER_C(WriteDateTime, uint64_t, uint64_t, fmt_datetime, 1, !value, MINMAX_STD, minmax_value_datetime, minmax_set_DateTime, hash_datetime);
+MKWRITER_C(WriteDateTime, uint64_t, uint64_t, fmt_datetime, 1, !value, MINMAX_DT,  minmax_value_datetime, minmax_set_DateTime, hash_datetime);
 MKWRITER_C(WriteDate    , uint32_t, uint32_t, fmt_date,     1, !value, MINMAX_STD,                      , minmax_set_Date    , hash_32bits  );
-MKWRITER_C(WriteTime    , uint64_t, uint64_t, fmt_time,     1, !value, MINMAX_STD, minmax_value_datetime, minmax_set_Time    , hash_datetime);
+MKWRITER_C(WriteTime    , uint64_t, uint64_t, fmt_time,     1, !value, MINMAX_DT,  minmax_value_datetime, minmax_set_Time    , hash_datetime);
 
 static int WriteNumber_serialize_Long(PyObject *obj, char *buf, const char *msg, const char *error_extra)
 {

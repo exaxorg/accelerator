@@ -950,12 +950,20 @@ class Dataset(unicode):
 			res_max = a[1]
 			if res_max is None: res_max = b[1]
 			return [res_min, res_max]
-		def nanfix(cmp, a, b):
+		def notz(value):
+			return value.replace(tzinfo=None)
+		def cmpfix(cmp, a, b):
 			if isinstance(a, float) and isnan(a):
 				return b
 			elif isinstance(b, float) and isnan(b):
 				return a
 			else:
+				if isinstance(a, (datetime.datetime, datetime.time,)):
+					if a.tzinfo != b.tzinfo:
+						if cmp(notz(a), notz(b)) == notz(a):
+							return a
+						else:
+							return b
 				return cmp(a, b)
 		res = {}
 		for part in minmax.values():
@@ -964,7 +972,7 @@ class Dataset(unicode):
 				if mm != (None, None):
 					omm = minmax_fixup(res.get(name, (None, None,)), mm)
 					mm = minmax_fixup(mm, omm)
-					res[name] = [nanfix(min, mm[0], omm[0]), nanfix(max, mm[1], omm[1])]
+					res[name] = [cmpfix(min, mm[0], omm[0]), cmpfix(max, mm[1], omm[1])]
 		return res
 
 	def _append(self, columns, filenames, compressions, minmax, filename, caption, previous, column_filter, name):
