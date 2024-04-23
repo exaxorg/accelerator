@@ -175,6 +175,7 @@ def main(urd):
 	urd.build("test_subjobs_type", typed=ds, untyped=reimp_csv)
 	urd.build("test_subjobs_nesting")
 	urd.build('test_finish_early')
+	urd.build('test_register_file')
 
 	print()
 	print("Testing datasets more")
