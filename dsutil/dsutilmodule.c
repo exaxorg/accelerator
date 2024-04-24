@@ -1419,8 +1419,7 @@ static inline uint64_t minmax_value_datetime(uint64_t value) {
 	/* My choice to use 2x u32 comes back to bite me. */
 	struct { uint32_t i0, i1; } tmp;
 	memcpy(&tmp, &value, sizeof(value));
-	// ignore .fold, because python does.
-	return ((uint64_t)(tmp.i0 & 0x2fffffff) << 32) | tmp.i1;
+	return ((uint64_t)tmp.i0 << 32) | tmp.i1;
 }
 
 #define MK_MINMAX_SET(name, parse)                                                       	\
