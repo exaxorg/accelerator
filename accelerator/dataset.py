@@ -1275,6 +1275,7 @@ class DatasetWriter(object):
 					raise DatasetUsageError("Can't discard columns without a parent")
 				obj.parent = None
 			obj._started = False
+			obj._finished = None
 			obj._lens = {}
 			obj._minmax = {}
 			obj._order = []
@@ -1581,6 +1582,8 @@ class DatasetWriter(object):
 		from accelerator.g import running, slices, job
 		if running != self._running and running != 'synthesis':
 			raise DatasetUsageError("Finish where you started or in synthesis")
+		if self._finished:
+			return self._finished
 		if not (self._started or self.meta_only or self._lens):
 			raise DatasetUsageError("DatasetWriter %r was never started (.get_split_write*() or .set_slice(), or .discard() it)" % (self.name,))
 		self.close()
@@ -1613,6 +1616,7 @@ class DatasetWriter(object):
 			res = Dataset.new(**args)
 		del _datasetwriters[self.name]
 		_datasets_written.append(self.name)
+		self._finished = res
 		return res
 
 class DatasetList(_ListTypePreserver):
