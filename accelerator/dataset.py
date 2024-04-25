@@ -1359,6 +1359,8 @@ class DatasetWriter(object):
 		self._mkwritefuncs(discard=True)
 
 	def _mkwriters(self, sliceno, filtered=True):
+		if self._finished:
+			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		if not self.columns:
 			raise DatasetUsageError("No columns in dataset")
 		if self.hashlabel is not None and self.hashlabel not in self.columns:
@@ -1387,6 +1389,8 @@ class DatasetWriter(object):
 		return writers
 
 	def _mkwritefuncs(self, discard=False):
+		if self._finished:
+			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		hl = self.hashlabel
 		w_l = [self.writers[c].write for c in self._order]
 		w = {k: w.write for k, w in self.writers.items()}
@@ -1455,6 +1459,8 @@ class DatasetWriter(object):
 
 	def _mksplit(self):
 		from accelerator import g
+		if self._finished:
+			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		if g.running == 'analysis' and self._for_single_slice != g.sliceno:
 			if self._for_single_slice is not None:
 				raise DatasetUsageError("This writer is for slice %d" % (self._for_single_slice,))
@@ -1551,7 +1557,10 @@ class DatasetWriter(object):
 				del self.writers
 
 	def discard(self):
+		if self._finished:
+			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		del _datasetwriters[self.name]
+		self._finished = 'deleted dataset ' + self.name
 		from shutil import rmtree
 		rmtree(self.fs_name)
 
