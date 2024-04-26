@@ -82,7 +82,8 @@ options = {
 	# No error checking can be done on this (tzset(3) can not return failure).
 	# On most 32bit systems this will break dates outside about 1970 - 2037.
 	# Setting this will mask most bad dates (mktime(3) "fixes" them).
-	# Don't set this to 'UTC', leaving it as None is faster and safer.
+	# (But "UTC" is special cased and doesn't break anything.)
+	# If you set this datetimes will have tzinfo=UTC.
 	'timezone'                  : str,
 	'hashlabel'                 : str, # leave as None to inherit hashlabel, set to '' to not have a hashlabel
 	'defaults'                  : {}, # {'COLNAME': value}, unspecified -> method fails on unconvertible unless filter_bad

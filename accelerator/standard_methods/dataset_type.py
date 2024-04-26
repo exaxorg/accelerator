@@ -251,7 +251,7 @@ _c_conv_date_template = r'''
 	}
 '''
 _c_conv_datetime = r'''
-		if (use_tz) {
+		if (use_tz == 1) {
 			tm.tm_isdst = -1;
 			time_t t = mktime(&tm);
 			gmtime_r(&t, &tm);
@@ -269,6 +269,7 @@ _c_conv_datetime = r'''
 			Py_DECREF(o);
 			p[0] = year << 14 | mon << 10 | mday << 5 | hour;
 			p[1] = min << 26 | sec << 20 | f;
+			if (use_tz) p[0] |= 0x20000000; // mark as UTC
 		} else {
 			PyErr_Clear();
 			ptr = 0;
@@ -2212,7 +2213,11 @@ static void init(const char *tz)
 	PyDateTime_IMPORT;
 #endif
 	if (tz) {
-		use_tz = 1;
+		if (!strcmp(tz, "UTC")) {
+			use_tz = -1; // true, but not 1, so not using mktime(3).
+		} else {
+			use_tz = 1;
+		}
 	} else {
 		// strptime parses %s in whatever timezone is set,
 		// so set UTC if user does not ask for a timezone.

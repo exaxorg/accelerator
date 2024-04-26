@@ -37,7 +37,7 @@ from accelerator import subjobs
 from accelerator.dispatch import JobError
 from accelerator.dataset import Dataset, DatasetWriter
 from accelerator.dsutil import typed_writer
-from accelerator.compat import PY3
+from accelerator.compat import PY3, UTC
 from accelerator.standard_methods import dataset_type
 from accelerator import g
 
@@ -266,8 +266,8 @@ def test_datetimes():
 
 	# Timezone tests. I hope all systems accept the :Region/City syntax.
 	verify('tz a', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 11:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-26 23:15')
-	verify('tz b', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 11:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-26 23:15', timezone='UTC')
-	verify('tz c', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 13:44', b'2020-02-22 12:44', b'x'], [datetime(2020, 9, 30, 11, 44), datetime(2020, 2, 22, 11, 44), datetime(2022, 11, 26, 23, 15)], default='2022-11-27 00:15', timezone=':Europe/Stockholm')
+	verify('tz b', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 11:44', b'x'], [datetime(2020, 9, 30, 11, 44, tzinfo=UTC), datetime(2022, 11, 26, 23, 15, tzinfo=UTC)], default='2022-11-26 23:15', timezone='UTC')
+	verify('tz c', ['datetime:%Y-%m-%d %H:%M'], [b'2020-09-30 13:44', b'2020-02-22 12:44', b'x'], [datetime(2020, 9, 30, 11, 44, tzinfo=UTC), datetime(2020, 2, 22, 11, 44, tzinfo=UTC), datetime(2022, 11, 26, 23, 15, tzinfo=UTC)], default='2022-11-27 00:15', timezone=':Europe/Stockholm')
 
 	# And now, for efficiency, all the remaining tests will be collected in
 	# just three datasets to speed things up.
