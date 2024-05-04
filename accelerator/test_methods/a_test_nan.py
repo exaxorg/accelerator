@@ -36,7 +36,7 @@ Test NaN values in the various float supporting types, making sure they
 hash as expected, including for unusual NaN representations.
 '''
 
-def synthesis(job):
+def synthesis(job, slices):
 	normal_NaN = float('NaN')
 	unusual_NaN_0 = struct.unpack('=f', b'\x7f\xc0\xc0\x7f')[0]
 	unusual_NaN_1 = struct.unpack('=f', b'\x7f\xc1\xc1\x7f')[0]
@@ -121,3 +121,5 @@ def synthesis(job):
 		ds = build('dataset_type', source=ds_u, hashlabel='nan', column2type={'ix': 'number'}).dataset()
 		assert set(ds.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s (dataset_type from %s)' % (ds.quoted, ds_u.quoted,)
 		assert expect_lines == ds.lines, 'dataset_type (%s) disagrees with datasetwriter (%s) about NaN slicing' % (ds.quoted, ds_h.quoted,)
+		rehash_lines = [len(list(ds_u.iterate(sliceno, rehash=True, hashlabel='nan'))) for sliceno in range(slices)]
+		assert expect_lines == rehash_lines, 'ds.iterate(rehash=True) of %s disagrees with datasetwriter hashing (%s) about NaN slicing' % (ds_u.quoted, ds_h.quoted,)
