@@ -2217,14 +2217,10 @@ static void init(const char *tz)
 			use_tz = -1; // true, but not 1, so not using mktime(3).
 		} else {
 			use_tz = 1;
+			if (setenv("TZ", tz, 1)) exit(1);
+			tzset();
 		}
-	} else {
-		// strptime parses %s in whatever timezone is set,
-		// so set UTC if user does not ask for a timezone.
-		tz = "UTC";
 	}
-	if (setenv("TZ", tz, 1)) exit(1);
-	tzset();
 }
 ''' + ''.join(funcs)
 
