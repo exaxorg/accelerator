@@ -113,8 +113,11 @@ def synthesis(job):
 			w_h(str(ix), v)
 		ds_h = dw_h.finish()
 		assert set(ds_h.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s' % (ds_h.quoted,)
+		expect_lines = ds_h.lines
 		ds_u = dw_u.finish()
 		ds = build('dataset_hashpart', source=ds_u, hashlabel='nan').dataset()
 		assert set(ds.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s (dataset_hashpart from %s)' % (ds.quoted, ds_u.quoted,)
+		assert expect_lines == ds.lines, 'dataset_hashpart (%s) disagrees with datasetwriter (%s) about NaN slicing' % (ds.quoted, ds_h.quoted,)
 		ds = build('dataset_type', source=ds_u, hashlabel='nan', column2type={'ix': 'number'}).dataset()
 		assert set(ds.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s (dataset_type from %s)' % (ds.quoted, ds_u.quoted,)
+		assert expect_lines == ds.lines, 'dataset_type (%s) disagrees with datasetwriter (%s) about NaN slicing' % (ds.quoted, ds_h.quoted,)
