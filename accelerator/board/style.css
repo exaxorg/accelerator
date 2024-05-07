@@ -42,7 +42,7 @@
 	--ansi-invert-bg: #245;
 
 	--graphnode-job-default: #8ae;
-	--graphnode-job-top: #cef;
+	--graphnode-job-top: #ace;
 	--graphnode-ds-default: #c8c;
 	--graphnode-ds-top: #fcf;
 	--graphnode-highlight: #ef8;
@@ -52,7 +52,7 @@
 	--graphnode-atmaxdepth: #c52;
 	--graph-fg: #222;
 	--graph-edge: #222;
-	--graph-subjobedge: #aea;
+	--graph-subjobedge: #9ab;
 	--graph-edgetext: #248;
 	--graph-edgefontsize: 9px;
 
