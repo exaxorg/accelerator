@@ -1,7 +1,7 @@
 % from math import atan2, sin, cos, pi
 % from json import dumps
 %
-% arrowlen = 15
+% arrowlen = 10
 % arrowangle = pi / 8
 % smallnodesize = 20
 % defaultnodesize = 30
@@ -78,10 +78,10 @@
 			{{ dumps(item.is_build) }}
 		)"
 	/>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/job/' + url_quote(item.jobid) }}">{{ item.jobid }}</a>
 	</text>
-	<text x="{{ item.x }}" y="{{ item.y + item.size + 2 * textrowspace }}" font-weight="normal" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
+	<text x="{{ item.x }}" y="{{ item.y + item.size + 1 * textrowspace }}" font-weight="bold" font-size="{{ fontsize }}" text-anchor="middle" fill="var(--graph-fg)">
 		<a href="{{ '/job/' + url_quote(item.jobid) +'/method.tar.gz/' }}">{{ item.name }}</a>
 	</text>
 	% else:
@@ -116,8 +116,8 @@
 %	a = atan2(dsty - srcy, dstx - srcx)
 %	srcx = srcx + srcnode.size * cos(a)
 %	srcy = srcy + srcnode.size * sin(a)
-%	dstx = dstx - dstnode.size * cos(a)
-%	dsty = dsty - dstnode.size * sin(a)
+%	dstx = dstx - (dstnode.size + 5) * cos(a)
+%	dsty = dsty - (dstnode.size + 5) * sin(a)
 		<line x1="{{ srcx }}" x2="{{ dstx }}" y1="{{ srcy }}" y2="{{ dsty }}" stroke="{{ stroke }}" stroke-width="{{ width }}"/>
 %	x1 = dstx - arrowlen * cos(a + arrowangle)
 %	y1 = dsty - arrowlen * sin(a + arrowangle)
