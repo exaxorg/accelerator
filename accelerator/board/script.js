@@ -1,3 +1,205 @@
+const resultItem = (function () {
+	const imageExts = new Set(['jpg', 'jpeg', 'gif', 'png', 'apng', 'svg', 'bmp', 'webp']);
+	const videoExts = new Set(['mp4', 'mov', 'mpg', 'mpeg', 'mkv', 'avi', 'webm']);
+	const resultItem = function (name, data, url_path) {
+		const resultEl = document.createElement('DIV');
+		const txt = text => resultEl.appendChild(document.createTextNode(text));
+		const a = function (text, ...parts) {
+			const a = document.createElement('A');
+			a.innerText = text;
+			let href = '/job'
+			for (const part of parts) {
+				href = href + '/' + encodeURIComponent(part);
+			}
+			a.href = href;
+			a.target = '_blank';
+			resultEl.appendChild(a);
+		}
+		resultEl.className = 'result';
+		resultEl.dataset.name = name;
+		resultEl.dataset.ts = data.ts;
+		if (data.jobid) {
+			a(name, data.jobid, data.name);
+			txt(' from ');
+			a(data.jobid, data.jobid);
+			txt(' (');
+			const methodEl = document.createElement('SPAN')
+			methodEl.className = 'method'
+			resultEl.appendChild(methodEl);
+			txt(')');
+			fetch('/job/' + encodeURIComponent(data.jobid), {headers: {Accept: 'application/json'}})
+			.then(res => {
+				if (res.ok) return res.json();
+				throw new Error('error response');
+			})
+			.then(res => {
+				const a = document.createElement('A');
+				a.innerText = res.params.method;
+				a.href = '/method/' + encodeURIComponent(res.params.method);
+				a.target = '_blank';
+				methodEl.appendChild(a);
+			});
+		} else {
+			txt(name + ' ');
+			const el = document.createElement('SPAN');
+			el.className = 'unknown';
+			el.appendChild(document.createTextNode('from UNKNOWN'));
+			resultEl.appendChild(el);
+		}
+		txt(' ');
+		const dateEl = document.createElement('SPAN');
+		dateEl.className = 'date';
+		resultEl.appendChild(dateEl)
+		update_date(resultEl);
+		const size = document.createElement('INPUT');
+		size.type = 'submit';
+		size.value = 'big';
+		size.disabled = true;
+		resultEl.appendChild(size);
+		const hide = document.createElement('INPUT');
+		hide.type = 'submit';
+		hide.value = 'hide';
+		hide.onclick = function () {
+			document.getElementById('show-all').disabled = false;
+			resultEl.classList.add('hidden');
+		}
+		resultEl.appendChild(hide);
+		resultEl.appendChild(sizewrap(name, data, size, url_path));
+		return resultEl;
+	};
+	const sizewrap = function (name, data, size, url_path) {
+		if (data.size < 5000000) return load(name, data, size, url_path);
+		const clickEl = document.createElement('DIV');
+		clickEl.className = 'clickme';
+		clickEl.innerText = 'Click to load ' + data.size + ' bytes';
+		clickEl.onclick = function () {
+			clickEl.parentNode.replaceChild(load(name, data, size, url_path), clickEl);
+		};
+		return clickEl;
+	};
+	const name2ext = function (name) {
+		const parts = name.split('.');
+		let ext = parts.pop().toLowerCase();
+		if (ext === 'gz' && parts.length > 1) {
+			ext = parts.pop().toLowerCase();
+		}
+		return ext;
+	}
+	const load = function (name, data, size, url_path) {
+		const fileUrl = url_path + '/' + encodeURIComponent(name) + '?ts=' + data.ts;
+		const ext = name2ext(name);
+		const container = document.createElement('DIV');
+		const spinner = document.createElement('DIV');
+		spinner.className = 'spinner';
+		container.appendChild(spinner);
+		const onerror = function () {
+			spinner.remove();
+			container.className = 'error';
+			container.innerText = 'ERROR';
+		};
+		let fileEl;
+		let stdhandling = false;
+		size.disabled = false;
+		size.onclick = function () {
+			if (container.className) {
+				size.value = 'big';
+				container.className = '';
+			} else {
+				size.value = 'small';
+				container.className = 'big';
+				container.scrollIntoView({behavior: 'smooth', block: 'end'});
+			}
+		};
+		if (imageExts.has(ext)) {
+			fileEl = document.createElement('IMG');
+			fileEl.onclick = function () {
+				if (fileEl.naturalHeight > fileEl.height) {
+					if (container.className) {
+						container.className = 'full';
+						size.value = 'small';
+						fileEl.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+					} else {
+						container.className = 'big';
+						container.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+						if (fileEl.naturalHeight > fileEl.height) {
+							size.value = 'bigger';
+						} else {
+							size.value = 'small';
+						}
+					}
+				} else {
+					size.value = 'big';
+					container.className = '';
+					fileEl.className = '';
+				}
+			};
+			size.onclick = fileEl.onclick;
+			stdhandling = true;
+		} else if (videoExts.has(ext)) {
+			fileEl = document.createElement('VIDEO');
+			fileEl.src = fileUrl;
+			fileEl.controls = true;
+			spinner.remove(); // shows a video UI immediately anyway
+		} else if (ext === 'pdf') {
+			fileEl = document.createElement('EMBED');
+			fileEl.type = 'application/pdf';
+			stdhandling = true;
+		} else {
+			fileEl = document.createElement('DIV');
+			fileEl.className = 'textfile';
+			const pre = document.createElement('PRE');
+			fileEl.appendChild(pre);
+			fetch(fileUrl, {headers: {Accept: 'text/plain'}})
+			.then(res => {
+				if (res.ok) return res.text();
+				throw new Error('error response');
+			})
+			.then(res => {
+				if (ext === 'html') {
+					fileEl.innerHTML = res;
+				} else {
+					parseANSI(pre, res);
+				}
+				spinner.remove();
+			})
+			.catch(error => {
+				console.log(error);
+				onerror();
+			});
+		}
+		if (stdhandling) {
+			fileEl.onload = () => spinner.remove();
+			fileEl.onerror = onerror;
+			fileEl.src = fileUrl;
+		}
+		container.appendChild(fileEl);
+		return container;
+	};
+	return resultItem;
+})();
+const units = [['minute', 60], ['hour', 24], ['day', 365.25], ['year', 0]];
+const fmtdate_ago = function (date) {
+	const now = new Date();
+	let ago = (now - date) / 60000;
+	for (const [unit, size] of units) {
+		if (size === 0 || ago < size) {
+			ago = ago.toFixed(0);
+			let s = (ago == 1) ? '' : 's';
+			return fmtdate(date) + ', ' + ago + ' ' + unit + s + ' ago';
+		}
+		ago = ago / size;
+	}
+};
+const update_date = function(el) {
+	const date = new Date(el.dataset.ts * 1000);
+	el.querySelector('.date').innerText = fmtdate_ago(date);
+};
+const fmtdate = function(date) {
+	if (!date) date = new Date();
+	return date.toISOString().substring(0, 19).replace('T', ' ') + 'Z';
+};
+
+
 const parseANSI = (function () {
 	// Two digit hex str
 	const hex2 = (n) => ('0' + n.toString(16)).slice(-2);
