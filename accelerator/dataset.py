@@ -663,7 +663,7 @@ class Dataset(unicode):
 			slice_skipping = False
 			slice_first = False
 		for d in datasets:
-			if isinstance(sliceno, int_types):
+			if isinstance(sliceno, int_types) and not rehash:
 				lines_here = d.lines[sliceno]
 			else:
 				lines_here = sum(d.lines)
