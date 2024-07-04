@@ -34,6 +34,28 @@
 	% end
 	<h2>job graph</h2>
 	% include('graph', mode='job', key=job)
+% if job.is_build and results:
+	<h2>Results</h2>
+	<input type="submit" value="show all" id="show-all" disabled>
+	<div class="box" id="results">
+	<script>
+		(function () {
+			const show_all = document.getElementById('show-all');
+			const resultfiles = document.getElementById('results');
+			show_all.onclick = function() {
+				show_all.disabled = true;
+				for (const el of document.querySelectorAll('.result.hidden')) {
+					el.classList.remove('hidden');
+				}
+			}
+			const results = {{! results }};
+			for (const data of results) {
+				resultfiles.appendChild(resultItem(data.name, data, data.jobid));
+			}
+		})();
+	</script>
+	</div>
+% end
 	<h2>setup</h2>
 	<div class="box">
 		% if job.is_build:

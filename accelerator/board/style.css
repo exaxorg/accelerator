@@ -299,6 +299,15 @@ input:disabled {
 .result .method {
 	font-size: 95%;
 }
+.description {
+    font-style: italic;
+    padding-top: 0.5em;
+}
+.resultheader {
+    font-weight: bold;
+    display: inline-block;
+}
+
 @keyframes result {
 	0% {
 		transform: scale(0.5);
