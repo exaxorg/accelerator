@@ -617,6 +617,8 @@ class Dataset(unicode):
 			if range_bottom is None and range_top is None:
 				range = None
 		if slice:
+			if rehash:
+				raise DatasetUsageError("Combining rehash and slice doesn't work, sorry.")
 			if isinstance(slice, int_types):
 				slice = builtins.slice(slice, None, 1)
 			slice = builtins.slice(slice.start or 0, slice.stop, slice.step or 1)
