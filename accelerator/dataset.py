@@ -148,7 +148,21 @@ def _ds_load(obj):
 	if n not in _ds_cache:
 		fn = obj.job.filename(obj._name('pickle'))
 		if not os.path.exists(fn):
-			raise NoSuchDatasetError('Dataset %r does not exist' % (n,))
+			extra = ''
+			try:
+				dslist = obj.job.datasets
+				if not dslist:
+					extra = ' (%s contains no datasets)' % (obj.job,)
+				elif len(dslist) == 1:
+					extra = ' (did you mean %s?)' % (dslist[0].quoted,)
+				elif len(dslist) < 5:
+					extra = ' (did you mean one of [%s]?)' % (', '.join(ds.quoted for ds in dslist),)
+				else:
+					extra = ' (job contains %d other datasets, use "ax ds -l %s" to list them)' % (len(dslist), obj.job,)
+			except Exception:
+				# We don't want to accidentally give an unrelated exception
+				pass
+			raise NoSuchDatasetError('Dataset %r does not exist%s' % (obj.quoted, extra,))
 		_ds_cache[n] = blob.load(fn)
 		_ds_cache.update(_ds_cache[n].get('cache', ()))
 	return _ds_cache[n]
