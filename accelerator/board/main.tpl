@@ -120,6 +120,7 @@
 					}
 					remove(oldEl);
 				}
+				const resultItem = function (name, data) {
 				const resultEl = document.createElement('DIV');
 				const txt = text => resultEl.appendChild(document.createTextNode(text));
 				const a = function (text, ...parts) {
@@ -183,6 +184,9 @@
 				}
 				resultEl.appendChild(hide);
 				resultEl.appendChild(sizewrap(name, data, size));
+				return resultEl;
+				}
+				const resultEl = resultItem(name, data);
 				prev.after(resultEl);
 				prev = resultEl;
 			}
