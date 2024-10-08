@@ -4,6 +4,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2018-2024 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
+# Modifications copyright (c) 2024 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -33,7 +34,7 @@ import json
 import ctypes
 
 from accelerator.job import CurrentJob, WORKDIRS
-from accelerator.compat import pickle, iteritems, setproctitle, QueueEmpty
+from accelerator.compat import pickle, iteritems, itervalues, setproctitle, QueueEmpty
 from accelerator.compat import getarglist, monotonic
 from accelerator.extras import job_params, ResultIterMagic
 from accelerator.error import AcceleratorError, JobError
@@ -122,7 +123,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				if isinstance(d, defaultdict) and not picklable(d.default_factory):
 					if not d:
 						return {}
-					v = next(iteritems(d))
+					v = next(itervalues(d))
 					if isinstance(v, defaultdict) and not picklable(v.default_factory):
 						return {k: fixup(v) for k, v in iteritems(d)}
 					else:
