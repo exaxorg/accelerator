@@ -4,7 +4,7 @@
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 # Modifications copyright (c) 2019-2024 Carl Drougge                       #
-# Modifications copyright (c) 2023 Pablo Correa Gómez                      #
+# Modifications copyright (c) 2023-2024 Pablo Correa Gómez                 #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -416,7 +416,7 @@ class ResultIterMagic(object):
 		return item
 	next = __next__
 
-	def merge_auto(self):
+	def merge_auto(self, safe=False):
 		"""Merge values from iterator using magic.
 		Currenly supports data that has .update, .itervalues and .iteritems
 		methods.
@@ -428,11 +428,18 @@ class ResultIterMagic(object):
 		if self._started:
 			raise self._exc("Will not merge after iteration started")
 		if self._inner._is_tupled:
-			return (self._merge_auto_single(it, ix) for ix, it in enumerate(self._inner._loaders))
+			return (self._merge_auto_single(it, ix, safe) for ix, it in enumerate(self._inner._loaders))
 		else:
-			return self._merge_auto_single(self, -1)
+			return self._merge_auto_single(self, -1, safe)
 
-	def _merge_auto_single(self, it, ix):
+	def merge_safe(self):
+		"""Merge values from iterator using magic, but avoid inserting values
+		that might override previous values in the iterator.
+		See merge_auto for more details.
+		"""
+		self.merge_auto(safe=True)
+
+	def _merge_auto_single(self, it, ix, safe):
 		# find a non-empty one, so we can look at the data in it
 		data = next(it)
 		if isinstance(data, num_types):
@@ -461,6 +468,9 @@ class ResultIterMagic(object):
 			raise self._exc("Top level has no .values (index %d)" % (ix,))
 		def upd(aggregate, part, level):
 			if level == depth:
+				if safe:
+					for k, v in iteritems(part):
+						assert k not in aggregate, "duplicate"
 				aggregate.update(part)
 			else:
 				for k, v in iteritems(part):
