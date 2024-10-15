@@ -304,8 +304,9 @@ def main(urd):
 	urd.build("test_output_on_error")
 
 	print()
-	print("Test special types in options")
+	print("Test special types in options and results")
 	urd.build("test_datetime")
+	urd.build("test_defaultdict")
 	urd.build("test_path")
 
 	print()
