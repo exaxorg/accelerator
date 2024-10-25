@@ -627,6 +627,7 @@ canvas {
 	display: none;
 	border: 2px solid var(--graphpopup-border);
 	box-shadow: 0 0 3px 4px var(--graphpopup-shadow) inset;
+	z-index: 1;
 }
 #graphpopup td {
 	list-style-type:none;
