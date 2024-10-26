@@ -306,6 +306,7 @@ input:disabled {
 .resultheader {
     font-weight: bold;
     display: inline-block;
+    margin-right: 1em;
 }
 
 @keyframes result {

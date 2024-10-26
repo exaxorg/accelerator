@@ -3,7 +3,8 @@ const resultItem = (function () {
 	const videoExts = new Set(['mp4', 'mov', 'mpg', 'mpeg', 'mkv', 'avi', 'webm']);
 	const resultItem = function (name, data, url_path) {
 		const resultEl = document.createElement('DIV');
-		const txt = text => resultEl.appendChild(document.createTextNode(text));
+		metahdr = document.createElement('SPAN');
+		const txt = text => metahdr.appendChild(document.createTextNode(text));
 		const a = function (text, ...parts) {
 			const a = document.createElement('A');
 			a.innerText = text;
@@ -13,12 +14,13 @@ const resultItem = (function () {
 			}
 			a.href = href;
 			a.target = '_blank';
-			resultEl.appendChild(a);
+			metahdr.appendChild(a);
 		}
 		resultEl.className = 'result';
 		resultEl.dataset.name = name;
 		resultEl.dataset.ts = data.ts;
 		if (data.is_build) {
+			metahdr.className = 'metahdr';
 			const el = document.createElement('SPAN');
 			el.className = 'resultheader';
 			resultEl.appendChild(el);
@@ -33,9 +35,9 @@ const resultItem = (function () {
 			txt(' from ');
 			a(data.jobid, data.jobid);
 			txt(' (');
-			const methodEl = document.createElement('SPAN')
-			methodEl.className = 'method'
-			resultEl.appendChild(methodEl);
+			const methodEl = document.createElement('SPAN');
+			methodEl.className = 'method';
+			metahdr.appendChild(methodEl);
 			txt(')');
 			fetch('/job/' + encodeURIComponent(data.jobid), {headers: {Accept: 'application/json'}})
 			.then(res => {
@@ -54,12 +56,13 @@ const resultItem = (function () {
 			const el = document.createElement('SPAN');
 			el.className = 'unknown';
 			el.appendChild(document.createTextNode('from UNKNOWN'));
-			resultEl.appendChild(el);
+			metahdr.appendChild(el);
 		}
 		txt(' ');
 		const dateEl = document.createElement('SPAN');
 		dateEl.className = 'date';
-		resultEl.appendChild(dateEl)
+		metahdr.appendChild(dateEl);
+		resultEl.appendChild(metahdr);
 		update_date(resultEl);
 		const size = document.createElement('INPUT');
 		size.type = 'submit';
