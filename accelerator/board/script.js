@@ -19,6 +19,19 @@ const resultItem = (function () {
 		resultEl.className = 'result';
 		resultEl.dataset.name = name;
 		resultEl.dataset.ts = data.ts;
+		const size = document.createElement('INPUT');
+		size.type = 'submit';
+		size.value = 'big';
+		size.disabled = true;
+		resultEl.appendChild(size);
+		const hide = document.createElement('INPUT');
+		hide.type = 'submit';
+		hide.value = 'hide';
+		hide.onclick = function () {
+			document.getElementById('show-all').disabled = false;
+			resultEl.classList.add('hidden');
+		}
+		resultEl.appendChild(hide);
 		if (data.is_build) {
 			metahdr.className = 'metahdr';
 			const el = document.createElement('SPAN');
@@ -64,19 +77,6 @@ const resultItem = (function () {
 		metahdr.appendChild(dateEl);
 		resultEl.appendChild(metahdr);
 		update_date(resultEl);
-		const size = document.createElement('INPUT');
-		size.type = 'submit';
-		size.value = 'big';
-		size.disabled = true;
-		resultEl.appendChild(size);
-		const hide = document.createElement('INPUT');
-		hide.type = 'submit';
-		hide.value = 'hide';
-		hide.onclick = function () {
-			document.getElementById('show-all').disabled = false;
-			resultEl.classList.add('hidden');
-		}
-		resultEl.appendChild(hide);
 		let child;
 		if (data.isdir) {
 			child = document.createElement('DIV');

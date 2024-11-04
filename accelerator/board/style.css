@@ -308,6 +308,9 @@ input:disabled {
     display: inline-block;
     margin-right: 1em;
 }
+.metahdr {
+    float: right;
+}
 
 @keyframes result {
 	0% {
