@@ -393,7 +393,7 @@ class CurrentJob(Job):
 		pattern = os.path.normpath(pattern)
 		assert not pattern.startswith('/')
 		assert not pattern.startswith('../')
-		forbidden = ('setup.json', 'post.json', 'method.tar.gz',)
+		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.jsonl')
 		res = set()
 		if PY3:
 			files = iglob(pattern, recursive=True)
