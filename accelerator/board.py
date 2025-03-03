@@ -526,6 +526,17 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
 		job = name2job(cfg, jobid)
+		if os.path.isdir(job.filename(name)):
+			files = {fn for fn in os.listdir(job.filename(name))}
+			dirs = {dn for dn in files if os.path.isdir(job.filename(name + '/' + dn))}
+			files -= dirs
+			res = dict(dirs=sorted(dirs), files=sorted(files), dirname=name, job=job)
+			accept = get_best_accept('application/json', 'text/json', 'text/html')
+			bottle.response.content_type = accept + '; charset=UTF-8'
+			if accept == 'text/html':
+				return template('dircontents', **res)
+			else:
+				return res
 		res = static_file(name, root=job.path, job=job)
 		if not res.content_type and res.status_code < 400:
 			# bottle default is text/html, which is probably wrong.
@@ -544,7 +555,9 @@ def run(cfg, from_shell=False, development=False):
 		results = None
 		if post:
 			aborted = False
-			files = [fn for fn in job.files() if fn[0] != '/']
+			files = {fn for fn in job.files() if fn[0] != '/'}
+			dirs = {dn for dn in files if os.path.isdir(job.filename(dn))}
+			files -= dirs
 			jobs = list(post.subjobs)
 			jobs.append(job)
 			jobs = call_s('jobs_are_current', jobs='\0'.join(jobs))
@@ -569,6 +582,7 @@ def run(cfg, from_shell=False, development=False):
 			datasets=job.datasets,
 			params=job.params,
 			subjobs=subjobs,
+			dirs=dirs,
 			files=files,
 			results=results,
 		)
