@@ -272,7 +272,6 @@ input:disabled {
 #dirs a {
 	padding-left: 0.3em;
 	font-family: monospace;
-	font-size: 150%;
 }
 .textfile {
 	max-height: var(--max-height);
