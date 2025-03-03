@@ -49,9 +49,7 @@
 				}
 			}
 			const results = {{! results }};
-			for (const data of results) {
-				resultfiles.appendChild(resultItem(data.name, data, data.jobid));
-			}
+			dirsandfiles(results, resultfiles);
 		})();
 	</script>
 	</div>
@@ -123,6 +121,16 @@
 						<span class="warning">not current</span>
 					% end
 					</li>
+				% end
+			</ul>
+		</div>
+	% end
+	% if dirs:
+		<h2>directories</h2>
+		<div class="box" id="dirs">
+			<ul>
+				% for dn in sorted(dirs):
+					<li><a target="_blank" href="/job/{{ url_quote(job) }}/{{ url_quote(dn) }}">{{ dn }}</a></li>
 				% end
 			</ul>
 		</div>

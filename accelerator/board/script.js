@@ -211,6 +211,38 @@ const resultItem = (function () {
 	};
 	return resultItem;
 })();
+const dirsandfiles = function (results, resultfiles) {
+	if (results.some(data => data.isdir)) {
+		const h3 = document.createElement('H3');
+		h3.innerText = 'directories';
+		resultfiles.appendChild(h3);
+		const div = document.createElement('DIV');
+		div.id = "dirs";
+		const ul = document.createElement('UL');
+		for (const data of results) {
+			if (data.isdir) {
+				let li = document.createElement('LI');
+				let a = document.createElement('A');
+				a.innerText = data.name;
+				a.href = encodeURI('/job/' + data.jobid + '/' + data.name);
+				li.appendChild(a);
+				li.appendChild(document.createTextNode(" (" + data.method + ") "));
+				a = document.createElement('A');
+				a.innerText = data.jobid;
+				a.href = encodeURI('/job/' + data.jobid);
+				li.appendChild(a);
+				ul.appendChild(li);
+			}
+		}
+		div.appendChild(ul);
+		resultfiles.appendChild(div);
+	}
+	for (const data of results) {
+		if (!data.isdir) {
+			resultfiles.appendChild(resultItem(data.name, data, '/job/' + data.jobid));
+		}
+	}
+}
 const units = [['minute', 60], ['hour', 24], ['day', 365.25], ['year', 0]];
 const fmtdate_ago = function (date) {
 	const now = new Date();
