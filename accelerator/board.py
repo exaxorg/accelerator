@@ -37,7 +37,7 @@ from accelerator.dataset import Dataset
 from accelerator.unixhttp import call, WaitressServer
 from accelerator.build import fmttime
 from accelerator.configfile import resolve_listen
-from accelerator.error import NoSuchWhateverError
+from accelerator.error import NoSuchWhateverError, NoSuchJobError
 from accelerator.metadata import insert_metadata
 from accelerator.shell.parser import ArgumentParser, name2job, name2ds
 from accelerator.shell.workdir import job_data, workdir_jids
@@ -691,7 +691,15 @@ def run(cfg, from_shell=False, development=False):
 	def urditem(user, build, ts):
 		key = user + '/' + build + '/' + ts
 		d = call_u(key)
-		return dict(key=key, entry=d)
+		results = None
+		if d.get('build_job'):  # non-existing on older versions
+			try:
+				bjob = name2job(cfg, d['build_job'])
+				with bjob.open('link_result.jsonl', 'rt') as fh:
+					results = '[%s]' % ', '.join(fh)
+			except (FileNotFoundError, NoSuchJobError):
+				pass
+		return dict(key=key, entry=d, results=results)
 
 	@bottle.get('/h/<name:path>')
 	def hashed_file(name):

@@ -9,7 +9,7 @@
 		% if entry.build_job:
 			<tr><td>build_job</td><td id="urd-build_job"><a href="/job/{{ url_quote(entry.build_job) }}">{{ entry.build_job }}</a></td></tr>
 		% end
-		% entry.pop('build_job')
+		% build_job = entry.pop('build_job')
 		% for thing, value in sorted(entry.items()):
 			% if thing not in ('joblist', 'deps',):
 				<tr><td>{{ thing }}</td><td>{{ value }}</td></tr>
@@ -39,10 +39,30 @@
 			</ol>
 		</td></tr>
 	</table>
-<script language="javascript">
-(function() {
-	const el = document.getElementById('urd-caption');
-	parseANSI(el, {{! js_quote(saved_caption) }});
-})();
-</script>
+	<script language="javascript">
+	(function() {
+		const el = document.getElementById('urd-caption');
+		parseANSI(el, {{! js_quote(saved_caption) }});
+	})();
+	</script>
+	% if build_job and results:
+		<h2>Results (from build job <a href="/job/{{ url_quote(build_job) }}">{{ build_job }}</a>)</h2>
+		<input type="submit" value="show all" id="show-all" disabled>
+		<div class="box" id="results">
+		<script>
+			(function () {
+				const show_all = document.getElementById('show-all');
+				const resultfiles = document.getElementById('results');
+				show_all.onclick = function() {
+					show_all.disabled = true;
+					for (const el of document.querySelectorAll('.result.hidden')) {
+						el.classList.remove('hidden');
+					}
+				}
+				const results = {{! results }};
+				dirsandfiles(results, resultfiles);
+			})();
+		</script>
+		</div>
+	% end
 </body>
