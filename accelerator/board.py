@@ -691,12 +691,18 @@ def run(cfg, from_shell=False, development=False):
 	def urditem(user, build, ts):
 		key = user + '/' + build + '/' + ts
 		d = call_u(key)
+		jobsinjoblist = set(x[1] for x in d.joblist)
 		results = None
 		if d.get('build_job'):  # non-existing on older versions
 			try:
 				bjob = name2job(cfg, d['build_job'])
+				filtereditems = []
 				with bjob.open('link_result.jsonl', 'rt') as fh:
-					results = '[%s]' % ', '.join(fh)
+					for item in fh:
+						j = json.loads(item)
+						if j['jobid'] in jobsinjoblist:
+							filtereditems.append(item)
+				results = '[%s]' % ', '.join(filtereditems)
 			except (FileNotFoundError, NoSuchJobError):
 				pass
 		return dict(key=key, entry=d, results=results)
