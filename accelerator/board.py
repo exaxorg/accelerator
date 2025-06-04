@@ -269,6 +269,9 @@ def run(cfg, from_shell=False, development=False):
 	# but we want it to do so (e.g. in case someone names a dataset with one).
 	def pathfilter(config):
 		return r'(?:.|\n)+?', None, None
+	if not bottle.default_app:
+		# Bottle 0.13 seems to start with this empty.
+		bottle.default_app.push()
 	bottle.default_app[0].router.add_filter('path', pathfilter)
 
 	populate_hashed()
