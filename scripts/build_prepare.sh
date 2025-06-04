@@ -73,7 +73,12 @@ for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
 			if [ "${AUDITWHEEL_PLAT/%_*}" = "manylinux2010" ]; then
 				/opt/python/"$V"/bin/pip install "setproctitle==1.1.8" "bottle==0.12.7" "waitress==1.0" "build==0.5.1"
 			else
-				/opt/python/"$V"/bin/pip install setproctitle 'bottle>=0.12.7, <0.13' waitress
+				/opt/python/"$V"/bin/pip install setproctitle waitress
+				if [[ "$V" =~ cp3.- ]]; then # < 3.10
+					/opt/python/"$V"/bin/pip install 'bottle>=0.12.7, <0.13'
+				else
+					/opt/python/"$V"/bin/pip install 'bottle>=0.13, <0.14'
+				fi
 			fi
 			;;
 	esac
