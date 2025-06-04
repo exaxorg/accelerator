@@ -79,6 +79,8 @@ for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*[0-9]; do
 				else
 					/opt/python/"$V"/bin/pip install 'bottle>=0.13, <0.14'
 				fi
+				# Some versions no longer come with setuptools (3.12+ as of this writing, but 3.12 used to, so I don't know what the rule is.)
+				/opt/python/"$V"/bin/pip list | grep setuptools >/dev/null || /opt/python/"$V"/bin/pip install setuptools
 			fi
 			;;
 	esac
