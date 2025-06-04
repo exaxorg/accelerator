@@ -132,7 +132,11 @@ setup(
 
 	install_requires=[
 		'setproctitle>=1.1.8', # not actually required
-		'bottle>=0.12.7, <0.13',
+		# There is no single bottle version compatible with all python versions we support.
+		# Bottle 0.13 works on python 3.8+, but we only use it on 3.10+ for now.
+		# I choose 3.10 pretty arbitrarily to make it a little easier in the build scripts.
+		'bottle>=0.12.7, <0.13; python_version<"3.10"',
+		'bottle>=0.13, <0.14; python_version>="3.10"',
 		'waitress>=1.0',
 		'configparser>=3.5.0, <5.0; python_version<"3"',
 		'monotonic>=1.0; python_version<"3"',
