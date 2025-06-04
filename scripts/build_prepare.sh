@@ -62,7 +62,7 @@ ZLIB_PREFIX="/prepare/zlib-ng"
 
 cd /tmp
 
-for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*; do
+for V in /opt/python/cp[23][5-9]-* /opt/python/cp31[0-9]-*[0-9]; do
 	V="${V/\/opt\/python\//}"
 	case "$V" in
 		cp27-*)

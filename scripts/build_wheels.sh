@@ -104,9 +104,9 @@ if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 else
 	BUILD_STEP="new"
 	if [ "$X86glibc" = "true" ]; then
-		VERSIONS=(/opt/python/cp3[89]-* /opt/python/cp31[0-9]-*)
+		VERSIONS=(/opt/python/cp3[89]-* /opt/python/cp31[0-9]-*[0-9])
 	else
-		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*)
+		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*[0-9])
 	fi
 fi
 
