@@ -263,13 +263,7 @@ if [ "$BUILD_STEP" = "old" ]; then
 		/opt/python/cp27-cp27m/bin \
 		/opt/python/cp36-cp36m/bin \
 		/opt/python/cp35-cp35m/bin
-elif [ "$X86glibc" = "false" ]; then
-	# Test running 3.10 and 3.6 under a 3.8 server
-	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-		/opt/python/cp38-cp38/bin \
-		/opt/python/cp310-cp310/bin \
-		/opt/python/cp36-cp36m/bin
-else # X86glibc new
+else
 	# Test running 3.12 and 3.8 under a 3.10 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
 		/opt/python/cp310-cp310/bin \
