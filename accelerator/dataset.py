@@ -162,7 +162,7 @@ def _ds_load(obj):
 			except Exception:
 				# We don't want to accidentally give an unrelated exception
 				pass
-			raise NoSuchDatasetError('Dataset %r does not exist%s' % (obj.quoted, extra,))
+			raise NoSuchDatasetError('Dataset %s does not exist%s' % (obj.quoted, extra,))
 		_ds_cache[n] = blob.load(fn)
 		_ds_cache.update(_ds_cache[n].get('cache', ()))
 	return _ds_cache[n]
