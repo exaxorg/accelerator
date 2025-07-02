@@ -90,7 +90,7 @@ const resultItem = (function () {
 			li.appendChild(a);
 			ul.appendChild(li);
 		} else {
-			child = sizewrap(name, data, size, url_path);
+			child = sizewrap(data.linkname ? data.name : name, data, size, url_path);
 		}
 		resultEl.appendChild(child);
 		if (data.description) {
@@ -239,7 +239,7 @@ const dirsandfiles = function (results, resultfiles) {
 	}
 	for (const data of results) {
 		if (!data.isdir) {
-			resultfiles.appendChild(resultItem(data.name, data, '/job/' + data.jobid));
+			resultfiles.appendChild(resultItem(data.linkname, data, '/job/' + data.jobid));
 		}
 	}
 }
