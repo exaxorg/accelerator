@@ -700,6 +700,8 @@ def run(cfg, from_shell=False, development=False):
 				v, lr = bjob.load('link_result.pickle')
 				if v == 0:
 					results = '[%s]' % (', '.join(v for k, v in lr if k == key),)
+					if results == '[]':
+						results = None
 			except (FileNotFoundError, NoSuchJobError):
 				pass
 		return dict(key=key, entry=d, results=results)
