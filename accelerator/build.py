@@ -462,6 +462,8 @@ class Urd(object):
 
 	def _reset(self):
 		self._a._reset()
+		self._link_result_current = []
+		self._link_result_finished = []
 		self._current = None
 		self.workdir = None
 		self._warnings = []
@@ -540,10 +542,19 @@ class Urd(object):
 			self._auth_tested = True
 		return True
 
+	def _link_result(self, d):
+		from json import dumps
+		self._link_result_current.append(dumps(d, ensure_ascii=False))
+
+	def _move_link_result(self, key=None):
+		self._link_result_finished.extend((key, v) for v in self._link_result_current)
+		self._link_result_current = []
+
 	def begin(self, path, timestamp=None, caption=None, update=False):
 		assert not self._current, 'Tried to begin %s while running %s' % (path, self._current,)
 		if not self._test_auth():
 			raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
+		self._move_link_result()
 		self._current = self._path(path)
 		self._current_timestamp = _tsfix(timestamp)
 		self._current_caption = caption
@@ -554,6 +565,7 @@ class Urd(object):
 
 	def abort(self):
 		self._current = None
+		self._move_link_result()
 
 	def finish(self, path, timestamp=None, caption=None):
 		path = self._path(path)
@@ -568,6 +580,7 @@ class Urd(object):
 		else:
 			timestamp = _tsfix(timestamp)
 		assert timestamp, 'No timestamp specified in begin or finish for %s' % (path,)
+		self._move_link_result(path + '/' + timestamp)
 		data = DotDict(
 			user=user,
 			build=build,
@@ -766,6 +779,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 
 	g.job = job
 	g.slices = cfg.slices
+	g.urd = urd
 
 	available_args = {'urd': urd, 'job': job}
 	kw = {}
@@ -806,6 +820,11 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 		dataset.finish_datasets()
 	if save_res is not None:
 		job.save(save_res, temp=False)
+
+	urd._move_link_result()
+	if urd._link_result_finished:
+		from accelerator import blob
+		blob.save((0, urd._link_result_finished), 'link_result.pickle', temp=False, _hidden=True)
 
 	if not res and urd.joblist_all:
 		if urd._test_auth():

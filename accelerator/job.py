@@ -244,11 +244,10 @@ class Job(unicode):
 	def link_result(self, filename='result.pickle', linkname=None, header=None, description=None):
 		"""Put a symlink to filename in result_directory
 		Only use this in a build script."""
-		from accelerator.g import running
+		from accelerator.g import running, urd
 		assert running == 'build', "Only link_result from a build script"
 		from accelerator.shell import cfg
 		from stat import S_ISDIR
-		from json import dumps
 		if isinstance(filename, Path):
 			filename = str(filename)
 		if isinstance(linkname, Path):
@@ -283,6 +282,7 @@ class Job(unicode):
 			'is_build': True,
 			'jobid': self,
 			'name': filename,
+			'linkname': linkname,
 			'header': header,
 			'description': description,
 			'method': self.method,
@@ -290,8 +290,7 @@ class Job(unicode):
 			'isdir': S_ISDIR(stat.st_mode),
 			'ts': stat.st_mtime,
 		}
-		with open('link_result.jsonl', 'at') as fh:
-			fh.write(dumps(res, ensure_ascii=False) + '\n')
+		urd._link_result(res)
 
 	def link_to_here(self, filename='result.pickle'):
 		from accelerator.g import job
@@ -393,7 +392,7 @@ class CurrentJob(Job):
 		pattern = os.path.normpath(pattern)
 		assert not pattern.startswith('/')
 		assert not pattern.startswith('../')
-		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.jsonl')
+		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.pickle')
 		res = set()
 		if PY3:
 			files = iglob(pattern, recursive=True)

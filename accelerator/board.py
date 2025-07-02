@@ -565,8 +565,9 @@ def run(cfg, from_shell=False, development=False):
 			current = jobs[job]
 			if job.is_build:
 				try:
-					with job.open('link_result.jsonl', 'rt') as fh:
-						results = '[%s]' % ', '.join(fh)
+					v, lr = job.load('link_result.pickle')
+					if v == 0:
+						results = '[%s]' % ', '.join(v for _, v in lr)
 				except FileNotFoundError:
 					pass
 		else:
@@ -692,18 +693,13 @@ def run(cfg, from_shell=False, development=False):
 		key = user + '/' + build + '/' + ts
 		d = call_u(key)
 		key = user + '/' + build + '/' + d.timestamp
-		jobsinjoblist = set(x[1] for x in d.joblist)
 		results = None
 		if d.get('build_job'):  # non-existing on older versions
 			try:
 				bjob = name2job(cfg, d['build_job'])
-				filtereditems = []
-				with bjob.open('link_result.jsonl', 'rt') as fh:
-					for item in fh:
-						j = json.loads(item)
-						if j['jobid'] in jobsinjoblist:
-							filtereditems.append(item)
-				results = '[%s]' % ', '.join(filtereditems)
+				v, lr = bjob.load('link_result.pickle')
+				if v == 0:
+					results = '[%s]' % (', '.join(v for k, v in lr if k == key),)
 			except (FileNotFoundError, NoSuchJobError):
 				pass
 		return dict(key=key, entry=d, results=results)
