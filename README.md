@@ -13,8 +13,8 @@ Supported Environments
 ----------------------
 
 The Accelerator project has been built, tested, and runs on:
- - Ubuntu 18.04, 20.04, 22.04
- - Debian 10, 11, 12
+ - Ubuntu 20.04, 22.04, 24.04
+ - Debian 11, 12
  - FreeBSD 13
 
 but is not limited to these systems or versions.
@@ -26,9 +26,9 @@ License
 =======
 
 Copyright 2017-2018 eBay Inc.  
-Modifications copyright (c) 2018-2024 Carl Drougge  
-Modifications copyright (c) 2019-2024 Anders Berkeman  
-Modifications copyright (c) 2023-2024 Pablo Correa Gómez  
+Modifications copyright (c) 2018-2025 Carl Drougge  
+Modifications copyright (c) 2019-2025 Anders Berkeman  
+Modifications copyright (c) 2023-2025 Pablo Correa Gómez  
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
