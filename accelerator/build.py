@@ -435,6 +435,7 @@ def _tsfix(ts):
 		ts = str(ts)
 	assert isinstance(ts, str_types), errmsg
 	assert ts, errmsg
+	ts = ts.replace(' ', 'T', 1)
 	if integer is None:
 		return ts
 	else:
