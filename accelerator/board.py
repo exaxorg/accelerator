@@ -691,6 +691,7 @@ def run(cfg, from_shell=False, development=False):
 	def urditem(user, build, ts):
 		key = user + '/' + build + '/' + ts
 		d = call_u(key)
+		key = user + '/' + build + '/' + d.timestamp
 		jobsinjoblist = set(x[1] for x in d.joblist)
 		results = None
 		if d.get('build_job'):  # non-existing on older versions
