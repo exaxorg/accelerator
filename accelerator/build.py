@@ -816,6 +816,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 			# For the rest we still don't want to see stuff from this
 			# file and earlier.
 			print_user_part_traceback()
+		os.chdir(job.path)
 
 	if not res:
 		dataset.finish_datasets()

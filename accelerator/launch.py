@@ -111,6 +111,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 			if finish.result is not None:
 				raise AcceleratorError('Can not return a result with job.finish_early() in analysis.')
 		if preserve_result and not finishjob:
+			os.chdir(g.job.path)
 			# Remove defaultdicts until we find one with a picklable default_factory.
 			# (This is what you end up doing manually anyway.)
 			def picklable(v):
@@ -365,7 +366,9 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 			except _FinishJob as finish:
 				analysis_func = synthesis_func = dummy
 				if finish.result is not None:
+					os.chdir(g.job.path)
 					blob.save(finish.result, temp=False)
+			os.chdir(g.job.path)
 			dataset.finish_datasets(final=False)
 		c_fflush()
 		_backgrounded_wait()
@@ -397,6 +400,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 			synthesis_res = synthesis_func(**args_for(synthesis_func))
 		except _FinishJob as finish:
 			synthesis_res = finish.result
+		os.chdir(g.job.path)
 		# If nothing was registered (except temp files), register everything not in subdirs.
 		if all(saved_files.values()):
 			g.job.register_files('*')
