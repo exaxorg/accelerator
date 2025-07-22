@@ -37,7 +37,7 @@ from accelerator import subjobs
 from accelerator.dispatch import JobError
 from accelerator.dataset import Dataset, DatasetWriter
 from accelerator.dsutil import typed_writer
-from accelerator.compat import PY3, UTC
+from accelerator.compat import UTC
 from accelerator.standard_methods import dataset_type
 from accelerator import g
 
@@ -137,14 +137,13 @@ def test_numbers():
 		values = [v + b'garbage' for v in values]
 		verify('base %d i' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
 		all_source_types = False
-	# python2 has both int and long, let's not check exact types there.
-	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=PY3)
+	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=True)
 	if options.numeric_comma:
-		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True, exact_types=PY3)
+		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True, exact_types=True)
 
-	# Python 2 accepts 42L as an integer, python 3 doesn't. The number
+	# Python 3 does not accepts 42L as an integer. The number
 	# type falls back to python parsing, verify this works properly.
-	verify('integer with L', ['number'], [b'42L'], [42], want_fail=PY3)
+	verify('integer with L', ['number'], [b'42L'], [42], want_fail=True)
 
 	# tests both that values outside the range are rejected
 	# and that None works as a default value.
@@ -981,19 +980,17 @@ def test_filter_bad_across_types():
 	want_bad = [tuple(l[1:]) for l in data if not l[0]]
 	dw = DatasetWriter(name="filter bad across types", columns=columns, allow_missing_slices=True)
 	cols_to_check = ['int32_10', 'bytes', 'json', 'unicode:utf-8']
-	if PY3:
-		# z so it sorts last.
-		dw.add('zpickle', 'pickle')
-		cols_to_check.append('zpickle')
-		for ix in range(len(data)):
-			data[ix].append({ix})
+	# z so it sorts last.
+	dw.add('zpickle', 'pickle')
+	cols_to_check.append('zpickle')
+	for ix in range(len(data)):
+		data[ix].append({ix})
 	dw.set_slice(0)
 	want = []
 	def add_want(ix):
 		v = data[ix]
 		want.append((int(v[3]), v[1], json.loads(v[4]), v[6].decode('utf-8'),))
-		if PY3:
-			want[-1] = want[-1] + (v[7],)
+		want[-1] = want[-1] + (v[7],)
 	for ix, v in enumerate(data):
 		if v[0]:
 			add_want(ix)

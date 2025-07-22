@@ -28,7 +28,6 @@ Test dataset_checksum[_chain].
 from accelerator.dataset import DatasetWriter
 from accelerator import subjobs
 from accelerator import blob
-from accelerator.compat import PY3
 
 test_data = [
 	("a", b"A", b"0", 0.42, 18, [1, 2, 3], u"a", u"A"),
@@ -48,12 +47,11 @@ def prepare():
 		unicode="unicode",
 		unicode_none=("unicode", True),
 	)
-	if PY3:
-		# z so it sorts last
-		columns['zpickle'] = 'pickle'
-		for ix, v in enumerate(test_data):
-			test_data[ix] = v + ([ix, 'line %d' % (ix,), {'line': ix}, 42],)
-		test_data[-1][-1][-1] = float('-inf')
+	# z so it sorts last
+	columns['zpickle'] = 'pickle'
+	for ix, v in enumerate(test_data):
+		test_data[ix] = v + ([ix, 'line %d' % (ix,), {'line': ix}, 42],)
+	test_data[-1][-1][-1] = float('-inf')
 	a = DatasetWriter(name="a", columns=columns)
 	b = DatasetWriter(name="b", columns=columns, previous=a)
 	c = DatasetWriter(name="c", columns=columns)
@@ -99,11 +97,10 @@ def synthesis(prepare_res):
 	a_uns_sum = ck(a, sort=False)
 	b_uns_sum = ck(b, sort=False)
 	assert a_uns_sum != b_uns_sum # they are not the same order
-	if PY3:
-		# Check that the pickle column really was included and works.
-		a_p_sum = ck(a, columns={'zpickle'})
-		b_p_sum = ck(b, columns={'zpickle'})
-		assert a_p_sum == b_p_sum # same values
-		a_uns_p_sum = ck(a, columns={'zpickle'}, sort=False)
-		b_uns_p_sum = ck(b, columns={'zpickle'}, sort=False)
-		assert a_uns_p_sum != b_uns_p_sum # but they are not the same order
+	# Check that the pickle column really was included and works.
+	a_p_sum = ck(a, columns={'zpickle'})
+	b_p_sum = ck(b, columns={'zpickle'})
+	assert a_p_sum == b_p_sum # same values
+	a_uns_p_sum = ck(a, columns={'zpickle'}, sort=False)
+	b_uns_p_sum = ck(b, columns={'zpickle'}, sort=False)
+	assert a_uns_p_sum != b_uns_p_sum # but they are not the same order

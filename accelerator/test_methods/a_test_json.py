@@ -29,7 +29,6 @@ from collections import OrderedDict
 from itertools import permutations
 
 from accelerator.extras import json_save, json_load, json_encode
-from accelerator.compat import PY2, PY3
 
 def test(name, input, want_obj, want_bytes, **kw):
 	json_save(input, name, **kw)
@@ -41,8 +40,7 @@ def test(name, input, want_obj, want_bytes, **kw):
 	as_bytes = json_encode(input, as_str=False, **kw)
 	assert isinstance(as_str, str) and isinstance(as_bytes, bytes), "json_encode returns the wrong types: %s %s" % (type(as_str), type(as_bytes),)
 	assert as_bytes == got_bytes_raw, "json_save doesn't save the same thing json_encode returns for " + name
-	if PY3:
-		as_str = as_str.encode("utf-8")
+	as_str = as_str.encode("utf-8")
 	assert as_bytes == as_str, "json_encode doesn't return the same data for as_str=True and False"
 	got_obj = json_load(name)
 	assert want_obj == got_obj, "%s roundtrips wrong (wanted %r, got %r)" % (name, want_obj, got_obj)
@@ -79,8 +77,6 @@ def synthesis():
 	)
 
 	unicode_want = u"bl\xe4"
-	if PY2:
-		unicode_want = unicode_want.encode("utf-8")
 	test(
 		"unicode.json",
 		u"bl\xe4",
@@ -93,7 +89,7 @@ def synthesis():
 		fh.write(b'"bl\xc3\xa4"')
 	assert json_load("utf-8.json") == unicode_want
 
-	# This is supposed to work on PY2, but not PY3.
+	# This not supposed to work on PY3.
 	try:
 		test(
 			"string encoding.json",
@@ -101,13 +97,9 @@ def synthesis():
 			[b"\xc3\xa4", b"\xc3\xa4", [b"\xc3\xa4", {b"\xc3\xa4": b"\xc3\xa4",},],],
 			b'["\\u00e4","\\u00e4",["\\u00e4",{"\\u00e4": "\\u00e4"}]]',
 		)
-		string_encoding_ok = True
+		assert False, "Bytes are not supposed to work in json_encode on PY3"
 	except TypeError:
-		string_encoding_ok = False
-	if PY2:
-		assert string_encoding_ok, "Bytes are supposed to work in json_encode on PY2"
-	else:
-		assert not string_encoding_ok, "Bytes are not supposed to work in json_encode on PY3"
+		pass
 
 	# 720 permutations might be a bit much, but at least it's unlikely to
 	# miss ordering problems.

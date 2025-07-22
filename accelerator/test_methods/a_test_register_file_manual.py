@@ -21,7 +21,6 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import unicode_literals
 
-from accelerator.compat import PY2
 import os
 
 description = r'''
@@ -62,9 +61,4 @@ def synthesis(job):
 	os.mkdir('subdir/deep')
 	with open('subdir/deep/file.txt', 'w') as fh:
 		fh.write('written in a subdir, then registered with job.register_files() without a pattern.')
-	if PY2:
-		# No recursive support in glob in python 2.
-		assert job.register_files() == set()
-		assert job.register_files('*/*/*') == {'subdir/deep/file.txt'}
-	else:
-		assert job.register_files() == {'subdir/deep/file.txt'}
+	assert job.register_files() == {'subdir/deep/file.txt'}

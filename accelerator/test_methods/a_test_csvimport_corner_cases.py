@@ -31,10 +31,10 @@ from collections import Counter
 from accelerator import subjobs
 from accelerator.dispatch import JobError
 from accelerator.dataset import Dataset
-from accelerator.compat import PY3, uni
+from accelerator.compat import uni
 
 def openx(filename):
-	return open(filename, "xb" if PY3 else "wbx")
+	return open(filename, "xb")
 
 def check_array(job, lines, filename, bad_lines=(), **options):
 	d = {}
@@ -124,11 +124,8 @@ def check_bad_file(job, name, data):
 	)
 	require_failure(name, options)
 
-if PY3:
-	def bytechr(i):
-		return chr(i).encode("iso-8859-1")
-else:
-	bytechr = chr
+def bytechr(i):
+	return chr(i).encode("iso-8859-1")
 
 def byteline(start, stop, nl, q):
 	s = b''.join(bytechr(i) for i in range(start, stop) if i != nl)

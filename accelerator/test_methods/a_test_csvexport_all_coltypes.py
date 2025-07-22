@@ -29,7 +29,6 @@ from datetime import date, time, datetime
 
 from accelerator import subjobs, status
 from accelerator.dsutil import _convfuncs
-from accelerator.compat import PY2
 
 def synthesis(job):
 	dw = job.datasetwriter()
@@ -54,11 +53,7 @@ def synthesis(job):
 	check = {n for n in _convfuncs if not n.startswith('parsed:')}
 	assert todo == check, 'Missing/extra column types: %r %r' % (check - todo, todo - check,)
 	for name in sorted(todo):
-		if PY2 and name == 'pickle':
-			# pickle columns are not supported on python 2.
-			t = 'ascii'
-		else:
-			t = name
+		t = name
 		dw.add(name, t, none_support=True)
 	write = dw.get_split_write()
 	write(
@@ -67,7 +62,7 @@ def synthesis(job):
 		date(2020, 6, 23), datetime(2020, 6, 23, 12, 13, 14),
 		1.0, float('-inf'), -10, -20,
 		{'json': True}, 0xfedcba9876543210beef,
-		'...' if PY2 else 1+2j, time(12, 13, 14), 'bl\xe5',
+		1+2j, time(12, 13, 14), 'bl\xe5',
 	)
 	d = {}
 	d['recursion'] = d
@@ -77,7 +72,7 @@ def synthesis(job):
 		date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5),
 		float('inf'), float('nan'), 0, 0,
 		[False, None], 42.18,
-		'...' if PY2 else d, time(13, 14, 5), 'bl\xe4',
+		d, time(13, 14, 5), 'bl\xe4',
 	)
 	write(
 		None, None, None,
@@ -145,7 +140,7 @@ def synthesis(job):
 					'2020-06-23', '2020-06-23 12:13:14',
 					'1.0', '-inf', '-10', '-20',
 					'{"json": true}', '1203552815971897489538799',
-					'...' if PY2 else '(1+2j)', '12:13:14', 'bl\xe5',
+					'(1+2j)', '12:13:14', 'bl\xe5',
 				)
 				expect(
 					'b', 'False', 'bye',
@@ -153,6 +148,6 @@ def synthesis(job):
 					'1868-01-03', '1868-01-03 13:14:05',
 					'inf', 'nan', '0', '0',
 					'[false, null]', '42.18',
-					'...' if PY2 else "{'recursion': {...}}", '13:14:05', 'bl\xe4',
+					"{'recursion': {...}}", '13:14:05', 'bl\xe4',
 				)
 				expect(*last_line)

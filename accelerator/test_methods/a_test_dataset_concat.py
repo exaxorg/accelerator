@@ -25,7 +25,6 @@ from datetime import date, time, datetime
 from itertools import chain
 
 from accelerator import subjobs, JobError
-from accelerator.compat import PY2
 from accelerator.dsutil import _type2iter
 
 def synthesis(job):
@@ -50,8 +49,6 @@ def synthesis(job):
 	}
 	missing = set(_type2iter) - set(types.values())
 	assert not missing, missing
-	if PY2:
-		del types['n'] # no pickle type on python2
 
 	def data(ix):
 		d = {

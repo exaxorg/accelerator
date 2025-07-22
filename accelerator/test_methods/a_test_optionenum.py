@@ -27,7 +27,6 @@ Test OptionEnum construction and enforcement.
 '''
 
 from accelerator.extras import OptionEnum
-from accelerator.compat import PY2
 from accelerator import subjobs
 from accelerator import blob
 
@@ -77,11 +76,7 @@ def synthesis():
 		return dict(options)
 	check(abcd="a", efgh="h")
 	check(ijkl="j", efgh="e")
-	if PY2:
-		# Passing "ä" is fine on PY2 too, but we get UTF-8 byte strings back.
-		check(uni=b"\xc3\xa4")
-	else:
-		check(uni="ä")
+	check(uni="ä")
 	check(ijkl=None, dict=dict(foo="j"))
 	check(mnSTARop="p", qSTARrSTARst="qwe", ijkl="k")
 	check(mnSTARop="nah", qSTARrSTARst="really good value\n")

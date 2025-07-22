@@ -34,7 +34,7 @@ hashlabel is inherited or discarded as appropriate.
 from itertools import cycle
 from datetime import date, time, datetime
 
-from accelerator.compat import unicode, PY3
+from accelerator.compat import unicode
 from accelerator import subjobs
 from accelerator.extras import DotDict
 from accelerator.dsutil import typed_writer
@@ -158,19 +158,17 @@ def synthesis(job, slices):
 		'time'    : ('time', True),
 		'unicode' : ('unicode', True),
 	})
-	if PY3:
-		# name it with z so it's last during iteration.
-		dw.add('zpickle', 'pickle', none_support=True)
+	# name it with z so it's last during iteration.
+	dw.add('zpickle', 'pickle', none_support=True)
 	write = dw.get_split_write()
 	data = {
 		'42': ('ascii string', True, b'bytes string',  1+2j, 2+3j, date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
 		None: (          None, None,            None,  None, None,               None,                             None, None,      None, None, None,     None,  None,            None,             None),
 		'18': ('ASCII STRING', False, b'BYTES STRING', 3-4j, 4-5j, date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
 	}
-	if PY3:
-		data['42'] += ([date(1, 2, 3), 'foo'],)
-		data[None] += (None,)
-		data['18'] += ({1, 2, 'c', b'bar'},)
+	data['42'] += ([date(1, 2, 3), 'foo'],)
+	data[None] += (None,)
+	data['18'] += ({1, 2, 'c', b'bar'},)
 	write('42', *data['42'])
 	write(None, *data[None])
 	write('18', *data['18'])

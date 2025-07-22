@@ -38,7 +38,7 @@ import json
 from itertools import cycle
 from functools import partial
 
-from accelerator.compat import PY2, PY3, izip_longest
+from accelerator.compat import izip_longest
 from accelerator.dsutil import _convfuncs
 
 def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False, check_output=check_output):
@@ -94,12 +94,8 @@ def grep_json(args, want):
 		if want != got:
 			raise Exception('%r gave wrong result on line %d:\nWant: %r\nGot:  %r' % (cmd, lineno, want, got,))
 
-if PY2:
-	def mk_bytes(low, high):
-		return b''.join(chr(c) for c in range(low, high))
-else:
-	def mk_bytes(low, high):
-		return bytes(range(low, high))
+def mk_bytes(low, high):
+	return bytes(range(low, high))
 
 # looks like 'bar' when matching but 'foo' when printing
 # intended to catch if objects are evaluated too many times
@@ -253,22 +249,21 @@ def synthesis(job, slices):
 		], sep='', check_output=check_output_pty,
 	)
 
-	if PY3: # no pickle type on PY2
-		pickle = mk_ds('pickle', ['pickle'], [TricksyObject()], [''], [{'foo'}])
-		grep_text(['', pickle], [['foo'], [''], ["{'foo'}"]])
-		grep_text(['.', pickle], [['foo'], ["{'foo'}"]])
-		grep_text(['bar', pickle], [['foo']])
-		# using -g with the same columns as output is a NOP
-		grep_text(['-g', 'pickle', 'bar', pickle], [['foo']])
-		# but using it with a different set of columns is not
-		pickle2 = mk_ds('pickle2', ['ascii'], ['a'], ['b'], ['c'], parent=pickle)
-		grep_text(['-g', 'pickle', 'bar', pickle2], [['a', 'bar']])
-		# order doesn't matter for equality, so here we're back to double evaluation.
-		grep_text(['-g', 'pickle', '-g', 'ascii', 'bar', pickle2], [['a', 'foo']])
-		bytespickle = mk_ds('bytespickle', ['pickle'], [b'\xf0'], [b'\t'])
-		# pickles are str()d, not special cased like bytes columns
-		grep_text(['-f', 'raw', 'xf0', bytespickle], [["b'\\xf0'"]])
-		grep_json(['', bytespickle], [{'pickle': "b'\\xf0'"}, {'pickle': "b'\\t'"}])
+	pickle = mk_ds('pickle', ['pickle'], [TricksyObject()], [''], [{'foo'}])
+	grep_text(['', pickle], [['foo'], [''], ["{'foo'}"]])
+	grep_text(['.', pickle], [['foo'], ["{'foo'}"]])
+	grep_text(['bar', pickle], [['foo']])
+	# using -g with the same columns as output is a NOP
+	grep_text(['-g', 'pickle', 'bar', pickle], [['foo']])
+	# but using it with a different set of columns is not
+	pickle2 = mk_ds('pickle2', ['ascii'], ['a'], ['b'], ['c'], parent=pickle)
+	grep_text(['-g', 'pickle', 'bar', pickle2], [['a', 'bar']])
+	# order doesn't matter for equality, so here we're back to double evaluation.
+	grep_text(['-g', 'pickle', '-g', 'ascii', 'bar', pickle2], [['a', 'foo']])
+	bytespickle = mk_ds('bytespickle', ['pickle'], [b'\xf0'], [b'\t'])
+	# pickles are str()d, not special cased like bytes columns
+	grep_text(['-f', 'raw', 'xf0', bytespickle], [["b'\\xf0'"]])
+	grep_json(['', bytespickle], [{'pickle': "b'\\xf0'"}, {'pickle': "b'\\t'"}])
 
 	# --only-matching, both the part (default) and columns (with -l) in both csv and json
 	grep_text(['-o', '-c', '1', b], [['1', ''], ['11', '1'], ['1'], ['11']])
@@ -282,11 +277,8 @@ def synthesis(job, slices):
 		['printable', mk_bytes(32, 128)],
 		['not ascii', mk_bytes(128, 256)],
 	)
-	if PY2:
-		encoded_not_ascii = raw_not_ascii = '\ufffd'.encode('utf-8') * 128
-	else:
-		raw_not_ascii = mk_bytes(128, 256)
-		encoded_not_ascii = raw_not_ascii.decode('utf-8', 'surrogateescape').encode('utf-8', 'surrogatepass')
+	raw_not_ascii = mk_bytes(128, 256)
+	encoded_not_ascii = raw_not_ascii.decode('utf-8', 'surrogateescape').encode('utf-8', 'surrogatepass')
 	grep_text(
 		['--format=raw', '', allbytes],
 		[
@@ -309,9 +301,9 @@ def synthesis(job, slices):
 		sep=b'\t',
 	)
 	grep_json(['', allbytes], [
-		{'ascii': 'control chars', 'bytes': mk_bytes(0, 32).decode('utf-8', 'surrogateescape' if PY3 else 'replace')},
-		{'ascii': 'printable', 'bytes': mk_bytes(32, 128).decode('utf-8', 'surrogateescape' if PY3 else 'replace')},
-		{'ascii': 'not ascii', 'bytes': mk_bytes(128, 256).decode('utf-8', 'surrogateescape' if PY3 else 'replace')},
+		{'ascii': 'control chars', 'bytes': mk_bytes(0, 32).decode('utf-8', 'surrogateescape')},
+		{'ascii': 'printable', 'bytes': mk_bytes(32, 128).decode('utf-8', 'surrogateescape')},
+		{'ascii': 'not ascii', 'bytes': mk_bytes(128, 256).decode('utf-8', 'surrogateescape')},
 	])
 
 	# header printing should happen between datasets only when columns change,
@@ -620,11 +612,9 @@ def synthesis(job, slices):
 	grep_text(['-g', 'json', 'foo', alltypes], [])
 	grep_text(['-g', 'bytes', 'tet', alltypes, 'ascii', 'unicode'], [['foo', 'codepoints\x00\xe4']])
 	grep_text(['-g', 'bytes', '\\x00', alltypes, 'bool'], [['True']])
-	if PY3:
-		# python2 doesn't really handle non-utf8 bytes
-		grep_text(['-g', 'bytes', '\\udcff', alltypes, 'bool'], [['True']])
-	grep_text(['--format=raw', '-g', 'json', '-i', 'foo', alltypes], [[b'foo', b'True', b'\xff\x00octets' if PY3 else b'\xef\xbf\xbd\x00octets', b'(1+2j)', b'(1.5-0.5j)', b'2021-09-20', b'2021-09-20 01:02:03', b'0.125', b'1e+42', b"[1, 2, 3, {'FOO': 'BAR'}, None]" if PY3 else b"[1, 2, 3, {u'FOO': u'BAR'}, None]", b'-2', b'04:05:06', b'codepoints\x00\xc3\xa4']], sep=b'\t', encoding=None)
-	grep_json([':05:', alltypes, 'bool', 'time', 'unicode', 'bytes'], [{'bool': True, 'time': '04:05:06', 'unicode': 'codepoints\x00\xe4', 'bytes': '\udcff\x00octets' if PY3 else '\ufffd\x00octets'}])
+	grep_text(['-g', 'bytes', '\\udcff', alltypes, 'bool'], [['True']])
+	grep_text(['--format=raw', '-g', 'json', '-i', 'foo', alltypes], [[b'foo', b'True', b'\xff\x00octets', b'(1+2j)', b'(1.5-0.5j)', b'2021-09-20', b'2021-09-20 01:02:03', b'0.125', b'1e+42', b"[1, 2, 3, {'FOO': 'BAR'}, None]", b'-2', b'04:05:06', b'codepoints\x00\xc3\xa4']], sep=b'\t', encoding=None)
+	grep_json([':05:', alltypes, 'bool', 'time', 'unicode', 'bytes'], [{'bool': True, 'time': '04:05:06', 'unicode': 'codepoints\x00\xe4', 'bytes': '\udcff\x00octets'}])
 
 	columns = [
 		'ascii',
@@ -695,8 +685,6 @@ def synthesis(job, slices):
 		{'dataset': d, 'sliceno': 1, 'lineno': 0, 'data': want_json[1]},
 	])
 	all_types = {n for n in _convfuncs if not n.startswith('parsed:')}
-	if PY2:
-		all_types.remove('pickle')
 	assert used_types == all_types, 'Missing/extra column types: %r %r' % (all_types - used_types, used_types - all_types,)
 
 	# test the smart tab mode with various lengths
