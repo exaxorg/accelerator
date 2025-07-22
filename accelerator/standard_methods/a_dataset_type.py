@@ -29,7 +29,7 @@ from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
 
-from accelerator.compat import unicode, itervalues, PY2
+from accelerator.compat import unicode, itervalues
 
 from accelerator.extras import OptionEnum, DotDict, quote
 from accelerator.dsutil import typed_writer, typed_reader
@@ -373,14 +373,9 @@ class Int16BytesWrapper(object):
 	def __setitem__(self, key, value):
 		self._s.pack_into(self.inner, key * 2, value)
 	def __iter__(self):
-		if PY2:
-			def it():
-				for o in range(len(self.inner) // 2):
-					yield self[o]
-		else:
-			def it():
-				for v, in self._s.iter_unpack(self.inner):
-					yield v
+		def it():
+			for v, in self._s.iter_unpack(self.inner):
+				yield v
 		return it()
 
 
@@ -540,8 +535,6 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		if options.filter_bad:
 			badmap = mmap(vars.badmap_fd, vars.badmap_size)
 			vars.map_fhs.append(badmap)
-			if PY2:
-				badmap = IntegerBytesWrapper(badmap)
 		if vars.rehashing:
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			vars.map_fhs.append(slicemap)

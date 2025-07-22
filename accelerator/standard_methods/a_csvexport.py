@@ -32,7 +32,7 @@ from functools import partial
 from itertools import chain
 import gzip
 
-from accelerator.compat import PY3, PY2, izip, imap, long
+from accelerator.compat import izip, imap, long
 from accelerator import status
 
 
@@ -71,16 +71,10 @@ format = dict(
 	json=JSONEncoder(sort_keys=True, ensure_ascii=True, check_circular=False).encode,
 )
 
-if PY3:
-	enc = str
-	format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
-	format['number'] = repr
-	format['unicode'] = None
-else:
-	enc = lambda s: s.encode('utf-8')
-	format['bytes'] = None
-	format['number'] = lambda n: str(n) if isinstance(n, long) else repr(n)
-	format['unicode'] = lambda s: s.encode('utf-8')
+enc = str
+format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
+format['number'] = repr
+format['unicode'] = None
 
 def csvexport(sliceno, filename, labelsonfirstline):
 	d = datasets.source[0]
@@ -100,10 +94,7 @@ def csvexport(sliceno, filename, labelsonfirstline):
 		open_func = partial(gzip.open, compresslevel=options.compression)
 	else:
 		open_func = open
-	if PY2:
-		open_func = partial(open_func, mode='wb')
-	else:
-		open_func = partial(open_func, mode='xt', encoding='utf-8')
+	open_func = partial(open_func, mode='xt', encoding='utf-8')
 	if options.none_as:
 		if isinstance(options.none_as, dict):
 			bad_none = set(options.none_as) - set(options.labels)
