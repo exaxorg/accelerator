@@ -33,7 +33,7 @@ from functools import partial
 import sys
 
 from accelerator.compat import pickle, izip, iteritems, first_value
-from accelerator.compat import num_types, uni, unicode, str_types
+from accelerator.compat import num_types, unicode, str_types
 
 from accelerator.error import AcceleratorError
 from accelerator.job import Job, JobWithFile
