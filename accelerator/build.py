@@ -38,7 +38,7 @@ from base64 import b64encode
 from importlib import import_module
 from argparse import RawTextHelpFormatter
 
-from accelerator.compat import unicode, str_types, PY3
+from accelerator.compat import unicode, str_types
 from accelerator.compat import urlencode
 from accelerator.compat import getarglist
 
@@ -400,10 +400,6 @@ class UrdResponse(dict):
 
 class EmptyUrdResponse(UrdResponse):
 	# so you can do "if urd.latest('foo'):" and similar.
-	# python2 version
-	def __nonzero__(self):
-		return False
-	# python3 version
 	def __bool__(self):
 		return False
 
@@ -452,10 +448,7 @@ class Urd(object):
 		self.horizon = horizon
 		self.default_workdir = default_workdir
 		auth = '%s:%s' % (user, password,)
-		if PY3:
-			auth = b64encode(auth.encode('utf-8')).decode('ascii')
-		else:
-			auth = b64encode(auth)
+		auth = b64encode(auth.encode('utf-8')).decode('ascii')
 		self._headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + auth}
 		self._auth_tested = False
 		self._reset()
@@ -690,12 +683,8 @@ def find_automata(a, script):
 			module_ref = import_module(module_name)
 			return module_ref
 		except ImportError as e:
-			if PY3:
-				if not e.msg[:-1].endswith(script):
-					raise
-			else:
-				if not e.message.endswith(script):
-					raise
+			if not e.msg[:-1].endswith(script):
+				raise
 	raise BuildError('No build script "%s" found in {%s}' % (script, ', '.join(package)))
 
 

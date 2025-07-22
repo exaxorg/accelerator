@@ -316,10 +316,7 @@ def load_methods(all_packages, data):
 
 def launch_start(data):
 	from accelerator.launch import run
-	from accelerator.compat import PY2
 	from accelerator.dispatch import close_fds
-	if PY2:
-		data = {k: v.encode('utf-8') if isinstance(v, unicode) else v for k, v in data.items()}
 	prof_r, prof_w = os.pipe()
 	# Disable the GC here, leaving it disabled in the child (the method).
 	# The idea is that most methods do not actually benefit from the GC, but

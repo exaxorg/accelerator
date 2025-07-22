@@ -30,14 +30,10 @@ import sys
 import traceback
 import zlib
 
-from accelerator.compat import PY3, FileNotFoundError
+from accelerator.compat import FileNotFoundError
 from accelerator.extras import json_decode
 
-if PY3:
-	crc32 = zlib.crc32
-else:
-	def crc32(data):
-		return zlib.crc32(data) & 0xffffffff
+crc32 = zlib.crc32
 
 
 def b64hash_setup(filename):
@@ -60,9 +56,7 @@ def job_metadata(job):
 		'setup_hash': b64hash_setup(job.filename('setup.json')),
 		'host': socket.gethostname(),
 	}
-	res = json.dumps(d)
-	if PY3:
-		res = res.encode('ascii')
+	res = json.dumps(d).encode('ascii')
 	return res
 
 
@@ -164,7 +158,7 @@ def generate_gif(fh, job, size):
 def extract_gif(fh):
 	def unchunk(pos):
 		while pos + 1 < len(data):
-			z, = struct.unpack('<B', data[pos:pos + 1]) # "z = pos[0]" but python2 compatible.
+			z = data[pos]
 			if z == 0:
 				return
 			yield data[pos + 1:pos + z + 1]

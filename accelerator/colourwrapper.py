@@ -24,7 +24,6 @@ from __future__ import unicode_literals
 import sys, os
 from functools import partial
 
-from accelerator.compat import PY2
 from accelerator.error import ColourError
 
 # all gray colours in the 256 colour palette in intensity order
@@ -102,11 +101,7 @@ class Colour:
 		self._on = {k: '\x1b[%sm' % (v,) for k, v in self._all.items()}
 		self._on['RESET'] = '\x1b[m'
 		self._all['RESET'] = ''
-		if PY2:
-			self._on = {k.encode('ascii'): v.encode('ascii') for k, v in self._on.items()}
-			self._off = dict.fromkeys(self._on, b'')
-		else:
-			self._off = dict.fromkeys(self._on, '')
+		self._off = dict.fromkeys(self._on, '')
 		self.enable()
 		self.__all__ = [k for k in dir(self) if not k.startswith('_')]
 		self._lined = False

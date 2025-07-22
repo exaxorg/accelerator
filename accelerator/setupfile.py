@@ -28,7 +28,7 @@ from json import dumps
 from datetime import datetime, date, time, timedelta
 from pathlib import PosixPath, PurePosixPath
 
-from accelerator.compat import iteritems, unicode, long, PY3, PY2, uni
+from accelerator.compat import iteritems, unicode, long, uni
 
 from accelerator.error import AcceleratorError, NoSuchJobError
 from accelerator.extras import DotDict, json_load, json_save, json_encode
@@ -130,8 +130,6 @@ def encode_setup(data, sort_keys=True, as_str=False):
 			return [1970, 1, 1, src.hour, src.minute, src.second, src.microsecond]
 		elif isinstance(src, timedelta):
 			return src.total_seconds()
-		elif PY2 and isinstance(src, bytes):
-			return uni(src)
 		else:
 			assert isinstance(src, (str, unicode, int, float, long, bool)) or src is None, "%s not supported in data" % (type(src),)
 			return src
@@ -140,7 +138,7 @@ def encode_setup(data, sort_keys=True, as_str=False):
 		compact_keys=('starttime', 'endtime', 'exectime', '_typing',),
 		special_keys=('options', 'datasets', 'jobs',),
 	)
-	if PY3 and not as_str:
+	if not as_str:
 		res = res.encode('ascii')
 	return res
 

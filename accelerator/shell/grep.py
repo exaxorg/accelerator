@@ -36,7 +36,7 @@ import datetime
 import operator
 import signal
 
-from accelerator.compat import unicode, izip, PY2
+from accelerator.compat import unicode, izip
 from accelerator.compat import izip_longest
 from accelerator.compat import monotonic
 from accelerator.compat import num_types
@@ -512,7 +512,7 @@ def main(argv, cfg):
 				return item.replace('\\', '\\\\').replace('\n', '\\n')
 		else:
 			escape_item = None
-		errors = 'replace' if PY2 else 'surrogateescape'
+		errors = 'surrogateescape'
 
 	if args.unique:
 		# A --unique without a value means all, and deletes any previously specified columns.
@@ -1129,7 +1129,7 @@ def main(argv, cfg):
 			else:
 				it = ds._column_iterator(sliceno, col, **kw)
 			if ds.columns[col].type == 'bytes':
-				errors = 'replace' if PY2 else 'surrogateescape'
+				errors = 'surrogateescape'
 				if ds.columns[col].none_support:
 					it = (None if v is None else v.decode('utf-8', errors) for v in it)
 				else:

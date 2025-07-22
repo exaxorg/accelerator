@@ -22,7 +22,7 @@ from __future__ import print_function
 from __future__ import division
 
 from accelerator import _dsutil
-from accelerator.compat import str_types, PY3
+from accelerator.compat import str_types
 from accelerator.standard_methods._dataset_type import strptime, strptime_i
 
 _convfuncs = {
@@ -84,12 +84,8 @@ class WriteJson(object):
 	min = max = None
 	def __init__(self, *a, **kw):
 		default = kw.pop('default', _nodefault)
-		if PY3:
-			self.fh = _dsutil.WriteUnicode(*a, **kw)
-			self.encode = JSONEncoder(ensure_ascii=False, separators=(',', ':')).encode
-		else:
-			self.fh = _dsutil.WriteBytes(*a, **kw)
-			self.encode = JSONEncoder(ensure_ascii=True, separators=(',', ':')).encode
+		self.fh = _dsutil.WriteUnicode(*a, **kw)
+		self.encode = JSONEncoder(ensure_ascii=False, separators=(',', ':')).encode
 		self.encode = self._wrap_encode(self.encode, default)
 	def _wrap_encode(self, encode, default):
 		if default is _nodefault:
@@ -141,10 +137,7 @@ _convfuncs['parsed:json'] = WriteParsedJson
 class ReadJson(object):
 	__slots__ = ('fh', 'decode')
 	def __init__(self, *a, **kw):
-		if PY3:
-			self.fh = _dsutil.ReadUnicode(*a, **kw)
-		else:
-			self.fh = _dsutil.ReadBytes(*a, **kw)
+		self.fh = _dsutil.ReadUnicode(*a, **kw)
 		self.decode = JSONDecoder().decode
 	def __next__(self):
 		return self.decode(next(self.fh))
@@ -167,7 +160,6 @@ class WritePickle(object):
 	__slots__ = ('fh',)
 	min = max = None
 	def __init__(self, *a, **kw):
-		assert PY3, "Pickle columns require python 3, sorry"
 		assert 'default' not in kw, "default not supported for Pickle, sorry"
 		self.fh = _dsutil.WriteBytes(*a, **kw)
 	def write(self, o):
@@ -189,7 +181,6 @@ _convfuncs['pickle'] = WritePickle
 class ReadPickle(object):
 	__slots__ = ('fh',)
 	def __init__(self, *a, **kw):
-		assert PY3, "Pickle columns require python 3, sorry"
 		self.fh = _dsutil.ReadBytes(*a, **kw)
 	def __next__(self):
 		return pickle_loads(next(self.fh))

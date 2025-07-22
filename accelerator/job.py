@@ -27,7 +27,7 @@ from collections import namedtuple, OrderedDict
 from functools import wraps
 from pathlib import Path
 
-from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
+from accelerator.compat import unicode, open, iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 
@@ -196,7 +196,7 @@ class Job(unicode):
 				raise
 			return default
 
-	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		from accelerator.extras import json_load
 		try:
 			return json_load(self.filename(filename, sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
@@ -360,7 +360,7 @@ class CurrentJob(Job):
 			return Job.open(self, filename, mode, sliceno, encoding, errors)
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
-		if PY3 and 'x' not in mode:
+		if 'x' not in mode:
 			mode = mode.replace('w', 'x')
 		def _open(fn, _mode):
 			# ignore the passed mode, use the one we have
@@ -380,11 +380,11 @@ class CurrentJob(Job):
 		from accelerator.extras import saved_files
 		saved_files[filename] = 0
 
-	def register_files(self, pattern='**/*' if PY3 else '*'):
+	def register_files(self, pattern='**/*'):
 		"""Bulk register files matching a pattern.
 		Tries to exclude internal files automatically.
 		Does not register temp-files.
-		The default pattern registers everything (recursively, unless python 2).
+		The default pattern registers everything, recursively.
 		Returns which files were registered.
 		"""
 		from accelerator.extras import saved_files
@@ -394,11 +394,7 @@ class CurrentJob(Job):
 		assert not pattern.startswith('../')
 		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.pickle')
 		res = set()
-		if PY3:
-			files = iglob(pattern, recursive=True)
-		else:
-			# No recursive support on python 2.
-			files = iglob(pattern)
+		files = iglob(pattern, recursive=True)
 		for fn in files:
 			if (
 				fn in forbidden or
@@ -464,7 +460,7 @@ class NoJob(Job):
 			raise NoSuchJobError('Can not load named / sliced file on <NoJob>')
 		return None
 
-	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		return self.load(filename, sliceno, default=default)
 
 	@property # so it can return the same instance as all other NoJob things
@@ -500,7 +496,7 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 				raise
 			return default
 
-	def json_load(self, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		from accelerator.extras import json_load
 		try:
 			return json_load(self.filename(sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)

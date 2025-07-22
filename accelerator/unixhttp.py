@@ -22,18 +22,13 @@
 from __future__ import print_function
 from __future__ import division
 
-from accelerator.compat import PY3
 from accelerator.compat import urlopen, Request, URLError, HTTPError
 from accelerator.extras import json_encode, json_decode
 from accelerator.error import ServerError, UrdError, UrdPermissionError, UrdConflictError
 from accelerator import g, __version__ as ax_version
 
-if PY3:
-	from urllib.request import install_opener, build_opener, AbstractHTTPHandler
-	from http.client import HTTPConnection
-else:
-	from urllib2 import install_opener, build_opener, AbstractHTTPHandler
-	from httplib import HTTPConnection
+from urllib.request import install_opener, build_opener, AbstractHTTPHandler
+from http.client import HTTPConnection
 
 import sys
 import time
@@ -94,8 +89,7 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 						# Nothing is supposed to catch this, so just print and die.
 						print('Server is running version %s but we are running version %s' % (s_version, ax_version,), file=sys.stderr)
 						exit(1)
-				if PY3:
-					resp = resp.decode('utf-8')
+				resp = resp.decode('utf-8')
 				# It is inconsistent if we get HTTPError or not.
 				# It seems we do when using TCP sockets, but not when using unix sockets.
 				if r.getcode() >= 400:
@@ -108,9 +102,7 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 					pass
 		except HTTPError as e:
 			if resp is None and e.fp:
-				resp = e.fp.read()
-				if PY3:
-					resp = resp.decode('utf-8')
+				resp = e.fp.read().decode('utf-8')
 			msg = '%s says %d: %s' % (server_name, e.code, resp,)
 			if server_name == 'urd' and 400 <= e.code < 500:
 				if e.code == 401:

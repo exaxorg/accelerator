@@ -39,7 +39,6 @@ import os
 import signal
 
 from accelerator.compat import iteritems, itervalues, unicode
-from accelerator.compat import PY3
 from accelerator.colourwrapper import colour
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
@@ -73,8 +72,7 @@ class TimeStamp(str):
 	When both are specified they are separated by a +
 	"""
 
-	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_ts', '_integer')
+	__slots__ = ('_ts', '_integer')
 
 	def __new__(cls, ts):
 		if isinstance(ts, TimeStamp):
@@ -533,9 +531,7 @@ def single(user, build, timestamp):
 @route('/add', method='POST')
 @auth_basic(auth)
 def add():
-	body = request.body
-	if PY3:
-		body = TextIOWrapper(body, encoding='utf-8')
+	body = TextIOWrapper(request.body, encoding='utf-8')
 	data = Entry(json.load(body))
 	if data.user != request.auth[0]:
 		abort(401, "Error:  user does not match authentication!")

@@ -25,7 +25,6 @@ import os
 import sys
 
 from accelerator.colourwrapper import colour
-from accelerator.compat import PY2
 from accelerator import mp
 
 
@@ -128,12 +127,8 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, 
 			(pre_fg1, pre_bg1),
 		])
 
-		if PY2:
-			in_fh = sys.stdin
-			errors = 'replace'
-		else:
-			in_fh = sys.stdin.buffer.raw
-			errors = 'surrogateescape'
+		in_fh = sys.stdin.buffer.raw
+		errors = 'surrogateescape'
 
 		if decode_lines:
 			if lined:

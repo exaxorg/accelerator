@@ -25,7 +25,7 @@ from __future__ import division
 import os
 from signal import SIGTERM, SIGKILL
 
-from accelerator.compat import PY3, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.statmsg import children, statmsg_endwait
 from accelerator.build import JobError
@@ -70,10 +70,9 @@ def run(cmd, close_in_child, keep_in_child, no_stdin=True):
 		devnull = os.open('/dev/null', os.O_RDONLY)
 		os.dup2(devnull, 0)
 		os.close(devnull)
-	if PY3:
-		keep_in_child.update([1, 2])
-		for fd in keep_in_child:
-			os.set_inheritable(fd, True)
+	keep_in_child.update([1, 2])
+	for fd in keep_in_child:
+		os.set_inheritable(fd, True)
 	os.execv(cmd[0], cmd)
 	os._exit()
 

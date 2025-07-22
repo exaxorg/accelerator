@@ -147,9 +147,6 @@ def _reprify(o):
 		o = o.default
 	if isinstance(o, (bytes, str, int, float, long, bool, NoneType)):
 		return repr(o)
-	if isinstance(o, unicode):
-		# not reachable in PY3, the above "str" matches
-		return repr(o.encode('utf-8'))
 	if isinstance(o, set):
 		return '[%s]' % (', '.join(map(_reprify, _sorted_set(o))),)
 	if isinstance(o, (list, tuple)):

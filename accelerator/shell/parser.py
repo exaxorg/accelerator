@@ -35,7 +35,7 @@ from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote, urlencode, PY3
+from accelerator.compat import url_quote, urlencode
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -330,10 +330,9 @@ class ArgumentParser(argparse.ArgumentParser):
 	def __init__(self, *a, **kw):
 		kw = dict(kw)
 		kw['prefix_chars'] = '-+'
-		if PY3:
-			# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
-			# it also regrettably disables -abc for -a -b -c until 3.8.
-			kw['allow_abbrev'] = False
+		# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
+		# it also regrettably disables -abc for -a -b -c until 3.8.
+		kw['allow_abbrev'] = False
 		return argparse.ArgumentParser.__init__(self, *a, **kw)
 
 	def add_argument(self, *a, **kw):

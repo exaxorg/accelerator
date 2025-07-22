@@ -32,7 +32,7 @@ from collections import OrderedDict
 from functools import partial
 import sys
 
-from accelerator.compat import PY2, PY3, pickle, izip, iteritems, first_value
+from accelerator.compat import pickle, izip, iteritems, first_value
 from accelerator.compat import num_types, uni, unicode, str_types
 
 from accelerator.error import AcceleratorError
@@ -212,10 +212,7 @@ def pickle_load(filename='result.pickle', jobid=None, sliceno=None, encoding='by
 	filename = _fn(filename, jobid, sliceno)
 	with status('Loading ' + filename):
 		with open(filename, 'rb') as fh:
-			if PY3:
-				return pickle.load(fh, encoding=encoding)
-			else:
-				return pickle.load(fh)
+			return pickle.load(fh, encoding=encoding)
 
 
 def json_encode(variable, sort_keys=True, as_str=False):
@@ -238,13 +235,11 @@ def json_encode(variable, sort_keys=True, as_str=False):
 			return dict_type((typefix(k), typefix(v)) for k, v in iteritems(e))
 		elif isinstance(e, (list, tuple, set,)):
 			return [typefix(v) for v in e]
-		elif PY2 and isinstance(e, bytes):
-			return uni(e)
 		else:
 			return e
 	variable = typefix(variable)
 	res = json.dumps(variable, indent=4, sort_keys=sort_keys)
-	if PY3 and not as_str:
+	if not as_str:
 		res = res.encode('ascii')
 	return res
 
@@ -271,20 +266,16 @@ def _unicode_as_utf8bytes(obj):
 	else:
 		return obj
 
-def json_decode(s, unicode_as_utf8bytes=PY2):
+def json_decode(s, unicode_as_utf8bytes=False):
 	if unicode_as_utf8bytes:
 		return _unicode_as_utf8bytes(json.loads(s, object_pairs_hook=DotDict))
 	else:
 		return json.loads(s, object_pairs_hook=DotDict)
 
-def json_load(filename='result.json', jobid=None, sliceno=None, unicode_as_utf8bytes=PY2):
+def json_load(filename='result.json', jobid=None, sliceno=None, unicode_as_utf8bytes=False):
 	filename = _fn(filename, jobid, sliceno)
-	if PY3:
-		with open(filename, 'r', encoding='utf-8') as fh:
-			data = fh.read()
-	else:
-		with open(filename, 'rb') as fh:
-			data = fh.read()
+	with open(filename, 'r', encoding='utf-8') as fh:
+		data = fh.read()
 	return json_decode(data, unicode_as_utf8bytes)
 
 
@@ -292,9 +283,6 @@ def quote(s):
 	"""Quote s unless it looks fine without"""
 	s = unicode(s)
 	r = repr(s)
-	if PY2:
-		# remove leading u
-		r = r[1:]
 	if s and len(s) + 2 == len(r) and not any(c.isspace() for c in s):
 		return s
 	else:
@@ -341,8 +329,7 @@ class FileWriteMove(object):
 	def __enter__(self):
 		self._status = status('Saving ' + self.filename)
 		self._status.__enter__()
-		# stupid python3 feels that w and x are exclusive, while python2 requires both.
-		fh = getattr(self, '_open', open)(self.tmp_filename, 'xb' if PY3 else 'wbx')
+		fh = getattr(self, '_open', open)(self.tmp_filename, 'xb')
 		self.close = fh.close
 		return fh
 	def __exit__(self, e_type, e_value, e_tb):
@@ -543,8 +530,7 @@ class _ListTypePreserver(list):
 
 class OptionEnumValue(str):
 
-	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_valid', '_prefixes')
+	__slots__ = ('_valid', '_prefixes')
 
 	@staticmethod
 	def _mktype(name, valid, prefixes):
@@ -595,8 +581,6 @@ class OptionEnum(object):
 		if isinstance(values, str_types):
 			values = values.replace(',', ' ').split()
 		values = list(values)
-		if PY2:
-			values = [v.encode('utf-8') if isinstance(v, unicode) else v for v in values]
 		valid = set(values)
 		prefixes = []
 		for v in values:
