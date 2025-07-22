@@ -138,12 +138,8 @@ setup(
 		'bottle>=0.12.7, <0.13; python_version<"3.10"',
 		'bottle>=0.13, <0.14; python_version>="3.10"',
 		'waitress>=1.0',
-		'configparser>=3.5.0, <5.0; python_version<"3"',
-		'monotonic>=1.0; python_version<"3"',
-		'selectors2>=2.0; python_version<"3"',
-		'pathlib>=1.0; python_version<"3"',
 	],
-	python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
+	python_requires=">=3.6, <4",
 
 	ext_modules=[dsutilmodule, dataset_typemodule, csvimportmodule],
 
@@ -171,7 +167,6 @@ setup(
 		"Operating System :: POSIX",
 		"Operating System :: POSIX :: BSD :: FreeBSD",
 		"Operating System :: POSIX :: Linux",
-		"Programming Language :: Python :: 2",
 		"Programming Language :: Python :: 3",
 		"Programming Language :: Python :: Implementation :: CPython",
 		"Programming Language :: C",
