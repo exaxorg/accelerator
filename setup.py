@@ -28,7 +28,6 @@ from os.path import exists
 import os
 from datetime import datetime
 from subprocess import check_output, check_call, CalledProcessError
-from io import open
 import re
 import sys
 
