@@ -85,14 +85,11 @@ def uni(s):
 def url_quote_more(s):
 	return quote_plus(s).replace('+', '%20')
 
-if sys.version_info < (3, 6):
-	fmt_num = '{:n}'.format
-else:
-	def fmt_num(num):
-		if isinstance(num, float):
-			return '{:_.6g}'.format(num)
-		else:
-			return '{:_}'.format(num)
+def fmt_num(num):
+	if isinstance(num, float):
+		return '{:_.6g}'.format(num)
+	else:
+		return '{:_}'.format(num)
 
 # This is used in the method launcher to set different titles for each
 # phase/slice. You can use it in the method to override that if you want.
