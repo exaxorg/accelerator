@@ -32,7 +32,7 @@ from functools import partial
 from itertools import chain
 import gzip
 
-from accelerator.compat import izip, imap, long
+from accelerator.compat import izip, imap
 from accelerator import status
 
 
