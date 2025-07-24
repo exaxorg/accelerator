@@ -27,7 +27,7 @@ from collections import namedtuple, OrderedDict
 from functools import wraps
 from pathlib import Path
 
-from accelerator.compat import unicode, open, iteritems, FileNotFoundError
+from accelerator.compat import unicode, iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 

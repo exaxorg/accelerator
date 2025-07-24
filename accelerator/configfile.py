@@ -26,7 +26,7 @@ import re
 import os
 import shlex
 
-from accelerator.compat import url_quote_more, open
+from accelerator.compat import url_quote_more
 
 from accelerator.extras import DotDict
 

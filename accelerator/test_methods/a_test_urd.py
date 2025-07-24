@@ -29,7 +29,7 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from accelerator.compat import open, url_quote_more
+from accelerator.compat import url_quote_more
 from accelerator.error import UrdPermissionError, UrdConflictError
 from accelerator.unixhttp import call
 from subprocess import Popen

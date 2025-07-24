@@ -35,7 +35,7 @@ from math import isnan
 import datetime
 
 from accelerator.compat import unicode, uni, ifilter, imap, iteritems
-from accelerator.compat import builtins, open, getarglist, izip, izip_longest
+from accelerator.compat import builtins, getarglist, izip, izip_longest
 from accelerator.compat import str_types, int_types, FileNotFoundError
 
 from accelerator import blob

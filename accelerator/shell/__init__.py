@@ -308,7 +308,6 @@ def _unesc(m):
 		return _unesc_v.get(v.lower(), v)
 
 def parse_user_config():
-	from accelerator.compat import open
 	from configparser import ConfigParser
 	from os import environ
 	fns = []
