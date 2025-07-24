@@ -29,7 +29,7 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from accelerator.compat import url_quote_more, urlopen, Request, HTTPError, unicode
+from accelerator.compat import url_quote_more, urlopen, Request, HTTPError
 
 from subprocess import Popen, check_output
 import os
@@ -77,9 +77,9 @@ def synthesis(job):
 	extra_metadata = br'{"job":"/\n/DoES/NoT.EXIST/NOPE","setup_hash":"nah","host":"cough","method":"none","time":0}'
 	def mk_meta(prefix_a, prefix_b=b'', suffix=b'', offset=0):
 		data = extra_metadata + suffix
-		if isinstance(prefix_a, unicode):
+		if isinstance(prefix_a, str):
 			return struct.pack(prefix_a, len(data) + len(prefix_b) + offset) + prefix_b + data
-		elif isinstance(prefix_b, unicode):
+		elif isinstance(prefix_b, str):
 			return prefix_a + struct.pack(prefix_b, len(data) + len(prefix_a) + offset) + data
 		else:
 			return prefix_a + prefix_b + extra_metadata + suffix

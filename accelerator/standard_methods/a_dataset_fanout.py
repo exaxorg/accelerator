@@ -29,7 +29,7 @@ from collections import defaultdict
 import itertools
 import re
 
-from accelerator.compat import unicode, izip
+from accelerator.compat import izip
 from accelerator import OptionString, NoSuchDatasetError
 from accelerator import subjobs, status
 
@@ -123,4 +123,4 @@ def analysis(sliceno, prepare_res):
 	# we can't just use chain.iterate because of protections against changing types with copy_mode
 	values_it = itertools.chain.from_iterable(ds.iterate(sliceno, columns, copy_mode=True, status_reporting=False) for ds in chain)
 	for key, values in izip(key_it, values_it):
-		writers[unicode(key)].write(*values)
+		writers[str(key)].write(*values)

@@ -38,7 +38,7 @@ import sys
 import os
 import signal
 
-from accelerator.compat import iteritems, itervalues, unicode
+from accelerator.compat import iteritems, itervalues
 from accelerator.colourwrapper import colour
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
@@ -60,7 +60,7 @@ def joblistlike(jl):
 		assert isinstance(v, (list, tuple)), v
 		assert len(v) == 2, v
 		for s in v:
-			assert isinstance(s, unicode), s
+			assert isinstance(s, str), s
 	return True
 
 
@@ -255,9 +255,9 @@ class DB:
 	def _validate_data(self, data, with_deps=True):
 		if with_deps:
 			assert set(data) == {'timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'flags', 'build_job',}
-			assert isinstance(data.user, unicode)
-			assert isinstance(data.build, unicode)
-			assert isinstance(data.build_job, unicode)
+			assert isinstance(data.user, str)
+			assert isinstance(data.build, str)
+			assert isinstance(data.build_job, str)
 			assert isinstance(data.deps, dict)
 			for v in itervalues(data.deps):
 				assert isinstance(v, dict)
@@ -266,7 +266,7 @@ class DB:
 			assert set(data) == {'timestamp', 'joblist', 'caption',}
 		assert joblistlike(data.joblist), data.joblist
 		assert data.joblist
-		assert isinstance(data.caption, unicode)
+		assert isinstance(data.caption, str)
 		data.timestamp = TimeStamp(data.timestamp)
 
 	def _serialise(self, action, data):

@@ -29,7 +29,7 @@ from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
 
-from accelerator.compat import unicode, itervalues
+from accelerator.compat import itervalues
 
 from accelerator.extras import OptionEnum, DotDict, quote
 from accelerator.dsutil import typed_writer, typed_reader
@@ -490,7 +490,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		else:
 			default_value_is_None = False
 			if default_value != cstuff.NULL:
-				if isinstance(default_value, unicode):
+				if isinstance(default_value, str):
 					default_value = default_value.encode("utf-8")
 				default_len = len(default_value)
 		c = getattr(cstuff.backend, 'convert_column_' + cfunc)

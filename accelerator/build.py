@@ -38,7 +38,7 @@ from base64 import b64encode
 from importlib import import_module
 from argparse import RawTextHelpFormatter
 
-from accelerator.compat import unicode, str_types
+from accelerator.compat import str_types
 from accelerator.compat import urlencode
 from accelerator.compat import getarglist
 
@@ -406,7 +406,7 @@ class EmptyUrdResponse(UrdResponse):
 def _urd_typeify(d):
 	if isinstance(d, str):
 		d = json.loads(d)
-		if not d or isinstance(d, unicode):
+		if not d or isinstance(d, str):
 			return d
 	res = DotDict()
 	for k, v in d.items():

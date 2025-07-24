@@ -37,7 +37,6 @@ Should not take much more than 3 * sleeptime to run.
 options = {'sleeptime': 0.5}
 
 from accelerator.compat import monotonic
-from accelerator.compat import unicode
 import time
 
 # This pickles as a string, but slowly.
@@ -51,7 +50,7 @@ class SlowToPickle(object):
 
 	def __reduce__(self):
 		time.sleep(self.sleeptime)
-		return unicode, (unicode(self.text),)
+		return str, (str(self.text),)
 
 # This is a True boolean that takes a long time to evaluate.
 # It's a hack to make json encoding slow.

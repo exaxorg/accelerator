@@ -36,7 +36,7 @@ import datetime
 import operator
 import signal
 
-from accelerator.compat import unicode, izip
+from accelerator.compat import izip
 from accelerator.compat import izip_longest
 from accelerator.compat import monotonic
 from accelerator.compat import num_types
@@ -69,7 +69,7 @@ def number_or_None(obj):
 			# Base 16 has to be handled separately, because using 0 will
 			# error on numbers starting with 0 (on python 3).
 			# But we have to check for 0x, so things like "a" are not accepted.
-			if (isinstance(obj, unicode) and '0x' in obj) or (isinstance(obj, bytes) and b'0x' in obj):
+			if (isinstance(obj, str) and '0x' in obj) or (isinstance(obj, bytes) and b'0x' in obj):
 				try:
 					return int(obj, 16)
 				except ValueError:
@@ -1039,9 +1039,9 @@ def main(argv, cfg):
 				if args.show_sliceno and args.roundrobin:
 					(prefix['sliceno'], lineno), items = items
 				if only_matching == 'part':
-					items = [filter_item(unicode(item)) for item in items]
+					items = [filter_item(str(item)) for item in items]
 				if only_matching == 'columns':
-					d = {k: v for k, v in zip(used_columns, items) if filter_item(unicode(v))}
+					d = {k: v for k, v in zip(used_columns, items) if filter_item(str(v))}
 				else:
 					d = dict(zip(used_columns, items))
 				if args.show_lineno:
@@ -1063,10 +1063,10 @@ def main(argv, cfg):
 				data = list(prefix)
 				if args.show_sliceno and args.roundrobin:
 					(sliceno, lineno), items = items
-					data[-1] = unicode(sliceno)
+					data[-1] = str(sliceno)
 				if args.show_lineno:
-					data.append(unicode(lineno))
-				show_items = map(unicode, items)
+					data.append(str(lineno))
+				show_items = map(str, items)
 				if only_matching:
 					if only_matching == 'columns':
 						show_items = (item if filter_item(item) else '' for item in show_items)
@@ -1183,7 +1183,7 @@ def main(argv, cfg):
 		if args.numeric:
 			fmtfix = number_or_None
 		else:
-			fmtfix = unicode
+			fmtfix = str
 		if args.unique:
 			if args.unique is True: # all columns
 				care_mask = [True] * len(used_columns)

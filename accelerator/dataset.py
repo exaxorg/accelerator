@@ -34,7 +34,7 @@ from operator import itemgetter, not_
 from math import isnan
 import datetime
 
-from accelerator.compat import unicode, uni, ifilter, imap, iteritems
+from accelerator.compat import uni, ifilter, imap, iteritems
 from accelerator.compat import builtins, getarglist, izip, izip_longest
 from accelerator.compat import str_types, int_types, FileNotFoundError
 
@@ -138,13 +138,13 @@ class _DatasetColumn_3_0(object):
 		none_support = not backing_type.startswith('bits')
 		return _DatasetColumn_3_1(type, backing_type, name, location, min, max, offsets, none_support)
 
-class _New_dataset_marker(unicode): pass
+class _New_dataset_marker(str): pass
 _new_dataset_marker = _New_dataset_marker('new')
 _no_override = object()
 
 _ds_cache = {}
 def _ds_load(obj):
-	n = unicode(obj)
+	n = str(obj)
 	if n not in _ds_cache:
 		fn = obj.job.filename(obj._name('pickle'))
 		if not os.path.exists(fn):
@@ -179,7 +179,7 @@ _dir_name_blacklist['\\'] = '\\\\' # make sure names can't collide
 def _fs_name(name):
 	return 'DS/' + ''.join(_dir_name_blacklist.get(c, c) for c in name)
 
-class Dataset(unicode):
+class Dataset(str):
 	"""
 	Represents a dataset. Is also a string 'jobid/name', or just 'jobid' if
 	name is 'default' (for better backwards compatibility).
@@ -193,7 +193,7 @@ class Dataset(unicode):
 	You can also pass jobid={jid: dsname} to resolve dsname from the datasets
 	passed to jid. This gives NoDataset if that option was unset.
 
-	These decay to a (unicode) string when pickled.
+	These decay to a string when pickled.
 	"""
 
 	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache', '_job_version',)
@@ -227,7 +227,7 @@ class Dataset(unicode):
 			fullname = job
 		else:
 			fullname = '%s/%s' % (job, name,)
-		obj = unicode.__new__(cls, fullname)
+		obj = str.__new__(cls, fullname)
 		obj.name = name
 		obj.quoted = quote('%s/%s' % (job, name,))
 		obj._job_version = 4 # hopefully
@@ -260,7 +260,7 @@ class Dataset(unicode):
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 	@property
 	def columns(self):
@@ -1056,7 +1056,7 @@ class Dataset(unicode):
 			if cache_distance == 64:
 				cache_distance = 0
 				chain = self.chain(64)
-				self._data['cache'] = tuple((unicode(d), d._data) for d in chain[:-1])
+				self._data['cache'] = tuple((str(d), d._data) for d in chain[:-1])
 			self._data['cache_distance'] = cache_distance
 
 	def _maybe_merge(self, n):
@@ -1759,7 +1759,7 @@ class NoDataset(Dataset):
 	__slots__ = ()
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	# functions you shouldn't call on this
 	append = iterate = iterate_chain = iterate_list = link_to_here = merge = new = None

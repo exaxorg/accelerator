@@ -80,7 +80,7 @@ def uni(s):
 			return s.decode('utf-8')
 		except UnicodeDecodeError:
 			return s.decode('iso-8859-1')
-	return unicode(s)
+	return str(s)
 
 def url_quote_more(s):
 	return quote_plus(s).replace('+', '%20')

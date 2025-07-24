@@ -23,7 +23,7 @@ from collections import defaultdict
 from datetime import datetime
 from accelerator import JobWithFile, Job
 from accelerator.dataset import Dataset
-from accelerator.compat import unicode, FileNotFoundError
+from accelerator.compat import FileNotFoundError
 
 MAXANGLE = 45 * pi / 180
 
@@ -74,7 +74,7 @@ def dsdeps(ds):
 	return res
 
 
-class WrapperNode(unicode):
+class WrapperNode(str):
 	def __init__(self, payload):
 		self.payload = payload
 		self.level = 0

@@ -28,7 +28,7 @@ from datetime import datetime, date, time, timedelta
 from pathlib import Path, PosixPath, PurePath, PurePosixPath
 import sys
 
-from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types, unicode
+from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types
 
 from accelerator.extras import OptionEnum, OptionEnumValue, _OptionString, OptionDefault, RequiredOption, typing_conv
 from accelerator.job import JobWithFile
@@ -156,7 +156,7 @@ class DepTree:
 					if not v:
 						raise OptionException('Option %s on method %s requires a non-empty string value' % (k, method,))
 					return v
-				if isinstance(default_v, unicode) and isinstance(v, bytes):
+				if isinstance(default_v, str) and isinstance(v, bytes):
 					return v.decode('utf-8')
 				return type(default_v)(v)
 			if (isinstance(default_v, type) and isinstance(v, typefuzz(default_v))) or isinstance(v, typefuzz(type(default_v))):

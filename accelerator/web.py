@@ -18,8 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from accelerator.compat import unicode
-
 from socketserver import ThreadingMixIn
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import UnixStreamServer
@@ -89,7 +87,7 @@ class BaseWebHandler(BaseHTTPRequestHandler):
 
 	def argdec(self, v):
 		if self.unicode_args:
-			if type(v) is unicode: return v
+			if type(v) is str: return v
 			try:
 				return v.decode("utf-8")
 			except Exception:

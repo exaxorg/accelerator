@@ -33,7 +33,7 @@ from functools import partial
 import sys
 
 from accelerator.compat import pickle, izip, iteritems, first_value
-from accelerator.compat import num_types, unicode, str_types
+from accelerator.compat import num_types, str_types
 
 from accelerator.error import AcceleratorError
 from accelerator.job import Job, JobWithFile
@@ -257,7 +257,7 @@ def json_save(variable, filename='result.json', sliceno=None, sort_keys=True, _e
 		return _SavedFile(filename, sliceno, json_load)
 
 def _unicode_as_utf8bytes(obj):
-	if isinstance(obj, unicode):
+	if isinstance(obj, str):
 		return obj.encode('utf-8')
 	elif isinstance(obj, dict):
 		return DotDict((_unicode_as_utf8bytes(k), _unicode_as_utf8bytes(v)) for k, v in iteritems(obj))
@@ -281,7 +281,7 @@ def json_load(filename='result.json', jobid=None, sliceno=None, unicode_as_utf8b
 
 def quote(s):
 	"""Quote s unless it looks fine without"""
-	s = unicode(s)
+	s = str(s)
 	r = repr(s)
 	if s and len(s) + 2 == len(r) and not any(c.isspace() for c in s):
 		return s

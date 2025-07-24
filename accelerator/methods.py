@@ -32,7 +32,7 @@ from collections import defaultdict, OrderedDict
 from importlib import import_module
 
 from accelerator.compat import iteritems, itervalues, first_value
-from accelerator.compat import NoneType, unicode, monotonic
+from accelerator.compat import NoneType, monotonic
 
 from accelerator.colourwrapper import colour
 from accelerator.error import AcceleratorError
@@ -186,7 +186,7 @@ def params2defaults(params):
 			return type(item)(l)
 		if isinstance(item, (type, OptionEnum)):
 			return None
-		assert isinstance(item, (bytes, unicode, int, float, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath, pathlib.PurePosixPath,)), type(item)
+		assert isinstance(item, (bytes, str, int, float, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath, pathlib.PurePosixPath,)), type(item)
 		return item
 	def fixup0(item):
 		if isinstance(item, RequiredOption):

@@ -26,7 +26,7 @@ import hashlib
 from importlib import import_module
 from collections import namedtuple
 
-from accelerator.compat import unicode, str_types
+from accelerator.compat import str_types
 
 
 _prologue_code_template = r'''
@@ -127,7 +127,7 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return [0] * count
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return s
 	else:
@@ -139,7 +139,7 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return ffi.new('uint64_t []', [0] * count)
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return ffi.new('char []', s)
 

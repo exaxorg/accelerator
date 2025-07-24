@@ -36,7 +36,7 @@ from string import ascii_letters
 import random
 import atexit
 
-from accelerator.compat import unicode, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.web import ThreadedHTTPServer, ThreadedUnixHTTPServer, BaseWebHandler
 
@@ -80,7 +80,7 @@ class XtdHandler(BaseWebHandler):
 	def encode_body(self, body):
 		if isinstance(body, bytes):
 			return body
-		if isinstance(body, unicode):
+		if isinstance(body, str):
 			return body.encode('utf-8')
 		return json_encode(body)
 

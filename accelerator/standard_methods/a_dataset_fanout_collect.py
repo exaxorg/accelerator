@@ -24,7 +24,7 @@ You probably don't want to call this yourself.
 '''
 
 from accelerator import OptionString
-from accelerator.compat import unicode, imap
+from accelerator.compat import imap
 
 
 options = {
@@ -39,7 +39,7 @@ jobs = ('previous',)
 
 def analysis(sliceno):
 	chain = datasets.source.chain(stop_ds={jobs.previous: 'source'}, length=options.length)
-	return set(imap(unicode, chain.iterate(sliceno, options.column)))
+	return set(imap(str, chain.iterate(sliceno, options.column)))
 
 def synthesis(analysis_res):
 	return analysis_res.merge_auto()

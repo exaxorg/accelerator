@@ -26,7 +26,6 @@ Test dataset_fanout with varying types, hashlabel and chain truncation.
 '''
 
 from accelerator import subjobs
-from accelerator.compat import unicode
 
 from itertools import cycle
 
@@ -184,7 +183,7 @@ def synthesis(job):
 		cycle(['int64', 'int32']),
 		cycle(['unicode', 'ascii']),
 	)):
-		data = [('data',) + (ix + 1000,) * 4 + (unicode(ix),)]
+		data = [('data',) + (ix + 1000,) * 4 + (str(ix),)]
 		want_data.append(data[0][1:])
 		all_types.append(
 			mk('all types %d' % (ix,), types, data, previous=previous)

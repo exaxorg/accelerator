@@ -27,7 +27,7 @@ from collections import namedtuple, OrderedDict
 from functools import wraps
 from pathlib import Path
 
-from accelerator.compat import unicode, iteritems, FileNotFoundError
+from accelerator.compat import iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 
@@ -61,7 +61,7 @@ def _cachedprop(meth):
 _cache = {}
 _nodefault = object()
 
-class Job(unicode):
+class Job(str):
 	"""
 	A string that is a jobid, but also has some extra properties:
 	.method The job method (can be the "name" when from build or urd).
@@ -82,7 +82,7 @@ class Job(unicode):
 	.link_result to put a link in result_directory that points to a file in this job.
 	.link_to_here to expose a subjob result in its parent.
 
-	Decays to a (unicode) string when pickled.
+	Decays to a string when pickled.
 	"""
 
 	__slots__ = ('workdir', 'number', '_cache')
@@ -91,7 +91,7 @@ class Job(unicode):
 		k = (jobid, method)
 		if k in _cache:
 			return _cache[k]
-		obj = unicode.__new__(cls, jobid)
+		obj = str.__new__(cls, jobid)
 		try:
 			obj.workdir, tmp = jobid.rsplit('-', 1)
 			obj.number = int(tmp)
@@ -318,7 +318,7 @@ class Job(unicode):
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 
 class CurrentJob(Job):
@@ -440,7 +440,7 @@ class NoJob(Job):
 	number = version = -1
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	def dataset(self, name='default'):
 		raise NoSuchDatasetError('NoJob has no datasets')
