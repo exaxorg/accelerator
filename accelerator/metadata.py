@@ -20,8 +20,6 @@
 # Functions for generating, inserting and extracting metadata about the job
 # that built files.
 
-from __future__ import print_function
-
 import json
 import re
 import socket

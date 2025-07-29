@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test that the expected files are registered (and not registered) when
 using job.open(), job.register_file() and job.register_files().

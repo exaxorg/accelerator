@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from accelerator.error import AcceleratorError
 from accelerator.job import Job
 from accelerator.shell.parser import ArgumentParser

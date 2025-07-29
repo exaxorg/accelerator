@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 class AcceleratorError(Exception):
 	"""Base class for all accelerator exception types"""
 	__slots__ = ()

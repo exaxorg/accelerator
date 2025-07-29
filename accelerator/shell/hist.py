@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from accelerator.colourwrapper import colour
 from accelerator.compat import fmt_num, num_types, int_types
 from accelerator.error import NoSuchWhateverError

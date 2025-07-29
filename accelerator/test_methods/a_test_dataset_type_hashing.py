@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify that using dataset_type with a hashlabel gives the same result as
 first typing and then rehashing for various hashlabel types, including

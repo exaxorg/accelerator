@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test re-using datasets (from test_selfchain) in new
 chains, and verify that the old chain still works.

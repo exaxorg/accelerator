@@ -20,10 +20,6 @@
 
 # a few things that differ between python2 and python3
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 try:
 	from setproctitle import setproctitle as _setproctitle, getproctitle

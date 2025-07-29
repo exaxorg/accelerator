@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test DatasetWriter, exercising the different ways to create,
 pass and populate the dataset.

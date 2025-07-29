@@ -19,10 +19,6 @@
 
 # Test data for use in dataset testing
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from datetime import date, time, datetime
 from sys import version_info
 

@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from accelerator.build import fmttime
 from accelerator.error import JobError
 from accelerator.job import Job
@@ -50,4 +48,3 @@ def main(argv, cfg):
 			print('%s (%s)' % (status.current[1], t))
 		else:
 			print_status_stacks(status.status_stacks)
-

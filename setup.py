@@ -20,8 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from setuptools import setup, find_packages, Extension
 from importlib import import_module
 from os.path import exists

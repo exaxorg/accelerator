@@ -34,9 +34,6 @@
 # Several built in functions will call this for you, notably dataset
 # iterators and pickle load/save functions.
 
-from __future__ import print_function
-from __future__ import division
-
 from contextlib import contextmanager
 from errno import ENOTCONN
 from functools import partial

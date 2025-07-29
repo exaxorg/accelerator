@@ -20,9 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from collections import OrderedDict
 from json import dumps
 from datetime import datetime, date, time, timedelta

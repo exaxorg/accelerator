@@ -20,10 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import os
 from keyword import kwlist
 from collections import namedtuple, Counter

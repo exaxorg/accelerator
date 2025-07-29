@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test that missing set_slice is an error without allow_missing_slices
 but not with.

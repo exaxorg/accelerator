@@ -19,9 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from collections import defaultdict
 from collections import namedtuple
 from traceback import print_exc

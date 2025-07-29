@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify the various dataset_type chaining options:
 Building a chain with and without extra datasets in the source.

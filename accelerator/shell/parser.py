@@ -22,8 +22,6 @@
 # parsing of "job specs", including as part of a dataset name.
 # handles jobids, paths and method names.
 
-from __future__ import division, print_function
-
 import argparse
 import sys
 from os.path import join, exists, realpath, split

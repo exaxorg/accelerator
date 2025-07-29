@@ -25,9 +25,6 @@
 # Also contains the function that starts these (new_runners) and the dict
 # of running ones {version: Runner}
 
-from __future__ import print_function
-from __future__ import division
-
 from importlib import import_module
 from types import ModuleType
 from traceback import print_exc

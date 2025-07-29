@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-
 description = r'''
 Verify that csvimport puts lines in the expected slice.
 

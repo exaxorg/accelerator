@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''Dataset (or chain) to CSV file.'''
 
 from shutil import copyfileobj

@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 from os import environ
 from argparse import RawDescriptionHelpFormatter

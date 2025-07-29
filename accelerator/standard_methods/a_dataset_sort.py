@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 description = r'''
 Stable sort a dataset based on one or more columns.
 You'll have to type the sort column(s) approprietly.

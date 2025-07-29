@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from accelerator import _dsutil
 from accelerator.compat import str_types
 from accelerator.standard_methods._dataset_type import strptime, strptime_i

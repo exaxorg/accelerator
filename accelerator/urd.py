@@ -19,10 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-
 from glob import glob
 from collections import defaultdict
 from bottle import route, request, auth_basic, abort

@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test that hashlabel does what it says in both split_write and hashcheck.
 Then test that rehashing gives the expected result, and that using the

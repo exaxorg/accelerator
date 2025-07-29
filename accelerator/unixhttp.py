@@ -19,9 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from accelerator.compat import urlopen, Request, URLError, HTTPError
 from accelerator.extras import json_encode, json_decode
 from accelerator.error import ServerError, UrdError, UrdPermissionError, UrdConflictError

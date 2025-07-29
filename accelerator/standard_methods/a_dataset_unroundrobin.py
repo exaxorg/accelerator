@@ -17,9 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''
 new_ds.iterate(None) gives the same order as old_ds.iterate('roundrobin').
 

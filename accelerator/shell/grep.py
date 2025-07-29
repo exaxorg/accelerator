@@ -21,8 +21,6 @@
 
 # grep in a dataset(chain)
 
-from __future__ import division, print_function
-
 import sys
 import re
 import os

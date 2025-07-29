@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division, print_function
-
 from itertools import cycle
 import errno
 import os

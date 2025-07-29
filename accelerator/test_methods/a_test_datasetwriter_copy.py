@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test copy_mode in DatasetWriter, and three ways to specify the column
 types (columns={}, add(n, Datasetcolums), .add(n, (t, none_support)).

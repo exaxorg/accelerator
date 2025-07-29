@@ -21,10 +21,6 @@
 # This is a separate file from a_dataset_type so setup.py can import
 # it and make the _dataset_type module at install time.
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
 from collections import namedtuple
 from functools import partial
 import sys
