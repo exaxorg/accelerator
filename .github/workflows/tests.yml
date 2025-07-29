@@ -1,0 +1,45 @@
+name: Run tests
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+jobs:
+  run_tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Version 3.6 of Python is based on older debian and alpine, and pip
+        # does not have "--break-system-packages"
+        version: [3.8, 3.12]
+        image: [slim, alpine]
+      fail-fast: false
+    container:
+      image: python:${{ matrix.version }}-${{ matrix.image }}
+    steps:
+      - name: Install dependencies
+        run: |
+          type apt && apt-get update && apt-get install -y build-essential git zlib1g-dev locales || true
+          type locale-gen && sed -i -e 's/# sv_SE.UTF-8 UTF-8/sv_SE.UTF-8 UTF-8/1' /etc/locale.gen && locale-gen || true
+          type apk && apk --no-cache add bash git zlib-dev build-base musl-locales || true
+          python3 -m pip install --break-system-packages pipx bottle
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: "repo"
+      - name: Run tests
+        run: |
+          python3 -m pipx ensurepath
+          . ~/.bashrc
+          git config --global --add safe.directory $GITHUB_WORKSPACE/repo
+          pipx install ./repo
+          ax init project
+          cd project
+          ax server &
+          sleep 5
+          trap "kill $(jobs -p)" ERR EXIT
+          ax run tests
+        shell: bash
