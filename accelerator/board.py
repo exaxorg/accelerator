@@ -39,6 +39,7 @@ from accelerator.build import fmttime
 from accelerator.configfile import resolve_listen
 from accelerator.error import NoSuchWhateverError, NoSuchJobError
 from accelerator.metadata import insert_metadata
+from accelerator.setupfile import copy_json_safe
 from accelerator.shell.parser import ArgumentParser, name2job, name2ds
 from accelerator.shell.workdir import job_data, workdir_jids
 from accelerator.compat import setproctitle, url_quote, urlencode
@@ -69,14 +70,10 @@ def get_best_accept(*want):
 	_, best = sorted(((v, k) for k, v in d.items()), reverse=True)[0]
 	return want_short.get(best, best)
 
-class JSONEncoderWithSet(json.JSONEncoder):
-	__slots__ = ()
-	def default(self, o):
-		if isinstance(o, set):
-			return list(o)
-		return json.JSONEncoder.default(o)
 
-json_enc = JSONEncoderWithSet(indent=4, ensure_ascii=False).encode
+def json_enc(value):
+	value = copy_json_safe(value)
+	return json.dumps(value, indent=4, ensure_ascii=False)
 
 
 def ax_repr(o):

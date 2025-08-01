@@ -103,8 +103,7 @@ def _sorted_set(s):
 	else:
 		return sorted(s)
 
-def encode_setup(data, sort_keys=True, as_str=False):
-	def copy(src):
+def copy_json_safe(src):
 		if isinstance(src, dict):
 			# Modern python versions preserve order on all dicts, but to avoid
 			# surprises we sort normal dicts regardless of version.
@@ -114,12 +113,12 @@ def encode_setup(data, sort_keys=True, as_str=False):
 				keys = sorted(src)
 			dst = OrderedDict()
 			for k in keys:
-				dst[k] = copy(src[k])
+				dst[k] = copy_json_safe(src[k])
 			return dst
 		elif isinstance(src, (list, tuple,)):
-			return [copy(v) for v in src]
+			return [copy_json_safe(v) for v in src]
 		elif isinstance(src, set):
-			return [copy(v) for v in _sorted_set(src)]
+			return [copy_json_safe(v) for v in _sorted_set(src)]
 		elif isinstance(src, datetime):
 			return [src.year, src.month, src.day, src.hour, src.minute, src.second, src.microsecond]
 		elif isinstance(src, date):
@@ -135,8 +134,10 @@ def encode_setup(data, sort_keys=True, as_str=False):
 		else:
 			assert isinstance(src, (str, unicode, int, float, long, bool)) or src is None, "%s not supported in data" % (type(src),)
 			return src
+
+def encode_setup(data, sort_keys=True, as_str=False):
 	res = _encode_with_compact(
-		copy(data),
+		copy_json_safe(data),
 		compact_keys=('starttime', 'endtime', 'exectime', '_typing',),
 		special_keys=('options', 'datasets', 'jobs',),
 	)
