@@ -333,6 +333,11 @@ class FileWriteMove(object):
 	__slots__ = ('filename', 'tmp_filename', 'temp', '_hidden', '_status', 'close', '_open')
 
 	def __init__(self, filename, temp=None, _hidden=False):
+		from accelerator import g
+		job = getattr(g, 'job', None)
+		if job: # This is also used outside jobs
+			# Normalise filename so it always contains the job path (unless already absolute)
+			filename = job.filename(filename)
 		self.filename = filename
 		self.tmp_filename = '%s.%dtmp' % (filename, os.getpid(),)
 		self.temp = temp
