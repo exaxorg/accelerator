@@ -641,7 +641,6 @@ class Dataset(unicode):
 			if slice.start < 0 or (slice.stop or 0) < 0:
 				msg = "slice with negative index is not supported with "
 				if range: raise DatasetUsageError(msg + "range")
-				if rehash: raise DatasetUsageError(msg + "rehash")
 				if filters: raise DatasetUsageError(msg + "filters")
 			if isinstance(sliceno, int_types):
 				total_lines = sum(d.lines[sliceno] for d in datasets)
