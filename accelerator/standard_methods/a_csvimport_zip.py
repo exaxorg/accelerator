@@ -147,7 +147,7 @@ class ProgressMsg:
 		self.z_so_far += self.z[self.cnt_so_far]
 		self.cnt_so_far += 1
 		percent = self.z_so_far / self.z_total * 100
-		return '%s %s (file %d/%d, up to %d%% of total size)' % (msg, fn, self.cnt_so_far, self.cnt_total, percent,)
+		return f'{msg} {fn} (file {self.cnt_so_far}/{self.cnt_total}, up to {percent}% of total size)'
 
 def analysis(sliceno, slices, prepare_res, job):
 	lst = prepare_res[sliceno::slices]

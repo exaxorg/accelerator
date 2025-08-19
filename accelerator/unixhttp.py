@@ -100,7 +100,7 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 		except HTTPError as e:
 			if resp is None and e.fp:
 				resp = e.fp.read().decode('utf-8')
-			msg = '%s says %d: %s' % (server_name, e.code, resp,)
+			msg = f'{server_name} says {e.code}: {resp}'
 			if server_name == 'urd' and 400 <= e.code < 500:
 				if e.code == 401:
 					err = UrdPermissionError()
@@ -123,7 +123,7 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 		if attempt < retries + 1:
 			time.sleep(attempt / 15)
 			if msg and not quiet:
-				print('Retrying (%d/%d).' % (attempt, retries,), file=sys.stderr)
+				print(f'Retrying ({attempt}/{retries}).', file=sys.stderr)
 	else:
 		if not quiet:
 			print('Giving up.', file=sys.stderr)

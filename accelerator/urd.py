@@ -75,7 +75,7 @@ class TimeStamp(str):
 			return ts
 		try:
 			integer = int(ts, 10)
-			assert integer >= 0, 'Invalid timestamp %d' % (ts,)
+			assert integer >= 0, f'Invalid timestamp {ts}'
 			ts = None
 		except ValueError:
 			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)(\+\d+)?$', ts)
@@ -86,7 +86,7 @@ class TimeStamp(str):
 		assert ts is not None or integer is not None, f'Invalid timestamp {ts}'
 		if ts:
 			if integer is not None:
-				strval = '%s+%d' % (ts, integer,)
+				strval = f'{ts}+{integer}'
 			else:
 				strval = ts
 		else:
@@ -193,7 +193,7 @@ class DB:
 			if verbose:
 				print("urd-list                          lines     ghosts     active")
 				for key, val in sorted(stat.items()):
-					print("%-30s  %7d    %7d    %7d" % (key, val, len(self.ghost_db[key]), len(self.db[key]),))
+					print(f"{key:30}  {val:7}    {len(self.ghost_db[key]):7}    {len(self.db[key]):7}")
 				print()
 		else:
 			print(f"Creating directory \"{path}\".")

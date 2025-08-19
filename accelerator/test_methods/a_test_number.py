@@ -175,4 +175,4 @@ def synthesis(job, slices):
 			('dataset_hashpart', ds_hashed),
 			('dataset_type', ds_typehashed),
 		]:
-			assert set(ds.iterate(sliceno, 'num')) == per_slice[sliceno], 'wrong in slice %d in %s (hashed by %s)' % (sliceno, ds, hashname)
+			assert set(ds.iterate(sliceno, 'num')) == per_slice[sliceno], f'wrong in slice {sliceno} in {ds} (hashed by {hashname})'

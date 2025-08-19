@@ -60,7 +60,7 @@ def synthesis(job, slices):
 		for sliceno in range(slices):
 			want_slice = hashfilter(typ, want_values, sliceno)
 			got_slice = list(ds.iterate(sliceno, 'value'))
-			assert nanfix(got_slice) == nanfix(want_slice), "%s got %r, wanted %r in slice %d" % (typ, got_slice, want_slice, sliceno)
+			assert nanfix(got_slice) == nanfix(want_slice), f"{typ} got {got_slice!r}, wanted {want_slice!r} in slice {sliceno}"
 
 	inf = float('inf')
 	nan = float('nan')

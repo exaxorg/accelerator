@@ -110,5 +110,5 @@ def synthesis():
 		if not sorted_s:
 			sorted_s = s
 			sorted_d = d
-		test("ordered%d.json" % (ix,), d, d, s, sort_keys=False)
-		test("sorted%d.json" % (ix,), d, sorted_d, sorted_s, sort_keys=True)
+		test(f"ordered{ix}.json", d, d, s, sort_keys=False)
+		test(f"sorted{ix}.json", d, sorted_d, sorted_s, sort_keys=True)

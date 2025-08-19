@@ -45,7 +45,7 @@ def _fn(filename, jobid, sliceno):
 	elif jobid:
 		filename = Job(jobid).filename(filename, sliceno)
 	elif sliceno is not None:
-		filename = '%s.%d' % (filename, sliceno,)
+		filename = f'{filename}.{sliceno}'
 	return filename
 
 def _type_list_or(v, t, falseval, listtype):
@@ -186,7 +186,7 @@ def job_post(jobid):
 		d.files = sorted(fn[len(prefix):] if fn.startswith(prefix) else fn for fn in d.files)
 		version = 1
 	if version != 1:
-		raise AcceleratorError("Don't know how to load post.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError(f"Don't know how to load post.json version {d.version} (in {jobid})")
 	return d
 
 def _pickle_save(variable, filename, temp, _hidden):
@@ -319,7 +319,7 @@ class FileWriteMove(object):
 
 	def __init__(self, filename, temp=None, _hidden=False):
 		self.filename = filename
-		self.tmp_filename = '%s.%dtmp' % (filename, os.getpid(),)
+		self.tmp_filename = f'{filename}.{os.getpid()}tmp'
 		self.temp = temp
 		self._hidden = _hidden
 
@@ -360,7 +360,7 @@ class ResultIter(object):
 		return self
 	def _loader(self, ix, slices):
 		for sliceno in slices:
-			yield pickle_load("Analysis.%d." % (ix,), sliceno=sliceno)
+			yield pickle_load(f"Analysis.{ix}.", sliceno=sliceno)
 	def __next__(self):
 		if self._is_tupled:
 			return next(self._tupled)
@@ -436,13 +436,13 @@ class ResultIterMagic(object):
 		to_check = data
 		while hasattr(to_check, "values"):
 			if not to_check:
-				raise self._exc("Empty value at depth %d (index %d)" % (depth, ix,))
+				raise self._exc(f"Empty value at depth {depth} (index {ix})")
 			to_check = first_value(to_check)
 			depth += 1
 		if hasattr(to_check, "update"): # like a set
 			depth += 1
 		if not depth:
-			raise self._exc("Top level has no .values (index %d)" % (ix,))
+			raise self._exc(f"Top level has no .values (index {ix})")
 		def upd(aggregate, part, level):
 			if level == depth:
 				aggregate.update(part)

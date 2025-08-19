@@ -173,7 +173,7 @@ class DataBase:
 		if verbose:
 			if discarded_due_to_hash_list:
 				print(f"DATABASE:  discarding due to unknown hash: {', '.join(discarded_due_to_hash_list)}")
-			print("DATABASE:  Full database contains %d items" % (sum(len(v) for v in itervalues(self.db_by_method)),))
+			print(f"DATABASE:  Full database contains {sum((len(v) for v in itervalues(self.db_by_method)))} items")
 
 	def match_complex(self, reqlist):
 		for method, uid, opttuple in reqlist:

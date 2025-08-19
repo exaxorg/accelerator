@@ -253,7 +253,7 @@ def load_config(filename):
 		if lineno[0] is None:
 			prefix = f'Error in {filename}:\n'
 		else:
-			prefix = 'Error on line %d of %s:\n' % (lineno[0], filename,)
+			prefix = f'Error on line {lineno[0]} of {filename}:\n'
 		raise UserError(prefix + e.args[0])
 
 	res.config_filename = os.path.realpath(filename)

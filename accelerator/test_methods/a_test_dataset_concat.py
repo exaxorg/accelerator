@@ -52,7 +52,7 @@ def synthesis(job):
 
 	def data(ix):
 		d = {
-			'a': '%d' % (ix,),
+			'a': f'{ix}',
 			'b': bool(ix % 2),
 			'c': b'%d' % (ix,),
 			'd': complex(0, ix),
@@ -67,7 +67,7 @@ def synthesis(job):
 			'm': -1.0 / (ix + 1),
 			'n': {ix},
 			'o': time(0, ix // 60 % 60, ix % 60),
-			'p': u'%d' % (ix,),
+			'p': f'{ix}',
 			'extra': 0,
 		}
 		return {k: v for k, v in d.items() if k in types}

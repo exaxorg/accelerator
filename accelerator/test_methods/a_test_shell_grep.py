@@ -51,7 +51,7 @@ def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False, check_out
 	want = [sep.join(typ(el) for el in l) for l in want]
 	for lineno, (want, got) in enumerate(zip(want, res), 1):
 		if want != got:
-			raise Exception('%r gave wrong result on line %d:\nWant: %r\nGot:  %r' % (cmd, lineno, want, got,))
+			raise Exception(f'{cmd!r} gave wrong result on line {lineno}:\nWant: {want!r}\nGot:  {got!r}')
 
 # like subprocess.check_output except stdout is a pty
 def check_output_pty(cmd):
@@ -86,9 +86,9 @@ def grep_json(args, want):
 		try:
 			got = json.loads(got)
 		except Exception as e:
-			raise Exception('%r made bad json %r on line %d: %s' % (cmd, got, lineno, e,))
+			raise Exception(f'{cmd!r} made bad json {got!r} on line {lineno}: {e}')
 		if want != got:
-			raise Exception('%r gave wrong result on line %d:\nWant: %r\nGot:  %r' % (cmd, lineno, want, got,))
+			raise Exception(f'{cmd!r} gave wrong result on line {lineno}:\nWant: {want!r}\nGot:  {got!r}')
 
 def mk_bytes(low, high):
 	return bytes(range(low, high))
@@ -320,7 +320,7 @@ def synthesis(job, slices):
 	slice = 0
 	header_test = []
 	for ds_ix, cols in enumerate(columns):
-		dw = job.datasetwriter(name='header test %d' % (ds_ix,), previous=previous, allow_missing_slices=True)
+		dw = job.datasetwriter(name=f'header test {ds_ix}', previous=previous, allow_missing_slices=True)
 		for col in cols:
 			dw.add(col, col)
 		if sorted(cols) != previous_cols:
@@ -424,7 +424,7 @@ def synthesis(job, slices):
 	# test escaping
 	unescaped, sliceno = header_test[-1]
 	escaped = unescaped.replace('\n', '\\n').replace('\r', '\\r').replace('"', '""')
-	grep_text(['-l', '-t', '/', '-S', '', previous], [['"%s"/%d' % (escaped, sliceno)]])
+	grep_text(['-l', '-t', '/', '-S', '', previous], [[f'"{escaped}"/{sliceno}']])
 
 	# more escaping
 	escapy = mk_ds('escapy',

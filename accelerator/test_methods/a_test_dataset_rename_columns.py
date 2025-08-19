@@ -41,7 +41,7 @@ def synthesis(job):
 	dw = job.datasetwriter(name='b', hashlabel='b', columns=columns, previous=a)
 	dw.get_split_write()(1, 2, 3)
 	b = dw.finish()
-	names = ('link%d' % (ix,) for ix in range(1000)) # more than enough
+	names = (f'link{ix}' for ix in range(1000)) # more than enough
 	def chk(ds, want_hashlabel, want_previous, want_coltypes, rename):
 		got_job = subjobs.build('dataset_rename_columns', rename=rename, source=ds)
 		chk_inner(got_job.dataset(), want_hashlabel, want_previous, want_coltypes)

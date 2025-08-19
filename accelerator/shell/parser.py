@@ -87,7 +87,7 @@ def job_up(job, count):
 			if prev:
 				prev = prev.job
 		if not prev:
-			raise JobNotFound('Tried to go %d up from %s, but only %d previous jobs available' % (count, err_job, ix,))
+			raise JobNotFound(f'Tried to go {count} up from {err_job}, but only {ix} previous jobs available')
 		job = prev
 	return job
 
@@ -191,7 +191,7 @@ def _name2job_do_tildes(cfg, job, current, tildes):
 			job = job_up(job, count)
 		elif char == '<':
 			if count > job.number:
-				raise JobNotFound('Tried to go %d jobs back from %s.' % (count, job,))
+				raise JobNotFound(f'Tried to go {count} jobs back from {job}.')
 			job = Job._create(job.workdir, job.number - count)
 		elif char == '>':
 			job = Job._create(job.workdir, job.number + count)
@@ -307,7 +307,7 @@ def name2ds(cfg, n):
 			res = ds
 			for done in range(count):
 				if not getattr(res, key):
-					raise DatasetNotFound('Tried to go %d %s from %s, but only %d available (stopped on %s)' % (count, motion, ds, done, res,))
+					raise DatasetNotFound(f'Tried to go {count} {motion} from {ds}, but only {done} available (stopped on {res})')
 				res = getattr(res, key)
 			return res
 		for char, count in tildes:
@@ -318,7 +318,7 @@ def name2ds(cfg, n):
 	slices = ds.job.params.slices
 	from accelerator import g
 	if hasattr(g, 'slices'):
-		assert g.slices == slices, "Dataset %s needs %d slices, by we are already using %d slices" % (ds, slices, g.slices)
+		assert g.slices == slices, f"Dataset {ds} needs {slices} slices, by we are already using {g.slices} slices"
 	else:
 		g.slices = slices
 	return ds

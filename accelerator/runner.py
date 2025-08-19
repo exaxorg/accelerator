@@ -402,7 +402,7 @@ class Runner(object):
 		self._lock = TLock()
 		self._thread = Thread(
 			target=self._receiver,
-			name="%d receiver" % (pid,),
+			name=f"{pid} receiver",
 		)
 		self._thread.daemon = True
 		self._thread.start()
@@ -554,9 +554,9 @@ if __name__ == "__main__":
 			pass
 	r1, r2 = resource.getrlimit(resource.RLIMIT_NOFILE)
 	if r1 < r2:
-		print("WARNING: Failed to raise RLIMIT_NOFILE to %d. Set to %d." % (r2, r1,))
+		print(f"WARNING: Failed to raise RLIMIT_NOFILE to {r2}. Set to {r1}.")
 	if r1 < 5000:
-		print("WARNING: RLIMIT_NOFILE is %d, that's not much." % (r1,))
+		print(f"WARNING: RLIMIT_NOFILE is {r1}, that's not much.")
 
 	wait_for = []
 	try:

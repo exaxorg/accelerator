@@ -208,7 +208,7 @@ def analysis(sliceno, params, prepare_res):
 		sort_idx, _ = sort(partial(ds_list.iterate, sliceno))
 		columniter = partial(ds_list.iterate, sliceno, copy_mode=True)
 	for ix, column in enumerate(datasets.source.columns, 1):
-		colstat = '%r (%d/%d)' % (column, ix, len(datasets.source.columns),)
+		colstat = f'{column!r} ({ix}/{len(datasets.source.columns)})'
 		with status('Reading ' + colstat):
 			lst = list(columniter(column))
 		with status('Writing ' + colstat):

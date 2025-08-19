@@ -30,11 +30,11 @@ def analysis(sliceno):
 		except StopIteration:
 			try:
 				next(iter_b)
-				raise Exception("dataset b is longer than a in slice %d" % (sliceno,))
+				raise Exception(f"dataset b is longer than a in slice {sliceno}")
 			except StopIteration:
 				break
 		try:
 			b = next(iter_b)
 		except StopIteration:
-			raise Exception("dataset a is longer than b in slice %d" % (sliceno,))
+			raise Exception(f"dataset a is longer than b in slice {sliceno}")
 		assert a == b

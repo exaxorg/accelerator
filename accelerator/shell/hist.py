@@ -295,7 +295,7 @@ def main(argv, cfg):
 		total_found = 0 # so we don't print about it later
 		if args.max_count:
 			if NaN in hist:
-				print(colour('WARNING: Ignored %d NaN values.' % (hist[NaN],), 'hist/warning'), file=sys.stderr)
+				print(colour(f'WARNING: Ignored {hist[NaN]} NaN values.', 'hist/warning'), file=sys.stderr)
 			hist[args.max_count - 1] += hist[args.max_count] # top value should not be in a separate bin
 			hist, fmt = formatter([(name, hist[ix]) for ix, name in enumerate(bin_names)])
 		else:

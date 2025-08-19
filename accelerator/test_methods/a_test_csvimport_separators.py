@@ -68,14 +68,14 @@ def check_one(job, newline, sep, data, want_res=None, prefix="", quotes=False, l
 			newline='' if "\n" in newline else newline,
 		))
 	except JobError as e:
-		raise CSVImportException("Failed to csvimport for separator %d with newline %r, csvimport error was:\n%s" % (sep, newline, e.format_msg()))
+		raise CSVImportException(f"Failed to csvimport for separator {sep} with newline {newline!r}, csvimport error was:\n{e.format_msg()}")
 	ds = Dataset(jid)
 	labels = sorted(ds.columns)
 	if labels != data[0]:
-		raise WrongLabelsException("csvimport gave wrong labels for separator %d with newline %r: %r (expected %r)" % (sep, newline, labels, data[0],))
+		raise WrongLabelsException(f"csvimport gave wrong labels for separator {sep} with newline {newline!r}: {labels!r} (expected {data[0]!r})")
 	res = list(ds.iterate(None, data[0]))
 	if res != want_res:
-		raise WrongDataException("csvimport gave wrong data for separator %d with newline %r: %r (expected %r)" % (sep, newline, res, want_res,))
+		raise WrongDataException(f"csvimport gave wrong data for separator {sep} with newline {newline!r}: {res!r} (expected {want_res!r})")
 
 def synthesis(job):
 	# Any iso-8859-1 character is a valid separator, but let's try

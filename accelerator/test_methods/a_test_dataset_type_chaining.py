@@ -34,7 +34,7 @@ def synthesis(job, slices):
 			for sliceno in range(slices):
 				a_data = list(Dataset.iterate_list(sliceno, col, a))
 				b_data = list(map(str, Dataset.iterate_list(sliceno, col, b)))
-				assert a_data == b_data, '%r has different contents to %r in slice %d column %s' % (a, b, sliceno, col,)
+				assert a_data == b_data, f'{a!r} has different contents to {b!r} in slice {sliceno} column {col}'
 	def verify_sorted(a, b):
 		for col in 'abcd':
 			a_data = list(Dataset.iterate_list(None, col, a))
@@ -51,7 +51,7 @@ def synthesis(job, slices):
 		w = dw.get_split_write()
 		for ix in range(low, high):
 			if filter(ix):
-				w('%d' % (ix,), '%d.2' % (ix,), '%d%s' % (ix, '.5' if ix % 2 else ''), '[%d]' % (ix,))
+				w(f'{ix}', f'{ix}.2', f"{ix}{'.5' if ix % 2 else ''}", f'[{ix}]')
 		return dw.finish()
 	untyped_A = write('A', None, 0, 100)
 	untyped_B = write('B', untyped_A, 100, 1000)

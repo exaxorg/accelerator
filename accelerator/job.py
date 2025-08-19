@@ -105,7 +105,7 @@ class Job(str):
 
 	@classmethod
 	def _create(cls, name, number):
-		return Job('%s-%d' % (name, number,))
+		return Job(f'{name}-{number}')
 
 	@_cachedprop
 	def method(self):
@@ -141,7 +141,7 @@ class Job(str):
 		if isinstance(filename, Path):
 			filename = str(filename)
 		if sliceno is not None:
-			filename = '%s.%d' % (filename, sliceno,)
+			filename = f'{filename}.{sliceno}'
 		return os.path.join(self.path, filename)
 
 	def open(self, filename, mode='r', sliceno=None, encoding=None, errors=None):

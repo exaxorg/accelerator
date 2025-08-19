@@ -282,6 +282,6 @@ def read_methods_conf(dirname, autodiscover):
 			except IndexError:
 				version = 'DEFAULT'
 			if data:
-				raise AcceleratorError('Trailing garbage on %s:%d: %s' % (filename, lineno, line,))
+				raise AcceleratorError(f'Trailing garbage on {filename}:{lineno}: {line}')
 			db[method] = DotDict(version=version)
 	return db

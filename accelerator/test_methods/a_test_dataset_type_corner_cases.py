@@ -125,13 +125,13 @@ def test_numbers():
 		(16, (b'1b', b'0x1b', b'\r001b',),),
 		( 0, (b'27', b'\r033', b'0x1b',),),
 	):
-		types = ['%s_%d' % (typ, base,) for typ in ('int32', 'int64',)]
-		verify('base %d' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
+		types = [f'{typ}_{base}' for typ in ('int32', 'int64',)]
+		verify(f'base {base}', types, values, [27, 27, 27], all_source_types=all_source_types)
 		types = [typ + 'i' for typ in types]
 		if base == 10:
 			types += ['float32i', 'float64i']
 		values = [v + b'garbage' for v in values]
-		verify('base %d i' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
+		verify(f'base {base} i', types, values, [27, 27, 27], all_source_types=all_source_types)
 		all_source_types = False
 	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=True)
 	if options.numeric_comma:

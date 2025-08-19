@@ -133,7 +133,7 @@ def char2int(name, empty_value, specials="empty"):
 	return cstuff.backend.char2int(char)
 
 def import_slice(fallback_msg, fd, sliceno, slices, field_count, out_fns, gzip_mode, separator, r_num, quote_char, lf_char, allow_bad, allow_extra_empty):
-	fn = "import.success.%d" % (sliceno,)
+	fn = f"import.success.{sliceno}"
 	fh = open(fn, "wb+")
 	real_stderr = os.dup(2)
 	try:
@@ -310,7 +310,7 @@ def analysis(sliceno, slices, prepare_res, update_top_status):
 	r_num = cstuff.mk_uint64(9) # [good_count, bad_count, comment_count, good_min,max, bad_min,max, comment_min,max]
 	gzip_mode = b"wb%d" % (options.compression,)
 	try:
-		import_slice("c backend failed in slice %d" % (sliceno,), fds[sliceno], sliceno, slices, len(labels), out_fns, gzip_mode, separator, r_num, quote_char, lf_char, options.allow_bad, options.allow_extra_empty)
+		import_slice(f"c backend failed in slice {sliceno}", fds[sliceno], sliceno, slices, len(labels), out_fns, gzip_mode, separator, r_num, quote_char, lf_char, options.allow_bad, options.allow_extra_empty)
 	finally:
 		os.close(fds[sliceno])
 	return list(r_num)

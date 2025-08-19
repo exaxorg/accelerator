@@ -39,13 +39,13 @@ def test(params, p=False, a=False, s=False):
 	cookie = randint(10000, 99999)
 	if p:
 		name += 'p'
-		opts['p'] = "Some words\nfrom prepare\nwith %d in them." % (cookie,)
+		opts['p'] = f"Some words\nfrom prepare\nwith {cookie} in them."
 	if a:
 		name += 'a'
 		opts['a'] = "A few words\nfrom analysis(%%d)\nwith the cookie %d in them." % (cookie,)
 	if s:
 		name += 's'
-		opts['s'] = "Words\nfrom synthesis\ncookie is %d." % (cookie,)
+		opts['s'] = f"Words\nfrom synthesis\ncookie is {cookie}."
 	jid = subjobs.build(name, options=opts)
 	d = jid.filename('OUTPUT/')
 	chked = set()

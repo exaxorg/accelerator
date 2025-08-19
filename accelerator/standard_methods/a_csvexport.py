@@ -195,7 +195,7 @@ def analysis(sliceno, job):
 		if '%' in options.filename:
 			filename = options.filename % (sliceno,)
 		else:
-			filename = '%s.%d' % (options.filename, sliceno,)
+			filename = f'{options.filename}.{sliceno}'
 		csvexport(sliceno, filename, options.labelsonfirstline)
 		job.register_file(filename)
 	else:
@@ -205,7 +205,7 @@ def analysis(sliceno, job):
 def synthesis(job, slices):
 	if not options.sliced:
 		def msg(sliceno):
-			return "Assembling %s (%d/%d)" % (options.filename, sliceno + 1, slices,)
+			return f"Assembling {options.filename} ({sliceno + 1}/{slices})"
 		with status(msg(0)) as update:
 			with job.open(options.filename, "wb") as outfh:
 				for sliceno in range(slices):

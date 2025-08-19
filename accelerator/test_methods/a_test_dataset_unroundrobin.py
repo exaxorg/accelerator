@@ -38,7 +38,7 @@ def synthesis(job, slices):
 	dw = job.datasetwriter(name='rr', columns=dict(a='int32', b='unicode'))
 	for sliceno in range(slices):
 		dw.set_slice(sliceno)
-		dw.write(sliceno, 'u %d' % (sliceno,))
+		dw.write(sliceno, f'u {sliceno}')
 		dw.write(sliceno, 'line 2')
 		dw.write(sliceno, 'line 3')
 		if sliceno == 0:
@@ -53,7 +53,7 @@ def synthesis(job, slices):
 			raise Exception(f'missing lines in {ds_unrr}')
 		assert got == (a, b), f"Wanted {(a, b)!r}, got {got!r} from {ds_unrr}"
 	for sliceno in range(slices):
-		want(sliceno, 'u %d' % (sliceno,))
+		want(sliceno, f'u {sliceno}')
 	for sliceno in range(slices):
 		want(sliceno, 'line 2')
 	for sliceno in range(slices):
@@ -70,7 +70,7 @@ def synthesis(job, slices):
 	imported = subjobs.build('csvimport', filename=exported.filename('unrr.csv'))
 	imported = subjobs.build('dataset_type', source=imported, column2type=dict(a='int32_10', b='ascii')).dataset()
 	for sliceno in range(slices):
-		assert list(imported.iterate(sliceno)) == list(ds_rr.iterate(sliceno)), "%s did not match %s in slice %d, export or import does not match roundrobin expectations" % (imported, ds_rr, sliceno)
+		assert list(imported.iterate(sliceno)) == list(ds_rr.iterate(sliceno)), f"{imported} did not match {ds_rr} in slice {sliceno}, export or import does not match roundrobin expectations"
 
 	# Check that empty slices in the middle are not a problem.
 	dw = job.datasetwriter(name='empty slices', columns=dict(a='number'))

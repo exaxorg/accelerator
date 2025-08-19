@@ -79,7 +79,7 @@ def load_setup(jobid):
 		# no changes here, it's only used to know how to find datasets
 		version = 4
 	if version != 4:
-		raise AcceleratorError("Don't know how to load setup.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError(f"Don't know how to load setup.json version {d.version} (in {jobid})")
 	return d
 
 def update_setup(jobid, **kw):

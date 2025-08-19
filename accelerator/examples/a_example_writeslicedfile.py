@@ -4,7 +4,7 @@ description = "Write a sliced file in analysis, one file in synthesis, and retur
 def analysis(sliceno, job):
 	# save one file per analysis process...
 	filename = 'myfile1'
-	data = 'This is job %s analysis slice %d.' % (job, sliceno,)
+	data = f'This is job {job} analysis slice {sliceno}.'
 	job.save(data, filename, sliceno=sliceno)
 
 

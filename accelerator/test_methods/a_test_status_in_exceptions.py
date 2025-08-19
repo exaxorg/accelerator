@@ -110,7 +110,7 @@ def synthesis(job):
 					want_re += '.*' + status1
 				for ix, want_line in enumerate(on_line, 1):
 					ds = job.dataset(str(len(on_line) - ix))
-					want_re += '.*Iterating %s:0 reached line %d\n' % (re.escape(ds.quoted), want_line,)
+					want_re += f'.*Iterating {re.escape(ds.quoted)}:0 reached line {want_line}\n'
 				if status2:
 					want_re += '.*' + status2
 				assert re.search(want_re, got, re.DOTALL), got

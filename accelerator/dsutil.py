@@ -217,7 +217,7 @@ def _sanity_check_float_hashing():
 	def check(typ, msg, want, *a):
 		for ix, v in enumerate(a):
 			if v != want:
-				raise _SanityError("%s did not hash %s value correctly. (%d)" % (typ, msg, ix,))
+				raise _SanityError(f"{typ} did not hash {msg} value correctly. ({ix})")
 
 	# Test that the float types (including number) hash floats the same,
 	# and that float32 rounds as expected.

@@ -104,7 +104,7 @@ def synthesis(job, slices):
 		h = typed_writer(typ).hash
 		want_h = (want_hash_complex if typ.startswith('complex') else want_hash_float)
 		for ix, v in enumerate(values):
-			assert want_h == h(v), 'value index %d did not hash correctly for type %s' % (ix, typ,)
+			assert want_h == h(v), f'value index {ix} did not hash correctly for type {typ}'
 			w_u(str(ix), v)
 			w_h(str(ix), v)
 		ds_h = dw_h.finish()

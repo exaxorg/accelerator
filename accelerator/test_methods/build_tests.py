@@ -33,7 +33,7 @@ Run the tests. Needs at least 3 slices to work.
 '''
 
 def main(urd):
-	assert urd.info.slices >= 3, "The tests don't work with less than 3 slices (you have %d)." % (urd.info.slices,)
+	assert urd.info.slices >= 3, f"The tests don't work with less than 3 slices (you have {urd.info.slices})."
 
 	from accelerator.shell import cfg
 	# sys.argv[0] is absolute for unqualified commands ("ax"), but exactly what
@@ -135,10 +135,10 @@ def main(urd):
 			time_after = monotonic()
 		time_to_die = time_after - time_before
 		if time_to_die > 13:
-			print("test_analysis_died took %d seconds to die, it should be faster" % (time_to_die,))
+			print(f"test_analysis_died took {time_to_die} seconds to die, it should be faster")
 			exit(1)
 		elif time_to_die > 2:
-			print("test_analysis_died took %d seconds to die, so death detection is slow, but works" % (time_to_die,))
+			print(f"test_analysis_died took {time_to_die} seconds to die, so death detection is slow, but works")
 		else:
 			print(f"test_analysis_died took {time_to_die:.1f} seconds to die, so death detection works")
 

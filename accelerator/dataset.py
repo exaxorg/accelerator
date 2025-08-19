@@ -645,16 +645,16 @@ class Dataset(str):
 				total_lines = sum(sum(d.lines) for d in datasets)
 			if slice.start < 0:
 				if -slice.start > total_lines:
-					raise DatasetUsageError("Wanted last %d lines, but only %d lines available" % (-slice.start, total_lines,))
+					raise DatasetUsageError(f"Wanted last {-slice.start} lines, but only {total_lines} lines available")
 				slice = builtins.slice(total_lines + slice.start, slice.stop, slice.step)
 			if (slice.stop or 0) < 0:
 				if -slice.stop > total_lines:
-					raise DatasetUsageError("Wanted to stop %d lines before end, but only %d lines available" % (-slice.stop, total_lines,))
+					raise DatasetUsageError(f"Wanted to stop {-slice.stop} lines before end, but only {total_lines} lines available")
 				slice = builtins.slice(slice.start, total_lines + slice.stop, slice.step)
 			if slice.start > total_lines:
-				raise DatasetUsageError("Wanted to skip %d lines, but only %d lines available" % (slice.start, total_lines,))
+				raise DatasetUsageError(f"Wanted to skip {slice.start} lines, but only {total_lines} lines available")
 			if (slice.stop or 0) > total_lines:
-				raise DatasetUsageError("Wanted to stop after %d lines, but only %d lines available" % (slice.stop, total_lines,))
+				raise DatasetUsageError(f"Wanted to stop after {slice.stop} lines, but only {total_lines} lines available")
 			if slice.start == total_lines:
 				return iter(())
 			if slice.stop is not None:
@@ -774,12 +774,12 @@ class Dataset(str):
 			for ix, f in filters:
 				if f is None or f is bool:
 					# use value directly
-					fs.append('t[%d]' % (ix,))
+					fs.append(f't[{ix}]')
 				else:
-					n = 'f%d' % (ix,)
+					n = f'f{ix}'
 					arg_n.append(n)
 					arg_v.append(f)
-					fs.append('%s(t[%d])' % (n, ix,))
+					fs.append(f'{n}(t[{ix}])')
 			f = 'lambda t: ' + ' and '.join(fs)
 			# Add another lambda to put all fN into local variables.
 			# (This is faster than putting them in "locals", you get
@@ -821,7 +821,7 @@ class Dataset(str):
 		else:
 			msg_head = f'Iterating {fmt_dsname(*to_iter[0])} to {fmt_dsname(*to_iter[-1])}'
 			def update_status(ix, d, sliceno, rehash):
-				update('%s, %d/%d (%s)' % (msg_head, ix, len(to_iter), fmt_dsname(d, sliceno, rehash)))
+				update(f'{msg_head}, {ix}/{len(to_iter)} ({fmt_dsname(d, sliceno, rehash)})')
 		with status(msg_head) as update:
 			update_status._line_report = getattr(update, '_line_report', None)
 			yield update_status
@@ -1084,7 +1084,7 @@ class Dataset(str):
 				if size:
 					with open(fn(sliceno), 'rb') as p_fh:
 						data = p_fh.read()
-					assert len(data) == size, "Slice %d is %d bytes, not %d?" % (sliceno, len(data), size,)
+					assert len(data) == size, f"Slice {sliceno} is {len(data)} bytes, not {size}?"
 					m_fh.write(data)
 					offsets.append(pos)
 				else:
@@ -1338,7 +1338,7 @@ class DatasetWriter(object):
 		from accelerator import g
 		if g.running == 'analysis' and self._for_single_slice != g.sliceno:
 			if self._for_single_slice is not None:
-				raise DatasetUsageError("This writer is for slice %d" % (self._for_single_slice,))
+				raise DatasetUsageError(f"This writer is for slice {self._for_single_slice}")
 			else:
 				raise DatasetUsageError("Only use set_slice in analysis together with for_single_slice")
 		self._set_slice(sliceno)
@@ -1348,7 +1348,7 @@ class DatasetWriter(object):
 		if self._started == 2:
 			raise DatasetUsageError("Don't use both set_slice and a split writer")
 		if not isinstance(sliceno, int_types) or sliceno < 0 or sliceno >= slices:
-			raise DatasetUsageError("sliceno must be int in range(%d)" % (slices,))
+			raise DatasetUsageError(f"sliceno must be int in range({slices})")
 		self.close()
 		self.sliceno = sliceno
 		writers = self._mkwriters(sliceno)
@@ -1359,7 +1359,7 @@ class DatasetWriter(object):
 	def column_filename(self, colname, sliceno=None):
 		if sliceno is None:
 			sliceno = self.sliceno
-		return '%s/%d.%s' % (self.fs_name, sliceno, self._filenames[colname],)
+		return f'{self.fs_name}/{sliceno}.{self._filenames[colname]}'
 
 	def enable_hash_discard(self):
 		"""Make the write functions silently discard data that does not
@@ -1427,7 +1427,7 @@ class DatasetWriter(object):
 			hix = -1
 		used_names = set()
 		names = [_clean_name(n, used_names) for n in self._order]
-		w_names = [_clean_name('w%d' % (ix,), used_names) for ix in range(len(w_l))]
+		w_names = [_clean_name(f'w{ix}', used_names) for ix in range(len(w_l))]
 		w_d = dict(zip(w_names, w_l))
 		errcls = _clean_name('DatasetUsageError', used_names)
 		w_d[errcls] = DatasetUsageError
@@ -1439,11 +1439,11 @@ class DatasetWriter(object):
 		else:
 			if hl is not None:
 				f.append(f' if {w_names[hix]}({names[hix]}):')
-				f_list.append(' if %s(values[%d]):' % (w_names[hix], hix,))
+				f_list.append(f' if {w_names[hix]}(values[{hix}]):')
 			for ix in range(len(names)):
 				if ix != hix:
 					f.append(f'  {w_names[ix]}({names[ix]})')
-					f_list.append('  %s(values[%d])' % (w_names[ix], ix,))
+					f_list.append(f'  {w_names[ix]}(values[{ix}])')
 			if hl is not None and not discard:
 				f.append(f' else: raise {errcls}({wrong_slice_msg!r})')
 				f_list.append(f' else: raise {errcls}({wrong_slice_msg!r})')
@@ -1475,7 +1475,7 @@ class DatasetWriter(object):
 			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		if g.running == 'analysis' and self._for_single_slice != g.sliceno:
 			if self._for_single_slice is not None:
-				raise DatasetUsageError("This writer is for slice %d" % (self._for_single_slice,))
+				raise DatasetUsageError(f"This writer is for slice {self._for_single_slice}")
 			else:
 				raise DatasetUsageError("Only use a split writer in analysis together with for_single_slice")
 		if self._started == 1:
@@ -1518,9 +1518,9 @@ class DatasetWriter(object):
 				w_d[name_hsh] = hashfunc
 			prefix = f'{name_w_l} = {name_writers}[{name_hsh}('
 			hix = self._order.index(hl)
-			f_____.append('%s%s) %% %d]' % (prefix, names[hix], slices,))
-			f_list.append('%sv[%d]) %% %d]' % (prefix, hix, slices,))
-			f_dict.append('%sd[%r]) %% %d]' % (prefix, hl, slices,))
+			f_____.append(f'{prefix}{names[hix]}) % {slices}]')
+			f_list.append(f'{prefix}v[{hix}]) % {slices}]')
+			f_dict.append(f'{prefix}d[{hl!r}]) % {slices}]')
 		else:
 			from itertools import cycle
 			w_d[name_cyc] = cycle(range(slices))
@@ -1529,9 +1529,9 @@ class DatasetWriter(object):
 			f_list.append(code)
 			f_dict.append(code)
 		for ix in range(len(names)):
-			f_____.append('%s[%d](%s)' % (name_w_l, ix, names[ix],))
-			f_list.append('%s[%d](v[%d])' % (name_w_l, ix, ix,))
-			f_dict.append('%s[%d](d[%r])' % (name_w_l, ix, self._order[ix],))
+			f_____.append(f'{name_w_l}[{ix}]({names[ix]})')
+			f_list.append(f'{name_w_l}[{ix}](v[{ix}])')
+			f_dict.append(f'{name_w_l}[{ix}](d[{self._order[ix]!r}])')
 		eval(compile('\n '.join(f_____), '<DatasetWriter generated split_write>'     , 'exec'), w_d)
 		eval(compile('\n '.join(f_list), '<DatasetWriter generated split_write_list>', 'exec'), w_d)
 		eval(compile('\n '.join(f_dict), '<DatasetWriter generated split_write_dict>', 'exec'), w_d)
@@ -1549,7 +1549,7 @@ class DatasetWriter(object):
 			w.close()
 		len_set = set(lens.values())
 		if len(len_set) != 1:
-			raise DatasetUsageError("Not all columns have the same linecount in slice %d: %r" % (sliceno, lens))
+			raise DatasetUsageError(f"Not all columns have the same linecount in slice {sliceno}: {lens!r}")
 		self._lens[sliceno] = len_set.pop()
 		self._minmax[sliceno] = minmax
 
@@ -1786,7 +1786,7 @@ def range_check_function(bottom, top, none_support=False, index=None):
 	and/or top to be None. Skips None values if none_support is true."""
 	if_l = []
 	d = {}
-	v_str = 'v' if index is None else 'v[%d]' % (index,)
+	v_str = 'v' if index is None else f'v[{index}]'
 	def add_if(op, v):
 		if if_l:
 			if_l.append(' and ')

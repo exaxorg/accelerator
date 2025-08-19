@@ -83,12 +83,12 @@ def verify(slices, data, source, previous=None, **options):
 	for slice in range(slices):
 		for row in ds.iterate_chain(slice, names):
 			row = dict(zip(names, row))
-			assert h(row[hl]) % slices == slice, "row %r is incorrectly in slice %d in %s" % (row, slice, ds)
+			assert h(row[hl]) % slices == slice, f"row {row!r} is incorrectly in slice {slice} in {ds}"
 			want = good[row[hl]]
 			assert row == want, f'{ds} (rehashed from {source}) did not contain the right data for "{hl}".\nWanted\n{want!r}\ngot\n{row!r}'
 	want_lines = len(data)
 	got_lines = ds.chain().lines()
-	assert got_lines == want_lines, '%s (rehashed from %s) had %d lines, should have had %d' % (ds, source, got_lines, want_lines,)
+	assert got_lines == want_lines, f'{ds} (rehashed from {source}) had {got_lines} lines, should have had {want_lines}'
 	return ds
 
 def verify_empty(source, previous=None, **options):
@@ -131,7 +131,7 @@ def synthesis(params):
 	dw.write_dict(data[0])
 	ds = verify(params.slices, [data[0], data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
-	assert got_slices == params.slices, "%s (built with chain_slices=True) has %d datasets in chain, expected %d." % (ds, got_slices, params.slices)
+	assert got_slices == params.slices, f"{ds} (built with chain_slices=True) has {got_slices} datasets in chain, expected {params.slices}."
 
 	# test varying types and available columns over the chain (including the hashlabel type)
 	v1 = write([{'a': '101', 'b':  201 }], columns={'a': 'ascii',  'b': 'int32'}, name='varying1')

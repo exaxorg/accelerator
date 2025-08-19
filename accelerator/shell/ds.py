@@ -194,7 +194,7 @@ def main(argv, cfg):
 					return str(val)
 			minlen = max(len(fmt_minmax(chain.min(n))) for n in ds.columns)
 			maxlen = max(len(fmt_minmax(chain.max(n))) for n in ds.columns)
-			minmax_template = '[%%%ds, %%%ds]' % (min(18, minlen), min(18, maxlen),)
+			minmax_template = f'[%{min(18, minlen)}s, %{min(18, maxlen)}s]'
 			def prettyminmax(n):
 				minval, maxval = chain.min(n), chain.max(n)
 				if args.suppress_minmax or minval is None:

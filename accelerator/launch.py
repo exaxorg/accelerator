@@ -83,13 +83,13 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		for fd in output_fds:
 			os.close(fd)
 		os.close(_prof_fd)
-		slicename = 'analysis(%d)' % (sliceno_,)
+		slicename = f'analysis({sliceno_})'
 		setproctitle(slicename)
 		from accelerator.extras import saved_files, _backgrounded_wait
 		saved_files.clear() # don't inherit (and then return) the files from prepare
 		if delayed_start:
 			os.close(delayed_start[1])
-			update = statmsg._start('waiting for concurrency limit (%d)' % (sliceno_,), parent_pid, True)
+			update = statmsg._start(f'waiting for concurrency limit ({sliceno_})', parent_pid, True)
 			if os.read(delayed_start[0], 1) != b'a':
 				raise AcceleratorError('bad delayed_start, giving up')
 			update(slicename)
@@ -138,7 +138,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				if sliceno_ == 0:
 					blob.save(len(res), "Analysis.tuple", temp=True)
 				for ix, item in enumerate(res):
-					save(item, "Analysis.%d." % (ix,))
+					save(item, f"Analysis.{ix}.")
 			else:
 				if sliceno_ == 0:
 					blob.save(False, "Analysis.tuple", temp=True)
@@ -183,7 +183,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 			# The rest will wait on this queue
 			delayed_start = os.pipe()
 			delayed_start_todo = slices - i
-		p = SimplifiedProcess(target=call_analysis, args=(analysis_func, i, delayed_start, q, preserve_result, pid, output_fds), kwargs=kw, name='analysis-%d' % (i,))
+		p = SimplifiedProcess(target=call_analysis, args=(analysis_func, i, delayed_start, q, preserve_result, pid, output_fds), kwargs=kw, name=f'analysis-{i}')
 		children.append(p)
 	for fd in output_fds:
 		os.close(fd)
@@ -205,7 +205,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 				else:
 					exit_count -= 1
 					if p.exitcode:
-						raise AcceleratorError("%s terminated with exitcode %d" % (p.name, p.exitcode,))
+						raise AcceleratorError(f"{p.name} terminated with exitcode {p.exitcode}")
 			children = still_alive
 			reap_time = monotonic() + 5
 		# If a process dies badly we may never get a message here.
@@ -233,7 +233,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 		if len(finishjob) != 1 and not s_tb:
 			s_tb = 'not all slices agreed about job.finish_early() in analysis'
 		if s_tb:
-			data = [{'analysis(%d)' % (s_no,): s_tb}, None]
+			data = [{f'analysis({s_no})': s_tb}, None]
 			writeall(_prof_fd, json.dumps(data).encode('utf-8'))
 			exitfunction()
 		if delayed_start_todo:
@@ -285,7 +285,7 @@ def fmt_tb(skip_level):
 			msg.append("  " * ix)
 			msg.append(txt)
 			if line_report and line_report[0]:
-				msg.append(' reached line %d' % (line_report[0].count,))
+				msg.append(f' reached line {line_report[0].count}')
 			msg.append("\n")
 	msg.extend(format_exception_only(e_type, e))
 	return ''.join(msg)

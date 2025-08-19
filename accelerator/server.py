@@ -186,7 +186,7 @@ class XtdHandler(BaseWebHandler):
 					else:
 						direction, kind = 'forward', 'later'
 						available = len(jobs) - start_ix - 1
-					res = {'error': 'tried to go %d jobs %s from %s, but only %d %s %s %s jobs available' % (abs(num), direction, jobs[start_ix], available, kind, typ, method,)}
+					res = {'error': f'tried to go {abs(num)} jobs {direction} from {jobs[start_ix]}, but only {available} {kind} {typ} {method} jobs available'}
 			self.do_response(200, 'text/json', res)
 
 		elif path[0] == 'job_is_current':
@@ -341,7 +341,7 @@ def exitfunction(*a):
 		signal.signal(signal.SIGTERM, signal.SIG_IGN)
 		signal.signal(signal.SIGINT, signal.SIG_IGN)
 	print()
-	print('The deathening! %d %s' % (os.getpid(), children,))
+	print(f'The deathening! {os.getpid()} {children}')
 	print()
 	for child in children:
 		try:
@@ -486,14 +486,14 @@ def main(argv, config):
 	for n in ("project_directory", "result_directory", "input_directory",):
 		v = config.get(n)
 		n = n.replace("_", " ")
-		print("%17s: %s" % (n, v,))
+		print(f"{n:>17}: {v}")
 	for n in ("board", "urd",):
 		v = config.get(n + '_listen')
 		if v and not config.get(n + '_local', True):
 			extra = ' (remote)'
 		else:
 			extra = ''
-		print("%17s: %s%s" % (n, v, extra,))
+		print(f"{n:>17}: {v}{extra}")
 	print()
 
 	print(f"Serving on {config.listen}\n", file=sys.stderr)

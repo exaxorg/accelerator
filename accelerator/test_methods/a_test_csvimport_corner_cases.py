@@ -77,8 +77,8 @@ def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 	if options.get("allow_bad"):
 		bad_ds = Dataset(jid, "bad")
 		for ix, data in bad_ds.iterate(None, ["lineno", "data"]):
-			assert ix in d_bad, "Bad bad_lineno %d in %r (%s/bad) %r" % (ix, filename, jid, data,)
-			assert data == d_bad[ix], "Wrong saved bad line %d in %r (%s/bad).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_bad[ix], data,)
+			assert ix in d_bad, f"Bad bad_lineno {ix} in {filename!r} ({jid}/bad) {data!r}"
+			assert data == d_bad[ix], f"Wrong saved bad line {ix} in {filename!r} ({jid}/bad).\nWanted {d_bad[ix]!r}.\nGot    {data!r}."
 			del d_bad[ix]
 		verify_minmax(bad_ds, "lineno")
 	assert not d_bad, f"Not all bad lines returned from {filename!r} ({jid}), {set(d_bad.keys())!r} missing"
@@ -86,8 +86,8 @@ def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 	if options.get("comment") or options.get("skip_lines"):
 		skipped_ds = Dataset(jid, "skipped")
 		for ix, data in skipped_ds.iterate(None, ["lineno", "data"]):
-			assert ix in d_skipped, "Bad skipped_lineno %d in %r (%s/skipped) %r" % (ix, filename, jid, data,)
-			assert data == d_skipped[ix], "Wrong saved skipped line %d in %r (%s/skipped).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_skipped[ix], data,)
+			assert ix in d_skipped, f"Bad skipped_lineno {ix} in {filename!r} ({jid}/skipped) {data!r}"
+			assert data == d_skipped[ix], f"Wrong saved skipped line {ix} in {filename!r} ({jid}/skipped).\nWanted {d_skipped[ix]!r}.\nGot    {data!r}."
 			del d_skipped[ix]
 		verify_minmax(skipped_ds, "lineno")
 	assert not d_skipped, f"Not all bad lines returned from {filename!r} ({jid}), {set(d_skipped.keys())!r} missing"

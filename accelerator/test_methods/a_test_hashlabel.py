@@ -157,7 +157,7 @@ def synthesis(prepare_res, params, job, slices):
 			data = [(ds, list(ds.iterate(sliceno))) for ds in hl2ds[hashlabel]]
 			good = data[0][1]
 			for name, got in data:
-				assert got == good, "%s doesn't match %s in slice %d" % (data[0][0], name, sliceno,)
+				assert got == good, f"{data[0][0]} doesn't match {name} in slice {sliceno}"
 
 	# Verify that both up and down hashed on the expected column
 	hash = typed_writer("complex64").hash
@@ -165,7 +165,7 @@ def synthesis(prepare_res, params, job, slices):
 		ds = all_ds[colname + "_checked"]
 		for sliceno in range(slices):
 			for value in ds.iterate(sliceno, colname):
-				assert hash(value) % slices == sliceno, "Bad hashing on %s in slice %d" % (colname, sliceno,)
+				assert hash(value) % slices == sliceno, f"Bad hashing on {colname} in slice {sliceno}"
 
 	# Verify that up and down are not the same, to catch hashing
 	# not actually hashing.
@@ -193,7 +193,7 @@ def synthesis(prepare_res, params, job, slices):
 				assert chk_ds.hashlabel != want_ds.hashlabel
 				got = chk_ds.iterate(sliceno, hashlabel=want_ds.hashlabel, rehash=True)
 				got = sorted(cleanup(got))
-				assert want == got, "Rehashing is broken for %s (slice %d of %s)" % (chk_ds.columns[want_ds.hashlabel].type, sliceno, chk_ds,)
+				assert want == got, f"Rehashing is broken for {chk_ds.columns[want_ds.hashlabel].type} (slice {sliceno} of {chk_ds})"
 	test_rehash("up_checked", hl2ds[None] + hl2ds["down"])
 	test_rehash("down_checked", hl2ds[None] + hl2ds["up"])
 	test_rehash("up_datetime", [all_ds["down_time"]])
@@ -230,4 +230,4 @@ def synthesis(prepare_res, params, job, slices):
 		values = [(ds, list(ds.iterate(sliceno, "value"))) for ds in float_ds_lst]
 		want_ds, want = values.pop()
 		for ds, got in values:
-			assert got == want, "%s did not match %s in slice %d" % (ds, want_ds, sliceno,)
+			assert got == want, f"{ds} did not match {want_ds} in slice {sliceno}"

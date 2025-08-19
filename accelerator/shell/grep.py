@@ -184,7 +184,7 @@ def main(argv, cfg):
 				except ValueError:
 					raise ArgumentError(self, f'invalid int value for {name}: {value!r}')
 				if value < min_value[name] or value > 9999:
-					raise ArgumentError(self, 'invalid value for %s: %d' % (name, value,))
+					raise ArgumentError(self, f'invalid value for {name}: {value}')
 				tab_length[name] = value
 			# -T overrides -t
 			namespace.separator = None
@@ -239,7 +239,7 @@ def main(argv, cfg):
 		     "TABLEN works like normal tabs\n" +
 		     "FIELDLEN sets a longer minimum between fields\n" +
 		     "MINLEN sets a minimum len for all separators\n" +
-		     "use \"-T/\" to just activate it (sets %d/%d/%d)" % (tab_length.tab_len, tab_length.field_len, tab_length.min_len,)
+		     f"use \"-T/\" to just activate it (sets {tab_length.tab_len}/{tab_length.field_len}/{tab_length.min_len})"
 	)
 	parser.add_argument('-B', '--before-context', type=int, default=0, metavar='NUM', help="print NUM lines of leading context", )
 	parser.add_argument('-A', '--after-context',  type=int, default=0, metavar='NUM', help="print NUM lines of trailing context", )
@@ -325,7 +325,7 @@ def main(argv, cfg):
 	if args.slice:
 		want_slices = []
 		for s in args.slice:
-			assert 0 <= s < g.slices, "Slice %d not available" % (s,)
+			assert 0 <= s < g.slices, f"Slice {s} not available"
 			if s not in want_slices:
 				want_slices.append(s)
 	else:
@@ -590,7 +590,7 @@ def main(argv, cfg):
 						msg = f'{round(p * 100):d}% of {total_lines_per_slice_at_ds[-1][sliceno]:n} lines'
 						if show_ds:
 							msg = f'{msg} (in {datasets[ds_ix].quoted})'
-					msg = '%9d: %s' % (sliceno, msg,)
+					msg = f'{sliceno:9}: {msg}'
 					if p < bad_cutoff:
 						msg = colour(msg, 'grep/infohighlight')
 					else:
@@ -606,7 +606,7 @@ def main(argv, cfg):
 					msg = f'{msg} (in {ds_name}{extra})'
 			worst = min(progress_fraction)
 			if worst < bad_cutoff:
-				msg = '%s, worst %d%%' % (msg, round(worst * 100),)
+				msg = f'{msg}, worst {round(worst * 100)}%'
 			msg = colour(f'  SUMMARY: {msg}', 'grep/info')
 			write(2, msg.encode('utf-8') + b'\n')
 		for signame in ('SIGINFO', 'SIGUSR1'):
@@ -1362,7 +1362,7 @@ def main(argv, cfg):
 		p = mp.SimplifiedProcess(
 			target=one_slice,
 			args=(sliceno, q_in, q_out, q_to_close,),
-			name='slice-%d' % (sliceno,),
+			name=f'slice-{sliceno}',
 			ignore_EPIPE=bool(liner),
 		)
 		children.append(p)

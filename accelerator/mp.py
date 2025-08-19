@@ -30,7 +30,7 @@ from traceback import print_exc
 from accelerator.compat import QueueEmpty, monotonic, selectors
 
 
-assert select.PIPE_BUF >= 512, "POSIX says PIPE_BUF is at least 512, you have %d" % (select.PIPE_BUF,)
+assert select.PIPE_BUF >= 512, f"POSIX says PIPE_BUF is at least 512, you have {select.PIPE_BUF}"
 
 PIPE_BUF = min(select.PIPE_BUF, 65536)
 MAX_PART = PIPE_BUF - 6
@@ -245,7 +245,7 @@ class SimplifiedProcess:
 			os.kill(os.getpid(), signal.SIGINT)
 		except Exception as e:
 			if not isinstance(e, OSError) or e.errno != errno.EPIPE:
-				print("Exception in %d %r:" % (os.getpid(), name), file=sys.stderr)
+				print(f"Exception in {os.getpid()} {name!r}:", file=sys.stderr)
 				print_exc(file=sys.stderr)
 			elif ignore_EPIPE:
 				rc = 0

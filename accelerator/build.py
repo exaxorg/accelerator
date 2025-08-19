@@ -173,7 +173,7 @@ class Automata:
 					sys.stdout.write('\r\033[K           %s %s %s' % current_display)
 			idle, now, status_stacks, current, last_time = self._server_idle(1)
 		if self.verbose == 'dots':
-			print('(%d)]' % (last_time,))
+			print(f'({last_time})]')
 		elif self.verbose:
 			print(f'\r\x1b[K              {fmttime(last_time)}')
 
@@ -273,7 +273,7 @@ class Automata:
 			print()
 			from inspect import stack
 			stk = stack()[2]
-			print("Called from %s line %d" % (stk[1], stk[2],))
+			print(f"Called from {stk[1]} line {stk[2]}")
 			exit()
 		jid = Job(jid, record_as or method)
 		self.joblist_all.append(jid)
@@ -431,7 +431,7 @@ def _tsfix(ts):
 	if integer is None:
 		return ts
 	else:
-		return '%s+%d' % (ts, integer,)
+		return f'{ts}+{integer}'
 
 class Urd(object):
 	def __init__(self, a, info, user, password, horizon=None, default_workdir=None):
@@ -951,6 +951,6 @@ def print_minimal_traceback():
 	lineno = last_interesting.tb_lineno
 	filename = last_interesting.tb_frame.f_code.co_filename
 	if isinstance(e, JobError):
-		print("Failed to build job %s on %s line %d" % (e.job, filename, lineno,))
+		print(f"Failed to build job {e.job} on {filename} line {lineno}")
 	else:
-		print("Server returned error on %s line %d:\n%s" % (filename, lineno, e.args[0]))
+		print(f"Server returned error on {filename} line {lineno}:\n{e.args[0]}")

@@ -189,7 +189,7 @@ def cmd_abort(argv):
 	a = Automata(cfg.url)
 	res = a.abort()
 	if not args.quiet:
-		print("Killed %d running job%s." % (res.killed, '' if res.killed == 1 else 's'))
+		print(f"Killed {res.killed} running job{'' if res.killed == 1 else 's'}.")
 cmd_abort.help = '''abort running job(s)'''
 
 def cmd_alias(argv):

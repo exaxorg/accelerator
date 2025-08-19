@@ -143,13 +143,13 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		# renamed over don't need to be duplicated
 		just_rename[k] = dup_rename.pop(k)
 	if dup_rename:
-		dup_ds = source.link_to_here(name='dup.%d' % (ix,), rename=dup_rename, column_filter=dup_rename.values())
+		dup_ds = source.link_to_here(name=f'dup.{ix}', rename=dup_rename, column_filter=dup_rename.values())
 		if source.hashlabel in dup_rename:
 			just_rename[source.hashlabel] = None
 	if just_rename:
-		source = source.link_to_here(name='rename.%d' % (ix,), rename=just_rename)
+		source = source.link_to_here(name=f'rename.{ix}', rename=just_rename)
 	if dup_rename:
-		source = source.merge(dup_ds, name='merge.%d' % (ix,))
+		source = source.merge(dup_ds, name=f'merge.{ix}')
 	none_support = set()
 	for colname, coltype in column2type.items():
 		if colname not in source.columns:
@@ -208,10 +208,10 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 				name = ds_name
 			else:
 				# This ds is either an earlier part of the chain or will be merged into ds_name in synthesis
-				name = '%s.%d' % (ds_name, sliceno,)
+				name = f'{ds_name}.{sliceno}'
 			dw = job.datasetwriter(
 				columns=columns,
-				caption='%s (from %s slice %d)' % (options.caption, source_name, sliceno,),
+				caption=f'{options.caption} (from {source_name} slice {sliceno})',
 				hashlabel=hashlabel,
 				filename=filename,
 				previous=previous,
@@ -289,7 +289,7 @@ def analysis(sliceno, slices, prepare_res):
 		dataset_type.numeric_comma = True
 	res = [analysis_one(sliceno, slices, p) for p in prepare_res]
 	for fn in ('slicemap', 'badmap',):
-		fn = '%s%d' % (fn, sliceno,)
+		fn = f'{fn}{sliceno}'
 		if exists(fn):
 			unlink(fn)
 	return res
@@ -327,7 +327,7 @@ def analysis_one(sliceno, slices, prepare_res):
 		column2type=column2type,
 	)
 	if options.filter_bad:
-		vars.badmap_fd = map_init(vars, 'badmap%d' % (sliceno,))
+		vars.badmap_fd = map_init(vars, f'badmap{sliceno}')
 		bad_count, default_count, minmax = analysis_lap(vars)
 		if sum(sum(c) for c in itervalues(bad_count)):
 			vars.first_lap = False
@@ -378,14 +378,14 @@ class Int16BytesWrapper(object):
 def analysis_lap(vars):
 	if vars.rehashing:
 		if vars.first_lap:
-			out_fn = 'hashtmp.%d' % (vars.sliceno,)
+			out_fn = f'hashtmp.{vars.sliceno}'
 			colname = vars.dw.hashlabel
 			coltype = vars.column2type[colname]
 			vars.rehashing = False
 			real_coltype = one_column(vars, colname, coltype, [out_fn], True)
 			vars.rehashing = True
 			assert vars.res_bad_count[colname] == [0] # implicitly has a default
-			vars.slicemap_fd = map_init(vars, 'slicemap%d' % (vars.sliceno,), 'slicemap_size')
+			vars.slicemap_fd = map_init(vars, f'slicemap{vars.sliceno}', 'slicemap_size')
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			vars.map_fhs.append(slicemap)
 			slicemap = Int16BytesWrapper(slicemap)
@@ -420,7 +420,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	else:
 		record_bad = 0
 		skip_bad = options.filter_bad
-	minmax_fn = 'minmax%d' % (vars.sliceno,)
+	minmax_fn = f'minmax{vars.sliceno}'
 
 	if coltype.split(':')[0].endswith('+None'):
 		coltype = ''.join(coltype.split('+None', 1))
@@ -468,7 +468,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	if not is_null_converter:
 		assert d.columns[colname].type in byteslike_types, f'{colname} has bad type in {d.quoted}'
 	in_fns.append(d.column_filename(colname, vars.sliceno))
-	in_msgnames.append('%s column %s slice %d' % (d.quoted, quote(colname), vars.sliceno,))
+	in_msgnames.append(f'{d.quoted} column {quote(colname)} slice {vars.sliceno}')
 	if d.columns[colname].offsets:
 		offsets.append(d.columns[colname].offsets[vars.sliceno])
 		max_counts.append(d.lines[vars.sliceno])
@@ -496,7 +496,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 			c_slices = 1
 		bad_count = cstuff.mk_uint64(c_slices)
 		default_count = cstuff.mk_uint64(c_slices)
-		gzip_mode = "wb%d" % (options.compression,)
+		gzip_mode = f"wb{options.compression}"
 		if in_fns:
 			assert len(out_fns) == c_slices + vars.save_bad
 			res = c(*cstuff.bytesargs(in_fns, in_msgnames, len(in_fns), out_fns, gzip_mode, minmax_fn, default_value, default_len, default_value_is_None, empty_types_as_None, fmt, fmt_b, record_bad, skip_bad, vars.badmap_fd, vars.badmap_size, vars.save_bad, c_slices, vars.slicemap_fd, vars.slicemap_size, bad_count, default_count, offsets, max_counts))
@@ -626,7 +626,7 @@ def synthesis_one(slices, prepare_res, analysis_res):
 			for colname in columns:
 				cnt = sum(sum(data[0].get(colname, ())) for data in analysis_res)
 				if cnt:
-					print('%14d   %s' % (cnt, colname,))
+					print(f'{cnt:14}   {colname}')
 		for s, cnt in enumerate(bad_line_count_per_slice):
 			dw_bad.set_lines(s, cnt)
 		dw_bad.set_compressions('gzip')
@@ -641,10 +641,10 @@ def synthesis_one(slices, prepare_res, analysis_res):
 				slicecnt = 0
 				for sliceno, cnt in enumerate(defaulted):
 					if cnt:
-						print('        %5d   %d' % (sliceno, cnt,))
+						print(f'        {sliceno:5}   {cnt}')
 						slicecnt += 1
 				if slicecnt > 1:
-					print('        total   %d' % (sum(defaulted),))
+					print(f'        total   {sum(defaulted)}')
 	if dws: # rehashing
 		if dw: # not as a chain
 			final_bad_count = [data[1] for data in analysis_res]

@@ -83,7 +83,7 @@ def check_one(slices, key, source, reverse=False):
 	for sliceno in range(slices):
 		good = sorted(test_data.sort_data_for_slice(sliceno), key=keycmp, reverse=reverse)
 		check = list(ds.iterate(sliceno))
-		assert unnan(check) == unnan(good), "Slice %d sorted on %s bad (%s)" % (sliceno, key, jid,)
+		assert unnan(check) == unnan(good), f"Slice {sliceno} sorted on {key} bad ({jid})"
 
 def synthesis(params):
 	source = Dataset(subjobs.build("test_sorting_gendata"))

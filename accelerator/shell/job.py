@@ -81,7 +81,7 @@ def show(url, job, verbose, show_output):
 		for thing in things:
 			print('   ', thing)
 		if total > len(things):
-			print('    ... and %d more' % (total - len(things),))
+			print(f'    ... and {total - len(things)} more')
 	if job.datasets:
 		list_of_things('datasets', [ds.quoted for ds in job.datasets])
 	try:
@@ -116,7 +116,7 @@ def show(url, job, verbose, show_output):
 			print(job, 'produced no output')
 			print()
 	elif out:
-		print('%s produced %d bytes of output, use --output/-o to see it' % (job, sum(len(v) for v in out.values()),))
+		print(f'{job} produced {sum((len(v) for v in out.values()))} bytes of output, use --output/-o to see it')
 		print()
 
 def show_source(job, pattern='*'):
@@ -202,7 +202,7 @@ def show_output_d(d, verbose):
 				else:
 					print()
 				if isinstance(k, int):
-					k = 'analysis(%d)' % (k,)
+					k = f'analysis({k})'
 				print(colour(k, 'job/header'))
 				print(colour('=' * len(k), 'job/header'))
 			print(out, end='' if out.endswith('\n') else '\n')

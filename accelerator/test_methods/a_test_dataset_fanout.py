@@ -182,7 +182,7 @@ def synthesis(job):
 		data = [('data',) + (ix + 1000,) * 4 + (str(ix),)]
 		want_data.append(data[0][1:])
 		all_types.append(
-			mk('all types %d' % (ix,), types, data, previous=previous)
+			mk(f'all types {ix}', types, data, previous=previous)
 		)
 		previous = all_types[-1]
 

@@ -46,7 +46,7 @@ def prepare():
 	# z so it sorts last
 	columns['zpickle'] = 'pickle'
 	for ix, v in enumerate(test_data):
-		test_data[ix] = v + ([ix, 'line %d' % (ix,), {'line': ix}, 42],)
+		test_data[ix] = v + ([ix, f'line {ix}', {'line': ix}, 42],)
 	test_data[-1][-1][-1] = float('-inf')
 	a = DatasetWriter(name="a", columns=columns)
 	b = DatasetWriter(name="b", columns=columns, previous=a)

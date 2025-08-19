@@ -29,9 +29,9 @@ def analysis(sliceno):
 	good = test_data.sort_data_for_slice(sliceno)
 	for lineno, got in enumerate(jobs.source.dataset().iterate(sliceno)):
 		want = next(good)
-		assert nanfix(want) == nanfix(got), "Wanted:\n%r\nbut got:\n%r\non line %d in slice %d of %s" % (want, got, lineno, sliceno, jobs.source)
+		assert nanfix(want) == nanfix(got), f"Wanted:\n{want!r}\nbut got:\n{got!r}\non line {lineno} in slice {sliceno} of {jobs.source}"
 	left_over = len(list(good))
-	assert left_over == 0, "Slice %d of %s missing %d lines" % (sliceno, jobs.source, left_over,)
+	assert left_over == 0, f"Slice {sliceno} of {jobs.source} missing {left_over} lines"
 	if jobs.source.load()['py_version'] > 2 and sys.version_info[0] > 2:
 		assert list(jobs.source.dataset('pickle').iterate(sliceno, 'p')) == [{'sliceno': sliceno}]
 
@@ -40,9 +40,9 @@ def synthesis(job):
 	assert p.versions.accelerator == accelerator.__version__
 	with job.open_input('proj/accelerator.conf') as fh:
 		for line in fh:
-			if line.startswith('interpreters: p%d ' % (options.n,)):
+			if line.startswith(f'interpreters: p{options.n} '):
 				path = line.split(' ', 2)[2].strip()[1:-1]
 				break
 		else:
-			raise Exception('Failed to find interpreter #%d in accelerator.conf' % (options.n,))
+			raise Exception(f'Failed to find interpreter #{options.n} in accelerator.conf')
 	assert p.versions.python_path == path

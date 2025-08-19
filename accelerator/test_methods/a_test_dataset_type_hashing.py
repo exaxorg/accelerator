@@ -95,10 +95,10 @@ def synthesis(job, slices):
 	dw = job.datasetwriter(name='more types')
 	cols = {
 		'floatbooli': cycle(['1.42 or so', '0 maybe', '1 (exactly)']),
-		'datetime:%Y%m%d %H:%M': ['2019%02d%02d 17:%02d' % (t % 12 + 1, t % 28 + 1, t % 60) for t in range(1000)],
-		'date:%Y%m%d': ['2019%02d%02d' % (t % 12 + 1, t % 28 + 1,) for t in range(1000)],
-		'time:%H:%M': ['%02d:%02d' % (t // 60, t % 60) for t in range(1000)],
-		'timei:%H:%M': ['%02d:%02d%c' % (t // 60, t % 60, chr(t % 26 + 65)) for t in range(1000)],
+		'datetime:%Y%m%d %H:%M': [f'2019{t % 12 + 1:02}{t % 28 + 1:02} 17:{t % 60:02}' for t in range(1000)],
+		'date:%Y%m%d': [f'2019{t % 12 + 1:02}{t % 28 + 1:02}' for t in range(1000)],
+		'time:%H:%M': [f'{t // 60:02}:{t % 60:02}' for t in range(1000)],
+		'timei:%H:%M': [f'{t // 60:02}:{t % 60:02}{chr(t % 26 + 65)}' for t in range(1000)],
 	}
 	gens = []
 	for coltype, gen in cols.items():

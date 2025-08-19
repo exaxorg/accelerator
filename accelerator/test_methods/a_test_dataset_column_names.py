@@ -36,14 +36,14 @@ def prepare():
 	return mk_dw("internal_names_analysis", internal_names_analysis)
 
 def analysis(sliceno, prepare_res):
-	prepare_res.write(*['a %d' % (sliceno,)] * 5)
-	prepare_res.write_list(['b %d' % (sliceno,)] * 5)
-	prepare_res.write_dict(dict(zip(internal_names_analysis, ['c %d' % (sliceno,)] * 5)))
+	prepare_res.write(*[f'a {sliceno}'] * 5)
+	prepare_res.write_list([f'b {sliceno}'] * 5)
+	prepare_res.write_dict(dict(zip(internal_names_analysis, [f'c {sliceno}'] * 5)))
 
 def synthesis(prepare_res, slices):
 	ds = prepare_res.finish()
 	for sliceno in range(slices):
-		assert list(ds.iterate(sliceno, internal_names_analysis)) == [('a %d' % (sliceno,),) * 5, ('b %d' % (sliceno,),) *5, ('c %d' % (sliceno,),) *5]
+		assert list(ds.iterate(sliceno, internal_names_analysis)) == [(f'a {sliceno}',) * 5, (f'b {sliceno}',) *5, (f'c {sliceno}',) *5]
 
 	in_parent = [ # list because order matters
 		"-",      # becomes _ because everything must be a valid python identifier.

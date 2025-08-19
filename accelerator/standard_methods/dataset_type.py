@@ -1449,7 +1449,7 @@ for name, ct in sorted(list(convfuncs.items()) + list(hidden_convfuncs.items()))
 	protos.append(proto + ';')
 	funcs.append(code)
 
-copy_types = {typerename.get(k.split(':')[0], k.split(':')[0]): 'null_%d' % (v.size,) if v.size else 'null_blob' for k, v in convfuncs.items()}
+copy_types = {typerename.get(k.split(':')[0], k.split(':')[0]): f'null_{v.size}' if v.size else 'null_blob' for k, v in convfuncs.items()}
 copy_types['number'] = 'null_number'
 copy_types['pickle'] = 'null_blob'
 
