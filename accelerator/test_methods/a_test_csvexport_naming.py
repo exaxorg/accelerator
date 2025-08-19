@@ -51,4 +51,4 @@ def synthesis(job):
 			want = b'a\n1\n'
 		else:
 			want = b'a\n0\n1\n2\n'
-		assert want == got, 'wanted %r, got %r in %s' % (want, got, fn)
+		assert want == got, f'wanted {want!r}, got {got!r} in {fn}'

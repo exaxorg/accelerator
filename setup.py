@@ -76,7 +76,7 @@ else:
 			assert re.match(r'20\d\d\.\d\d\.\d\d\.(?:dev|rc)\d+$', env_version)
 			version = env_version
 		else:
-			version = "%s.dev1+%s%s" % (version, commit[:10], dirty(),)
+			version = f"{version}.dev1+{commit[:10]}{dirty()}"
 	version = version.replace('.0', '.')
 	with open('accelerator/version.txt', 'w') as fh:
 		fh.write(version + '\n')

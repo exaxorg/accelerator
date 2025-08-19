@@ -56,7 +56,7 @@ def check(**options):
 	want_res.update(pass_options)
 	jid = subjobs.build("test_optionenum", options=pass_options)
 	res = blob.load(jobid=jid)
-	assert res == want_res, "%r != %r from %r" % (res, want_res, options,)
+	assert res == want_res, f"{res!r} != {want_res!r} from {options!r}"
 
 def check_unbuildable(**options):
 	try:
@@ -65,7 +65,7 @@ def check_unbuildable(**options):
 		if e.args[0].startswith("Submit failed"):
 			return
 		raise
-	raise Exception("Building with options = %r should have failed but didn't" % (options,))
+	raise Exception(f"Building with options = {options!r} should have failed but didn't")
 
 def synthesis():
 	if options.inner:

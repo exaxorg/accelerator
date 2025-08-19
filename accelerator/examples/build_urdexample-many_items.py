@@ -14,7 +14,7 @@ def main(urd):
 	urd.truncate(listname, 0)
 
 	prt('Start by creating ten chained jobs.  Each job is associated')
-	prt('with a unique Urd-item in the "%s" Urd list.' % (listname,))
+	prt(f'with a unique Urd-item in the "{listname}" Urd list.')
 	starttime = date(2021, 8, 1)
 	for days in range(10):
 		timestamp = starttime + timedelta(days=days)
@@ -24,11 +24,11 @@ def main(urd):
 		urd.finish(listname)
 
 	prt()
-	prt('Here\'s a list of all entries in the list "%s"' % (listname,))
+	prt(f'Here\'s a list of all entries in the list "{listname}"')
 	for ts in urd.since(listname, 0):
-		prt.output(ts, '"%s"' % (urd.peek(listname, ts).caption,))
+		prt.output(ts, f'"{urd.peek(listname, ts).caption}"')
 	prt('This is available in the shell using')
-	prt.command('ax urd %s/' % (listname,))
+	prt.command(f'ax urd {listname}/')
 
 	prt()
 	prt('Here\'s the session for timestamp 2021-08-06')
@@ -39,4 +39,4 @@ def main(urd):
 
 	prt()
 	prt('To print this in a more human friendly format on the command line, try')
-	prt.command('    ax urd %s/2021-08-06' % (listname,))
+	prt.command(f'    ax urd {listname}/2021-08-06')

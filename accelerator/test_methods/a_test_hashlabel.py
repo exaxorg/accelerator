@@ -106,7 +106,7 @@ def analysis(sliceno, prepare_res, params):
 				good = False
 			except Exception:
 				pass
-			assert good, "%s allowed writing in wrong slice" % (fn,)
+			assert good, f"{fn} allowed writing in wrong slice"
 
 # complex isn't sortable
 def uncomplex(t):
@@ -177,9 +177,9 @@ def synthesis(prepare_res, params, job, slices):
 	):
 		up = cleanup(all_ds[up_name].iterate(None))
 		down = cleanup(all_ds[down_name].iterate(None))
-		assert up != down, "Hashlabel did not change slice distribution (%s vs %s)" % (up_name, down_name)
+		assert up != down, f"Hashlabel did not change slice distribution ({up_name} vs {down_name})"
 		# And check that the data is still the same.
-		assert sorted(up) == sorted(down) == all_data, "Hashed datasets have wrong data (%s vs %s)" % (up_name, down_name)
+		assert sorted(up) == sorted(down) == all_data, f"Hashed datasets have wrong data ({up_name} vs {down_name})"
 
 	# Verify that rehashing works.
 	# (Can't use sliceno None, because that won't rehash, and even if it did

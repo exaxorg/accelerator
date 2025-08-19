@@ -83,18 +83,18 @@ def url_quote_more(s):
 
 def fmt_num(num):
 	if isinstance(num, float):
-		return '{:_.6g}'.format(num)
+		return f'{num:_.6g}'
 	else:
-		return '{:_}'.format(num)
+		return f'{num:_}'
 
 # This is used in the method launcher to set different titles for each
 # phase/slice. You can use it in the method to override that if you want.
 def setproctitle(title):
 	from accelerator import g
 	if hasattr(g, 'params'):
-		title = '%s %s (%s)' % (g.job, uni(title), g.params.method,)
+		title = f'{g.job} {uni(title)} ({g.params.method})'
 	elif hasattr(g, 'job'):
-		title = '%s %s' % (g.job, uni(title),)
+		title = f'{g.job} {uni(title)}'
 	else:
 		title = uni(title)
 	_setproctitle(title)

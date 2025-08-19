@@ -123,7 +123,7 @@ def synthesis(job):
 	def want_fail(why, **kw):
 		try:
 			subjobs.build('dataset_concat', **kw)
-			raise Exception('dataset_concat(%r) should have failed: %s' % (kw, why,))
+			raise Exception(f'dataset_concat({kw!r}) should have failed: {why}')
 		except JobError:
 			pass
 

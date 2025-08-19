@@ -90,7 +90,7 @@ for name, data, bad_cnt, res_data in (
 				if typ is w_typ:
 					# File is not created until written.
 					fh.flush()
-			raise Exception("%r does not give IOError for DOES/NOT/EXIST" % (typ,))
+			raise Exception(f"{typ!r} does not give IOError for DOES/NOT/EXIST")
 		except IOError:
 			pass
 		try:
@@ -99,7 +99,7 @@ for name, data, bad_cnt, res_data in (
 		except TypeError:
 			pass
 		except Exception:
-			raise Exception("%r does not give TypeError for bad keyword argument" % (typ,))
+			raise Exception(f"{typ!r} does not give TypeError for bad keyword argument")
 	# test that the right data fails to write
 	for test_none_support in (False, True):
 		with w_mk(TMP_FN, none_support=test_none_support) as fh:
@@ -118,8 +118,8 @@ for name, data, bad_cnt, res_data in (
 			if can_minmax(name):
 				want_min = min(filter(lambda x: x is not None, res_data))
 				want_max = max(filter(lambda x: x is not None, res_data))
-				assert fh.min == want_min, "%s: claims min %r, not %r" % (name, fh.min, want_min,)
-				assert fh.max == want_max, "%s: claims max %r, not %r" % (name, fh.max, want_max,)
+				assert fh.min == want_min, f"{name}: claims min {fh.min!r}, not {want_min!r}"
+				assert fh.max == want_max, f"{name}: claims max {fh.max!r}, not {want_max!r}"
 	# Okay, errors look good
 	with r_mk(TMP_FN) as fh:
 		res = list(fh)
@@ -149,7 +149,7 @@ for name, data, bad_cnt, res_data in (
 						fh.write(value)
 						count += 1
 					except (ValueError, TypeError, OverflowError):
-						assert 0, "No default: %r" % (value,)
+						assert 0, f"No default: {value!r}"
 				assert fh.count == count, "%s: %d lines written, claims %d" % (name, count, fh.count,)
 			# No errors when there is a default
 			with r_mk(TMP_FN) as fh:
@@ -182,8 +182,8 @@ for name, data, bad_cnt, res_data in (
 				tmp = list(fh)
 			assert len(tmp) == count, "%s (%d, %d): %d lines written, claims %d" % (name, sliceno, slices, len(tmp), count,)
 			for v in tmp:
-				assert (spread_None and v is None) or w_typ.hash(v) % slices == sliceno, "Bad hash for %r" % (v,)
-				assert w_typ.hash(v) == _dsutil.hash(v), "Inconsistent hash for %r" % (v,)
+				assert (spread_None and v is None) or w_typ.hash(v) % slices == sliceno, f"Bad hash for {v!r}"
+				assert w_typ.hash(v) == _dsutil.hash(v), f"Inconsistent hash for {v!r}"
 			res.extend(tmp)
 			sliced_res.append(tmp)
 			if can_minmax(name):
@@ -241,7 +241,7 @@ for name, value in (
 
 print("Hash testing, false things")
 for v in (None, "", b"", 0, 0.0, False,):
-	assert _dsutil.hash(v) == 0, "%r doesn't hash to 0" % (v,)
+	assert _dsutil.hash(v) == 0, f"{v!r} doesn't hash to 0"
 print("Hash testing, strings")
 for v in ("", "a", "0", "foo", "a slightly longer string", "\0", "a\0b",):
 	l_u = _dsutil.WriteUnicode.hash(v)
@@ -250,7 +250,7 @@ for v in ("", "a", "0", "foo", "a slightly longer string", "\0", "a\0b",):
 	u = _dsutil.WriteUnicode.hash(v)
 	a = _dsutil.WriteAscii.hash(v)
 	b = _dsutil.WriteBytes.hash(v.encode("utf-8"))
-	assert u == l_u == a == l_a == b == l_b, "%r doesn't hash the same" % (v,)
+	assert u == l_u == a == l_a == b == l_b, f"{v!r} doesn't hash the same"
 assert _dsutil.hash(b"\xe4") != _dsutil.hash("\xe4"), "Unicode hash fail"
 assert _dsutil.WriteBytes.hash(b"\xe4") != _dsutil.WriteUnicode.hash("\xe4"), "Unicode hash fail"
 try:

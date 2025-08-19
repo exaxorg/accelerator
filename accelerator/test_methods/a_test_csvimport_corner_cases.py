@@ -70,10 +70,10 @@ def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 		except ValueError:
 			# We have a few non-numeric ones
 			pass
-		assert ix in d, "Bad index %r in %r (%s)" % (ix, filename, jid,)
-		assert a == b == d[ix], "Wrong data for line %r in %r (%s)" % (ix, filename, jid,)
+		assert ix in d, f"Bad index {ix!r} in {filename!r} ({jid})"
+		assert a == b == d[ix], f"Wrong data for line {ix!r} in {filename!r} ({jid})"
 		del d[ix]
-	assert not d, "Not all lines returned from %r (%s), %r missing" % (filename, jid, set(d.keys()),)
+	assert not d, f"Not all lines returned from {filename!r} ({jid}), {set(d.keys())!r} missing"
 	if options.get("allow_bad"):
 		bad_ds = Dataset(jid, "bad")
 		for ix, data in bad_ds.iterate(None, ["lineno", "data"]):
@@ -81,7 +81,7 @@ def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 			assert data == d_bad[ix], "Wrong saved bad line %d in %r (%s/bad).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_bad[ix], data,)
 			del d_bad[ix]
 		verify_minmax(bad_ds, "lineno")
-	assert not d_bad, "Not all bad lines returned from %r (%s), %r missing" % (filename, jid, set(d_bad.keys()),)
+	assert not d_bad, f"Not all bad lines returned from {filename!r} ({jid}), {set(d_bad.keys())!r} missing"
 
 	if options.get("comment") or options.get("skip_lines"):
 		skipped_ds = Dataset(jid, "skipped")
@@ -90,11 +90,11 @@ def verify_ds(options, d, d_bad, d_skipped, filename, d_columns=None):
 			assert data == d_skipped[ix], "Wrong saved skipped line %d in %r (%s/skipped).\nWanted %r.\nGot    %r." % (ix, filename, jid, d_skipped[ix], data,)
 			del d_skipped[ix]
 		verify_minmax(skipped_ds, "lineno")
-	assert not d_skipped, "Not all bad lines returned from %r (%s), %r missing" % (filename, jid, set(d_skipped.keys()),)
+	assert not d_skipped, f"Not all bad lines returned from {filename!r} ({jid}), {set(d_skipped.keys())!r} missing"
 
 	if options.get("lineno_label"):
 		lineno_got = dict(ds.iterate(None, [d_columns[0], options.get("lineno_label")]))
-		assert lineno_got == lineno_want, "%r != %r" % (lineno_got, lineno_want,)
+		assert lineno_got == lineno_want, f"{lineno_got!r} != {lineno_want!r}"
 		verify_minmax(ds, options["lineno_label"])
 
 def verify_minmax(ds, colname):
@@ -102,14 +102,14 @@ def verify_minmax(ds, colname):
 	minmax_want = (min(data) , max(data),) if data else (None, None,)
 	col = ds.columns[colname]
 	minmax_got = (col.min, col.max,)
-	assert minmax_got == minmax_want, "%s: %r != %r" % (ds, minmax_got, minmax_want,)
+	assert minmax_got == minmax_want, f"{ds}: {minmax_got!r} != {minmax_want!r}"
 
 def require_failure(name, options):
 	try:
 		subjobs.build("csvimport", options=options)
 	except JobError:
 		return
-	raise Exception("File with %s was imported without error." % (name,))
+	raise Exception(f"File with {name} was imported without error.")
 
 def check_bad_file(job, name, data):
 	filename = name + ".txt"
@@ -143,7 +143,7 @@ def check_no_separator(job):
 		for q in (None, 0, 34, 13, 10, 228):
 			if nl == q:
 				continue
-			filename = "no separator.%r.%r.txt" % (nl, q,)
+			filename = f"no separator.{nl!r}.{q!r}.txt"
 			nl_b = bytechr(nl)
 			q_b = bytechr(q) if q else b''
 			wrote_c = Counter()
@@ -160,9 +160,9 @@ def check_no_separator(job):
 					labels=["data"],
 				))
 			except JobError:
-				raise Exception("Importing %r failed" % (filename,))
+				raise Exception(f"Importing {filename!r} failed")
 			got_c = Counter(Dataset(jid).iterate(None, "data"))
-			assert got_c == wrote_c, "Importing %r (%s) gave wrong contents" % (filename, jid,)
+			assert got_c == wrote_c, f"Importing {filename!r} ({jid}) gave wrong contents"
 
 def check_good_file(job, name, data, d, d_bad={}, d_skipped={}, d_columns=None, **options):
 	filename = name + ".txt"

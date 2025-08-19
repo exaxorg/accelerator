@@ -10,7 +10,7 @@ def main(urd):
 	job1 = urd.build('example_writeslicedfile')
 
 	prt()
-	prt('These are the files created by / located in job %s.' % (job1,))
+	prt(f'These are the files created by / located in job {job1}.')
 	prt.output(job1.files())
 
 	prt()
@@ -23,13 +23,13 @@ def main(urd):
 	)
 
 	prt()
-	prt('Read and print stored stdout from %s synthesis' % (job2,))
+	prt(f'Read and print stored stdout from {job2} synthesis')
 	prt.output(job2.output('synthesis'))
 	prt()
-	prt('Read and print stored stdout from %s everything' % (job2,))
+	prt(f'Read and print stored stdout from {job2} everything')
 	prt.output(job2.output())
 	prt()
-	prt('Read and print stored stdout from %s analysis process 2' % (job2,))
+	prt(f'Read and print stored stdout from {job2} analysis process 2')
 	prt.output(job2.output(2))
 
 	prt()
@@ -40,4 +40,4 @@ def main(urd):
 		prt.output(pickle.load(fh))
 
 	prt('To see all files stored in a job, try')
-	prt.command('ax job %s' % (job1,))
+	prt.command(f'ax job {job1}')

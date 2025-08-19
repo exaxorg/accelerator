@@ -44,9 +44,9 @@ def dirnamematcher(name):
 def _assert_is_normrelpath(path, dirtype):
 	norm = os.path.normpath(path)
 	if (norm != path and norm + '/' != path) or norm.startswith('/'):
-		raise AcceleratorError('%r is not a normalised relative path' % (path,))
+		raise AcceleratorError(f'{path!r} is not a normalised relative path')
 	if norm == '..' or norm.startswith('../'):
-		raise AcceleratorError('%r is above the %s dir' % (path, dirtype))
+		raise AcceleratorError(f'{path!r} is above the {dirtype} dir')
 
 
 def _cachedprop(meth):
@@ -96,7 +96,7 @@ class Job(str):
 			obj.workdir, tmp = jobid.rsplit('-', 1)
 			obj.number = int(tmp)
 		except ValueError:
-			raise NoSuchJobError('Not a valid jobid: "%s".' % (jobid,))
+			raise NoSuchJobError(f'Not a valid jobid: "{jobid}".')
 		obj._cache = {}
 		if method:
 			obj._cache['method'] = method
@@ -134,7 +134,7 @@ class Job(str):
 	@property
 	def path(self):
 		if self.workdir not in WORKDIRS:
-			raise NoSuchWorkdirError('Not a valid workdir: "%s"' % (self.workdir,))
+			raise NoSuchWorkdirError(f'Not a valid workdir: "{self.workdir}"')
 		return os.path.join(WORKDIRS[self.workdir], self)
 
 	def filename(self, filename, sliceno=None):
@@ -223,7 +223,7 @@ class Job(str):
 		if isinstance(what, int):
 			fns = [what]
 		else:
-			assert what in (None, 'prepare', 'analysis', 'synthesis'), 'Unknown output %r' % (what,)
+			assert what in (None, 'prepare', 'analysis', 'synthesis'), f'Unknown output {what!r}'
 			if what in (None, 'analysis'):
 				fns = list(range(self.params.slices))
 				if what is None:
@@ -262,14 +262,14 @@ class Job(str):
 			else:
 				linkname += os.path.basename(filename)
 		source_fn = os.path.join(self.path, filename)
-		assert os.path.exists(source_fn), "Filename \"%s\" does not exist in jobdir \"%s\"!" % (filename, self.path)
+		assert os.path.exists(source_fn), f"Filename \"{filename}\" does not exist in jobdir \"{self.path}\"!"
 		result_directory = cfg['result_directory']
 		dest_fn = result_directory
 		for part in linkname.split('/'):
 			if not os.path.exists(dest_fn):
 				os.mkdir(dest_fn)
 			elif dest_fn != result_directory and os.path.islink(dest_fn):
-				raise AcceleratorError("Refusing to create link %r: %r is a symlink" % (linkname, dest_fn))
+				raise AcceleratorError(f"Refusing to create link {linkname!r}: {dest_fn!r} is a symlink")
 			dest_fn = os.path.join(dest_fn, part)
 		try:
 			os.remove(dest_fn + '_')

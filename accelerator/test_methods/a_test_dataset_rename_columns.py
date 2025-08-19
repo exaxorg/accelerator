@@ -53,9 +53,9 @@ def synthesis(job):
 		got_cols = set(got_ds.columns)
 		want_cols = set(want_coltypes)
 		extra = got_cols - want_cols
-		assert not extra, 'got extra columns %r' % (extra,)
+		assert not extra, f'got extra columns {extra!r}'
 		missing = want_cols - got_cols
-		assert not missing, 'missing columns %r' % (missing,)
+		assert not missing, f'missing columns {missing!r}'
 		for colname, want_type in want_coltypes.items():
 			assert got_ds.columns[colname].type == want_type
 			assert list(got_ds.iterate(None, colname)) == [type2value[want_type]]

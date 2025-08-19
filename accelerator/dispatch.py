@@ -81,7 +81,7 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 		print_prefix = ''
 	else:
 		print_prefix = '    '
-	print('%s| %s [%s] |' % (print_prefix, jobid, method,))
+	print(f'{print_prefix}| {jobid} [{method}] |')
 	args = dict(
 		workdir=workdir,
 		slices=slices,
@@ -109,7 +109,7 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 				pass
 			# The dying process won't have sent an end message, so it has
 			# the endwait time until we SIGKILL it.
-			print('%s| %s [%s]  failed!    (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
+			print(f'{print_prefix}| {jobid} [{method}]  failed!    ({monotonic() - starttime:5.1f}s) |')
 		# There is a race where stuff on the status socket has not arrived when
 		# the sending process exits. This is basically benign, but let's give
 		# it a chance to arrive to cut down on confusing warnings.
@@ -130,5 +130,5 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 			pass
 	if status:
 		raise JobError(jobid, method, status)
-	print('%s| %s [%s]  completed. (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
+	print(f'{print_prefix}| {jobid} [{method}]  completed. ({monotonic() - starttime:5.1f}s) |')
 	return data

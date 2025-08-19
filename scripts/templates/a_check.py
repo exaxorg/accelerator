@@ -11,7 +11,7 @@ def check(num, *want):
 		assert job.params.versions.accelerator
 	ds = job.dataset()
 	want_lines = [len(w) for w in want]
-	assert ds.lines == want_lines, '%s should have had %r lines but has %r' % (ds, want_lines, ds.lines,)
+	assert ds.lines == want_lines, f'{ds} should have had {want_lines!r} lines but has {ds.lines!r}'
 	for sliceno, want in enumerate(want):
 		got = list(ds.iterate(sliceno, ('a', 'b',)))
 		assert got == want, '%s slice %d should have had %r but had %r' % (ds, sliceno, want, got,)
@@ -38,7 +38,7 @@ def synthesis(job):
 	# Test for accidental recursion.
 	sys.setrecursionlimit(49)
 	ds51 = Job('%s-%d' % (options.prefix, 51)).dataset()
-	assert len(ds51.chain()) == 50, '%s should have had a dataset chain of length 50' % (job,)
+	assert len(ds51.chain()) == 50, f'{job} should have had a dataset chain of length 50'
 	# And check the chain actually contains the expected stuff (i.e. nothing past the first ds).
 	# (Also to check that iterating the chain doesn't recurse more.)
 	ds2 = Job('%s-%d' % (options.prefix, 2)).dataset()

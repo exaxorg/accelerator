@@ -26,9 +26,9 @@ def main(urd):
 
 	prt()
 	prt('To go back in chain and investigate datasets, try')
-	prt.command('ax ds %s' % (imp,))
-	prt.command('ax ds %s~' % (imp,))
-	prt.command('ax ds %s~~' % (imp,))
+	prt.command(f'ax ds {imp}')
+	prt.command(f'ax ds {imp}~')
+	prt.command(f'ax ds {imp}~~')
 	prt('Note that ~~ can also be written ~2 etc.')
 
 	prt()

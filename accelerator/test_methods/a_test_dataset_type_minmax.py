@@ -167,7 +167,7 @@ def synthesis(job):
 		minmax = (t_ds.columns['v'].min, t_ds.columns['v'].max)
 
 		if minmax != (None, None):
-			raise Exception('Typing empty dataset as %s did not give minmax == None, gave %r' % (typ, minmax,))
+			raise Exception(f'Typing empty dataset as {typ} did not give minmax == None, gave {minmax!r}')
 		all_names = list(chain.from_iterable(groupdata[group].keys() for group in groups))
 		# just 1 and 2, so we don't make way too many
 		for num_groups in (1, 2,):
@@ -176,7 +176,7 @@ def synthesis(job):
 				t_ds = subjobs.build('dataset_type', column2type={'v': typ}, source=ds).dataset()
 				got_minmax = (t_ds.columns['v'].min, t_ds.columns['v'].max)
 				want_minmax = (mn, mx)
-				chk_minmax(got_minmax, want_minmax, 'Typing %s as %s gave wrong minmax: expected %r, got %r (in %s)' % (ds.quoted, typ, want_minmax, got_minmax, t_ds.quoted,))
+				chk_minmax(got_minmax, want_minmax, f'Typing {ds.quoted} as {typ} gave wrong minmax: expected {want_minmax!r}, got {got_minmax!r} (in {t_ds.quoted})')
 				chk_minmax(got_minmax, (t_ds.min('v'), t_ds.max('v')), 'Dataset.min/max() broken on ' + t_ds)
 				# verify writing the same data normally also gives the correct result
 				dw = DatasetWriter(name='rewrite ' + t_ds, columns=t_ds.columns)
@@ -186,7 +186,7 @@ def synthesis(job):
 				re_ds = dw.finish()
 				got_minmax = (re_ds.columns['v'].min, re_ds.columns['v'].max)
 				want_minmax = (mn, mx)
-				chk_minmax(got_minmax, want_minmax, 'Rewriting %s gave the wrong minmax: expected %r, got %r (in %s)' % (t_ds.quoted, want_minmax, got_minmax, re_ds.quoted,))
+				chk_minmax(got_minmax, want_minmax, f'Rewriting {t_ds.quoted} gave the wrong minmax: expected {want_minmax!r}, got {got_minmax!r} (in {re_ds.quoted})')
 
 	# make sure renaming doesn't mix anything up
 	dw = DatasetWriter(name='rename', columns={'a': 'ascii', 'b': 'ascii'})
@@ -206,5 +206,5 @@ def synthesis(job):
 		('int', (2, 3)),
 	):
 		got_minmax = (t_ds.columns[name].min, t_ds.columns[name].max)
-		msg = 'Typing %s gave wrong minmax: expected %r, got %r (in %s)' % (ds.quoted, want_minmax, got_minmax, t_ds.quoted,)
+		msg = f'Typing {ds.quoted} gave wrong minmax: expected {want_minmax!r}, got {got_minmax!r} (in {t_ds.quoted})'
 		chk_minmax(got_minmax, want_minmax, msg)

@@ -37,7 +37,7 @@ def validate(data):
 		job = None
 	if job:
 		if job.path != data.job:
-			warnings.append("path mismatch (%r != %r)" % (job.path, data.job,))
+			warnings.append(f"path mismatch ({job.path!r} != {data.job!r})")
 	else:
 		warnings.append("unknown job")
 	h = b64hash_setup(data.job + '/setup.json')
@@ -85,14 +85,14 @@ def main(argv, cfg):
 					print(prefix + colour('decoding error', 'sherlock/warning'), file=sys.stderr)
 					continue
 				if args.verbose:
-					print('%s%s' % (prefix, data.job,), end='')
+					print(f'{prefix}{data.job}', end='')
 				else:
-					print('%s%s' % (prefix, data.job.rsplit('/', 1)[-1],), end='')
+					print(f"{prefix}{data.job.rsplit('/', 1)[-1]}", end='')
 				warnings = validate(data)
 				if warnings:
 					print(' ' + colour(', '.join(warnings), 'sherlock/warning'), end='')
 				if args.verbose:
 					ts = datetime.fromtimestamp(data.time)
-					print(' (%s at %s on %s)' % (data.method, ts, data.host), end='')
+					print(f' ({data.method} at {ts} on {data.host})', end='')
 				print()
 	return res

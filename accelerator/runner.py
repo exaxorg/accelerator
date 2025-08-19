@@ -77,7 +77,7 @@ def check_picklable(desc, value):
 		return
 	except Exception as e:
 		msg = str(e)
-	raise MsgException('Unpicklable %s: %s' % (desc, msg,))
+	raise MsgException(f'Unpicklable {desc}: {msg}')
 
 def load_methods(all_packages, data):
 	from accelerator.compat import str_types, iteritems
@@ -107,7 +107,7 @@ def load_methods(all_packages, data):
 		except Exception:
 			pass
 	for package, key in data:
-		modname = '%s.a_%s' % (package, key)
+		modname = f'{package}.a_{key}'
 		try:
 			mod, mod_filename, prefix = get_mod(modname)
 			depend_extra = []
@@ -119,7 +119,7 @@ def load_methods(all_packages, data):
 						dep = prefix + dep
 					depend_extra.append(dep)
 				else:
-					raise MsgException('Bad depend_extra: %r' % (dep,))
+					raise MsgException(f'Bad depend_extra: {dep!r}')
 			dep_prefix = os.path.commonprefix(depend_extra + [mod_filename])
 			# commonprefix works per character (and commonpath is v3.5+)
 			dep_prefix = dep_prefix.rsplit('/', 1)[0] + '/'
@@ -149,8 +149,8 @@ def load_methods(all_packages, data):
 				hash_extra ^= int(hashlib.sha1(data).hexdigest(), 16)
 				tar_add(dep, data)
 			for dep in (likely_deps - set(depend_extra)):
-				res_warnings.append('%s.a_%s should probably depend_extra on %s' % (package, key, dep_names[dep],))
-			res_hashes[key] = ("%040x" % (hash ^ hash_extra,),)
+				res_warnings.append(f'{package}.a_{key} should probably depend_extra on {dep_names[dep]}')
+			res_hashes[key] = (f"{hash ^ hash_extra:040x}",)
 			res_params[key] = params = DotDict()
 			# It would have been nice to be able to use ast.get_source_segment
 			def find_source(name):
@@ -187,7 +187,7 @@ def load_methods(all_packages, data):
 							end = find_end(b'['[0], b']'[0])
 							break
 					if not end:
-						print('Failed to figure out where %s is in %s' % (name, key,))
+						print(f'Failed to figure out where {name} is in {key}')
 						end = start
 					return slice(start, end)
 				except Exception:
@@ -204,23 +204,23 @@ def load_methods(all_packages, data):
 				elif isinstance(v, dict):
 					return '{%s}' % (', '.join('%s: %s' % (fmtopt(k), fmtopt(v)) for k, v in v.items()),)
 				elif isinstance(v, list):
-					return '[%s]' % (', '.join(fmtopt(v) for v in v),)
+					return f"[{', '.join((fmtopt(v) for v in v))}]"
 				elif isinstance(v, OptionEnum):
 					return '{%s}' % (', '.join(sorted(map(str, v._valid))),)
 				elif isinstance(v, OptionEnumValue):
 					return '%r {%s}' % (v, ', '.join(sorted(map(str, v._valid))),)
 				elif isinstance(v, RequiredOption):
-					return 'RequiredOption(%s%s)' % (fmtopt(v.value), ', none_ok=True' if v.none_ok else '',)
+					return f"RequiredOption({fmtopt(v.value)}{', none_ok=True' if v.none_ok else ''})"
 				elif isinstance(v, OptionDefault):
 					if v.default is None:
-						return 'OptionDefault(%s)' % (fmtopt(v.value),)
-					return 'OptionDefault(%s, default=%s)' % (fmtopt(v.value), fmtopt(v.default),)
+						return f'OptionDefault({fmtopt(v.value)})'
+					return f'OptionDefault({fmtopt(v.value)}, default={fmtopt(v.default)})'
 				else:
 					return repr(v)
 			for name, default in (('options', {},), ('datasets', (),), ('jobs', (),),):
 				params[name] = d = getattr(mod, name, default)
 				if not isinstance(d, type(default)):
-					raise MsgException("%s should be a %s" % (name, type(default).__name__,))
+					raise MsgException(f"{name} should be a {type(default).__name__}")
 				if d:
 					items = {v[0] if isinstance(v, list) else v for v in params[name]}
 					if isinstance(d, dict):
@@ -268,7 +268,7 @@ def load_methods(all_packages, data):
 				d = res_descriptions[key].get(name)
 				for item in getattr(mod, name, ()):
 					if isinstance(item, list):
-						d['[%s]' % (item[0],)] = d.pop(item[0])
+						d[f'[{item[0]}]'] = d.pop(item[0])
 			equivalent_hashes = getattr(mod, 'equivalent_hashes', ())
 			if equivalent_hashes:
 				try:
@@ -290,11 +290,11 @@ def load_methods(all_packages, data):
 				end -= 1 # to get the same hash as the old way of parsing
 				h = hashlib.sha1(src[:start])
 				h.update(src[end:])
-				verifier = "%040x" % (int(h.hexdigest(), 16) ^ hash_extra,)
+				verifier = f"{int(h.hexdigest(), 16) ^ hash_extra:040x}"
 				if verifier == k:
 					res_hashes[key] += v
 				else:
-					res_warnings.append('%s.a_%s has equivalent_hashes, but missing verifier %s' % (package, key, verifier,))
+					res_warnings.append(f'{package}.a_{key} has equivalent_hashes, but missing verifier {verifier}')
 			tar_o.close()
 			tar_fh.seek(0)
 			archives[key] = tar_fh.read()
@@ -302,7 +302,7 @@ def load_methods(all_packages, data):
 			check_picklable('description', res_descriptions[key])
 		except Exception as e:
 			if isinstance(e, MsgException):
-				print('%s: %s' % (modname, str(e),))
+				print(f'{modname}: {e!s}')
 			else:
 				print_exc(file=sys.stderr)
 			res_failed.append(modname)

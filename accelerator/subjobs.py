@@ -44,14 +44,14 @@ def build(method, options={}, datasets={}, jobs={}, name=None, caption=None, **k
 		_bad_kws = set(getarglist(_a.call_method))
 	bad_kws = _bad_kws & set(kw)
 	if bad_kws:
-		raise Exception('subjobs.build does not accept these keywords: %r' % (bad_kws,))
+		raise Exception(f'subjobs.build does not accept these keywords: {bad_kws!r}')
 	def run():
 		return _a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, **kw)
 	try:
 		if name or caption:
-			msg = 'Building subjob %s' % (name or method,)
+			msg = f'Building subjob {name or method}'
 			if caption:
-				msg += ' "%s"' % (caption,)
+				msg += f' "{caption}"'
 			with status(msg):
 				jid = run()
 		else:

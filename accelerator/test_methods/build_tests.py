@@ -80,14 +80,14 @@ def main(urd):
 	assert fin == {'new': False, 'changed': False, 'is_ghost': False}, fin
 	urd.begin("tests.urd", 1) # will be overridden to 2 in finish
 	jl = urd.latest("tests.urd").joblist
-	assert jl == [job], '%r != [%r]' % (jl, job,)
+	assert jl == [job], f'{jl!r} != [{job!r}]'
 	urd.build("test_build_kws", options=dict(foo='bar', a='A'))
 	urd.finish("tests.urd", 2, caption="second")
 	u = urd.peek_latest("tests.urd")
 	assert u.caption == "second"
 	dep0 = list(u.deps.values())[0]
 	assert dep0.caption == "first", dep0.caption
-	assert dep0.joblist == jl, '%r != %r' % (dep0.joblist, jl,)
+	assert dep0.joblist == jl, f'{dep0.joblist!r} != {jl!r}'
 	assert urd.since("tests.urd", 0) == ['1', '2']
 	urd.truncate("tests.urd", 2)
 	assert urd.since("tests.urd", 0) == ['1']
@@ -125,11 +125,11 @@ def main(urd):
 
 	for how in ("exiting", "dying",):
 		print()
-		print("Verifying that an analysis process %s kills the job" % (how,))
+		print(f"Verifying that an analysis process {how} kills the job")
 		time_before = monotonic()
 		try:
 			job = urd.build("test_analysis_died", how=how)
-			print("test_analysis_died completed successfully (%s), that shouldn't happen" % (job,))
+			print(f"test_analysis_died completed successfully ({job}), that shouldn't happen")
 			exit(1)
 		except JobError:
 			time_after = monotonic()
@@ -140,7 +140,7 @@ def main(urd):
 		elif time_to_die > 2:
 			print("test_analysis_died took %d seconds to die, so death detection is slow, but works" % (time_to_die,))
 		else:
-			print("test_analysis_died took %.1f seconds to die, so death detection works" % (time_to_die,))
+			print(f"test_analysis_died took {time_to_die:.1f} seconds to die, so death detection works")
 
 	print()
 	print("Testing dataset creation, export, import")

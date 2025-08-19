@@ -46,16 +46,16 @@ def show(url, job, verbose, show_output):
 		print(encode_setup(setup, as_str=True))
 	else:
 		starttime = datetime.fromtimestamp(setup.starttime).replace(microsecond=0)
-		hdr = '%s (%s) at %s' % (job, job.method, starttime,)
+		hdr = f'{job} ({job.method}) at {starttime}'
 		if 'exectime' in setup:
-			hdr = '%s in %s' % (hdr, fmttime(setup.exectime.total),)
+			hdr = f'{hdr} in {fmttime(setup.exectime.total)}'
 		print(colour(hdr, 'job/header'))
 		if job.is_build:
 			print(colour('  build job', 'job/highlight'))
 		if job.parent:
-			built_from = "  built from %s (%s)" % (job.parent, job.parent.method,)
+			built_from = f"  built from {job.parent} ({job.parent.method})"
 			if job.build_job and job.parent != job.build_job:
-				built_from = "%s, build job %s (%s)" % (built_from, job.build_job, job.build_job.method,)
+				built_from = f"{built_from}, build job {job.build_job} ({job.build_job.method})"
 			print(colour(built_from, 'job/highlight'))
 		things = []
 		def opt_thing(name):
@@ -71,13 +71,13 @@ def show(url, job, verbose, show_output):
 		opt_thing('datasets')
 		opt_thing('jobs')
 		for k, v in things:
-			print('    %s: %s' % (k, v,))
+			print(f'    {k}: {v}')
 	def list_of_things(name, things):
 		total = len(things)
 		if total > 5 and not verbose:
 			things = things[:3]
 		print()
-		print(colour('%s:' % (name,), 'job/header'))
+		print(colour(f'{name}:', 'job/header'))
 		for thing in things:
 			print('   ', thing)
 		if total > len(things):
@@ -127,7 +127,7 @@ def show_source(job, pattern='*'):
 		members = [info for info in all_members if fnmatch(info.path, pattern)]
 		if not members:
 			if pattern:
-				print(colour('No sources matching %r in %s.' % (pattern, job,), 'job/warning'), file=sys.stderr)
+				print(colour(f'No sources matching {pattern!r} in {job}.', 'job/warning'), file=sys.stderr)
 				fh = sys.stderr
 				res = 1
 			else:
@@ -163,7 +163,7 @@ def show_file(job, pattern):
 	if not files:
 		if pattern:
 			fh = sys.stderr
-			print(colour('No files matching %r in %s.' % (pattern, job,), 'job/warning'), file=fh)
+			print(colour(f'No files matching {pattern!r} in {job}.', 'job/warning'), file=fh)
 			res = 1
 		else:
 			fh = sys.stdout
@@ -261,6 +261,6 @@ def main(argv, cfg):
 			if isinstance(e, OSError) and e.errno == errno.EPIPE:
 				raise
 			print_exc(file=sys.stderr)
-			print("Failed to show %r" % (path,), file=sys.stderr)
+			print(f"Failed to show {path!r}", file=sys.stderr)
 			res = 1
 	return res

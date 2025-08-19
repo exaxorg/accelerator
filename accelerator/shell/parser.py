@@ -71,7 +71,7 @@ def split_tildes(n, allow_empty=False, extended=False):
 	return n, lst
 
 def method2job(cfg, method, **kw):
-	url ='%s/method2job/%s?%s' % (cfg.url, url_quote(method), urlencode(kw))
+	url =f'{cfg.url}/method2job/{url_quote(method)}?{urlencode(kw)}'
 	found = call(url)
 	if 'error' in found:
 		raise JobNotFound(found.error)
@@ -144,30 +144,30 @@ def name2job(cfg, n, _want_ds=False):
 			if n in ('jobs', 'datasets'):
 				k = n
 				if current or tildes:
-					raise JobNotFound("Don't use !~+<>^ on .%s, put after .%s.foo(HERE)." % (k, k))
+					raise JobNotFound(f"Don't use !~+<>^ on .{k}, put after .{k}.foo(HERE).")
 				try:
 					n = next(dotted)
 				except StopIteration:
-					raise JobNotFound("%s.%s.what?" % (job, k,))
+					raise JobNotFound(f"{job}.{k}.what?")
 				n, current, tildes = split(n, k)
 			elif n in p.jobs and n in p.datasets:
-				raise JobNotFound("Job %s (%s) has %s in both .jobs and .datasets, please specify." % (job, job.method, n,))
+				raise JobNotFound(f"Job {job} ({job.method}) has {n} in both .jobs and .datasets, please specify.")
 			if k:
 				if n not in p[k]:
-					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, k + '.' + n,))
+					raise JobNotFound(f"Job {job} ({job.method}) does not have a {k + '.' + n!r}.")
 			else:
 				if n in p.jobs:
 					k = 'jobs'
 				elif n in p.datasets:
 					k = 'datasets'
 				else:
-					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, n,))
+					raise JobNotFound(f"Job {job} ({job.method}) does not have a {n!r}.")
 			if not p[k][n]:
-				raise JobNotFound("%s.%s.%s is None" % (job, k, n,))
+				raise JobNotFound(f"{job}.{k}.{n} is None")
 			job = p[k][n]
 			if isinstance(job, list):
 				if len(job) != 1:
-					raise JobNotFound("Job %s (%s) has %d %s in %r." % (job, job.method, len(job), k, n,))
+					raise JobNotFound(f"Job {job} ({job.method}) has {len(job)} {k} in {n!r}.")
 				job = job[0]
 			if isinstance(job, Dataset):
 				ds = job
@@ -196,9 +196,9 @@ def _name2job_do_tildes(cfg, job, current, tildes):
 		elif char == '>':
 			job = Job._create(job.workdir, job.number + count)
 		else:
-			raise Exception("BUG: split_tildes should not give %r as a char" % (char,))
+			raise Exception(f"BUG: split_tildes should not give {char!r} as a char")
 	if not exists(job.filename('setup.json')):
-		raise JobNotFound('Job resolved to %r but that job does not exist' % (job,))
+		raise JobNotFound(f'Job resolved to {job!r} but that job does not exist')
 	return job
 
 def _name2job(cfg, n, current):
@@ -226,12 +226,12 @@ def _name2job(cfg, n, current):
 			print(e, file=sys.stderr)
 			urdres = None
 		if not urdres:
-			raise JobNotFound('urd list %r not found' % (a[0],))
+			raise JobNotFound(f'urd list {a[0]!r} not found')
 		from accelerator.build import JobList
 		joblist = JobList(Job(e[1], e[0]) for e in urdres.joblist)
 		res = joblist.get(entry)
 		if not res:
-			raise JobNotFound('%r not found in %s' % (entry, path,))
+			raise JobNotFound(f'{entry!r} not found in {path}')
 		return res
 	if re.match(r'[^/]+-\d+$', n):
 		# Looks like a jobid
@@ -241,12 +241,12 @@ def _name2job(cfg, n, current):
 		# Looks like workdir-LATEST
 		wd = m.group(1)
 		if wd not in WORKDIRS:
-			raise NoSuchWorkdirError('Not a valid workdir: "%s"' % (wd,))
+			raise NoSuchWorkdirError(f'Not a valid workdir: "{wd}"')
 		path = join(WORKDIRS[wd], n)
 		try:
 			n = readlink(path)
 		except OSError as e:
-			raise JobNotFound('Failed to read %s: %s' % (path, e,))
+			raise JobNotFound(f'Failed to read {path}: {e}')
 		return Job(n)
 	if n not in ('.', '..') and '/' not in n:
 		# Must be a method then
@@ -256,10 +256,10 @@ def _name2job(cfg, n, current):
 		path, jid = split(realpath(n))
 		job = Job(jid)
 		if WORKDIRS.get(job.workdir, path) != path:
-			print("### Overriding workdir %s to %s" % (job.workdir, path,))
+			print(f"### Overriding workdir {job.workdir} to {path}")
 		WORKDIRS[job.workdir] = path
 		return job
-	raise JobNotFound("Don't know what to do with %r." % (n,))
+	raise JobNotFound(f"Don't know what to do with {n!r}.")
 
 def split_ds_dir(n):
 	"""try to split a path at the jid/ds boundary"""
@@ -276,7 +276,7 @@ def split_ds_dir(n):
 		n, bit = n.rsplit('/', 1)
 		name_bits.append(bit)
 	if not n:
-		raise JobNotFound('No setup.json found in %r' % (orig_n,))
+		raise JobNotFound(f'No setup.json found in {orig_n!r}')
 	if not name_bits:
 		name_bits = ['default']
 	return n, '/'.join(reversed(name_bits))

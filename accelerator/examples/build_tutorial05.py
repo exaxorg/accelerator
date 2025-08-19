@@ -53,11 +53,11 @@ def main(urd):
 		urd.finish(key)
 
 	prt()
-	prt('''
-		Now, references to everything that has been built, including
-		job dependencies, is stored in the Urd server using the.
-		key "<user>/%s".
-	''' % (key,))
+	prt(f'''
+\t\tNow, references to everything that has been built, including
+\t\tjob dependencies, is stored in the Urd server using the.
+\t\tkey "<user>/{key}".
+\t''')
 
 	prt()
 	with prt.header('View all Urd lists.'):
@@ -70,10 +70,10 @@ def main(urd):
 	prt()
 	with prt.header('Inspecting all sessions in a list.'):
 		prt('All sessions are timestamped.  To see all timestamps')
-		prt('and captions in "%s" since timestamp zero, do' % (key,))
-		prt.command('ax urd %s/since/0' % (key,))
+		prt(f'and captions in "{key}" since timestamp zero, do')
+		prt.command(f'ax urd {key}/since/0')
 		prt('or equivalently')
-		prt.command('ax urd %s/' % (key,))
+		prt.command(f'ax urd {key}/')
 		prt('the output from this command looks something like this (try it)')
 		for ts in urd.since(key, 0):
 			prt.output(ts, urd.peek(key, ts).caption)
@@ -81,8 +81,8 @@ def main(urd):
 	prt()
 	with prt.header('Inspecting individual Urd items.'):
 		prt('We can look at an individual Urd-item like this')
-		prt.command('ax urd %s/3' % (key,))
-		prt('which corresponds to the list in key "%s" at timestamp 3.' % (key,))
+		prt.command(f'ax urd {key}/3')
+		prt(f'which corresponds to the list in key "{key}" at timestamp 3.')
 		prt('(Timestamps can be dates, datetimes, integers, or tuples')
 		prt('of date/datetimes and integers.)')
 

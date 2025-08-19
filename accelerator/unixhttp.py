@@ -84,7 +84,7 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 					s_version = r.headers['Accelerator-Version'] or '<unknown (old)>'
 					if s_version != ax_version:
 						# Nothing is supposed to catch this, so just print and die.
-						print('Server is running version %s but we are running version %s' % (s_version, ax_version,), file=sys.stderr)
+						print(f'Server is running version {s_version} but we are running version {ax_version}', file=sys.stderr)
 						exit(1)
 				resp = resp.decode('utf-8')
 				# It is inconsistent if we get HTTPError or not.
@@ -115,9 +115,9 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 			if attempt < retries - 1:
 				msg = None
 			else:
-				msg = 'error contacting %s: %s' % (server_name, e.reason)
+				msg = f'error contacting {server_name}: {e.reason}'
 		except ValueError as e:
-			msg = 'Bad data from %s, %s: %s' % (server_name, type(e).__name__, e,)
+			msg = f'Bad data from {server_name}, {type(e).__name__}: {e}'
 		if msg and not quiet:
 			print(msg, file=sys.stderr)
 		if attempt < retries + 1:

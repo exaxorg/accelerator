@@ -57,7 +57,7 @@ def main(argv, cfg):
 				try:
 					module = import_module(modname)
 				except Exception as e:
-					print(colour('%s: %s' % (item, e,), 'script/warning'), file=sys.stderr)
+					print(colour(f'{item}: {e}', 'script/warning'), file=sys.stderr)
 					continue
 				scripts.append((name, getattr(module, 'description', '')))
 

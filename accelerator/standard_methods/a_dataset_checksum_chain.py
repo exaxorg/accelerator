@@ -44,5 +44,5 @@ def synthesis():
 	for src in jobs:
 		data = build('dataset_checksum', columns=options.columns, sort=options.sort, source=src).load()
 		sum ^= data.sum
-	print("Total: %016x" % (sum,))
+	print(f"Total: {sum:016x}")
 	return DotDict(sum=sum, columns=data.columns, sort=options.sort, sources=jobs)

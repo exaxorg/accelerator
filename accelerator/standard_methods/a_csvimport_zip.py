@@ -120,7 +120,7 @@ def prepare(job):
 				used_names.add(name)
 				res.append((next(tmpfn), info, name, fn,))
 	if namemap:
-		raise Exception("The following files were not found in %s: %r" % (options.filename, set(namemap),))
+		raise Exception(f"The following files were not found in {options.filename}: {set(namemap)!r}")
 	if options.chaining == 'by_filename':
 		res.sort(key=lambda x: x[3])
 	if options.chaining == 'by_dsname':
@@ -169,7 +169,7 @@ def synthesis(prepare_res):
 		for fn, info, dsn in lst:
 			update(msg.step('importing'))
 			opts.filename = fn
-			show_fn = '%s:%s' % (options.filename, info.filename,)
+			show_fn = f'{options.filename}:{info.filename}'
 			ds = build('csvimport', options=opts, previous=previous, caption='Import of ' + show_fn).dataset()
 			previous = ds.link_to_here(dsn, filename=show_fn)
 			if options.chaining == 'off':

@@ -83,9 +83,9 @@ class Methods(object):
 			v = runner.get_ax_version()
 			if v != ax_version:
 				if runner.python == sys.executable:
-					raise AcceleratorError("Server is using accelerator %s but %s is currently installed, please restart server." % (ax_version, v,))
+					raise AcceleratorError(f"Server is using accelerator {ax_version} but {v} is currently installed, please restart server.")
 				else:
-					print("WARNING: Server is using accelerator %s but runner %r is using accelerator %s." % (ax_version, version, v,))
+					print(f"WARNING: Server is using accelerator {ax_version} but runner {version!r} is using accelerator {v}.")
 			w, f, h, p, d = runner.load_methods(package_list, data)
 			warnings.extend(w)
 			failed.extend(f)
@@ -123,9 +123,9 @@ class Methods(object):
 			if not hasattr(package_mod, "__file__"):
 				raise ImportError("no __file__")
 		except ImportError:
-			raise AcceleratorError("Failed to import %s, maybe missing __init__.py?" % (package,))
+			raise AcceleratorError(f"Failed to import {package}, maybe missing __init__.py?")
 		if not package_mod.__file__:
-			raise AcceleratorError("%s has no __file__, maybe missing __init__.py?" % (package,))
+			raise AcceleratorError(f"{package} has no __file__, maybe missing __init__.py?")
 		return os.path.dirname(package_mod.__file__)
 
 
@@ -136,7 +136,7 @@ class Methods(object):
 				filled_in = dict(self.params[optmethod].defaults[group])
 				filled_in.update(d)
 				for optname, optval in iteritems(filled_in):
-					optset.add('%s %s-%s %s' % (optmethod, group, optname, _reprify(optval),))
+					optset.add(f'{optmethod} {group}-{optname} {_reprify(optval)}')
 		return optset
 
 def _reprify(o):
@@ -145,15 +145,15 @@ def _reprify(o):
 	if isinstance(o, (bytes, str, int, float, bool, NoneType)):
 		return repr(o)
 	if isinstance(o, set):
-		return '[%s]' % (', '.join(map(_reprify, _sorted_set(o))),)
+		return f"[{', '.join(map(_reprify, _sorted_set(o)))}]"
 	if isinstance(o, (list, tuple)):
-		return '[%s]' % (', '.join(map(_reprify, o)),)
+		return f"[{', '.join(map(_reprify, o))}]"
 	if isinstance(o, dict):
 		assert isinstance(o, OrderedDict)
 		return '{%s}' % (', '.join('%s: %s' % (_reprify(k), _reprify(v),) for k, v in iteritems(o)),)
 	if isinstance(o, (datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.Path, pathlib.PurePath)):
 		return str(o)
-	raise AcceleratorError('Unhandled %s in dependency resolution' % (type(o),))
+	raise AcceleratorError(f'Unhandled {type(o)} in dependency resolution')
 
 
 
@@ -241,13 +241,13 @@ def options2typing(method, options):
 		if typ:
 			return fmt % (typ,)
 	def collect(key, value, path=''):
-		path = "%s/%s" % (path, key,)
+		path = f"{path}/{key}"
 		if isinstance(value, dict):
 			for v in itervalues(value):
 				collect('*', v, path)
 			return
 		spec = value2spec(value)
-		assert res.get(path, spec) == spec, 'Method %s has incompatible types in options%s' % (method, path,)
+		assert res.get(path, spec) == spec, f'Method {method} has incompatible types in options{path}'
 		res[path] = spec
 	for k, v in iteritems(options):
 		collect(k, v)

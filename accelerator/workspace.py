@@ -45,7 +45,7 @@ class WorkSpace:
 		""" verify or write metadata file in workdir """
 		filename = os.path.join(self.path, ".slices")
 		if not os.path.isdir(self.path):
-			print('\nERROR:  Directory \"%s\" does not exist!' % (self.path,))
+			print(f'\nERROR:  Directory "{self.path}" does not exist!')
 			return False
 		if not os.path.exists(filename):
 			print('\nCreate ' + filename)
@@ -58,7 +58,7 @@ class WorkSpace:
 		with open(filename) as F:
 			file_slices = int(F.read())
 		if file_slices != self.slices:
-			print('\nERROR:  Number of slices in workdir \"%s\" differs from config file!' % (self.name,))
+			print(f'\nERROR:  Number of slices in workdir "{self.name}" differs from config file!')
 			return False
 		return True
 
@@ -100,7 +100,7 @@ class WorkSpace:
 		jobidv = [Job._create(self.name, highest + 1 + x) for x in range(num_jobs)]
 		for jobid in jobidv:
 			fullpath = os.path.join(self.path, jobid)
-			print("WORKDIR:  Allocate_job \"%s\"" % fullpath)
+			print(f"WORKDIR:  Allocate_job \"{fullpath}\"")
 			self.known_jobids.add(jobid)
 			os.mkdir(fullpath)
 		return jobidv

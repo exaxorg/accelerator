@@ -49,11 +49,11 @@ def synthesis(job, slices):
 			try:
 				write(value)
 			except Exception as e:
-				raise Exception('Failed to write %r to %s column: %r' % (value, typ, e))
+				raise Exception(f'Failed to write {value!r} to {typ} column: {e!r}')
 		for value in ['foo', '1 two'] + bad_values:
 			try:
 				write(value)
-				raise Exception('writer for parsed:%s allowed %r' % (typ, value,))
+				raise Exception(f'writer for parsed:{typ} allowed {value!r}')
 			except (ValueError, OverflowError):
 				pass
 		ds = dw.finish()

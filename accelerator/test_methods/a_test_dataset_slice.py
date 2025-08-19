@@ -68,7 +68,7 @@ def synthesis(job, slices):
 	def assert_fails(sliceno, slice, func=get, columns='a'):
 		try:
 			func(sliceno, slice, columns)
-			raise Exception("Iterating with slice %r should have failed" % (slice,))
+			raise Exception(f"Iterating with slice {slice!r} should have failed")
 		except DatasetError:
 			pass
 	assert_fails(None, -101)

@@ -68,7 +68,7 @@ def synthesis(job, slices):
 		with gzip.open('tmp', 'rb') as fh:
 			got_bytes = fh.read()
 		os.remove('tmp')
-		assert got_bytes in want, 'bad NaN representation in %s: got %r, wanted something in %r' % (typ, got_bytes, want,)
+		assert got_bytes in want, f'bad NaN representation in {typ}: got {got_bytes!r}, wanted something in {want!r}'
 
 	# Test that they either encode as themselves or as one of the normal NaNs,
 	# and all hash the same as the standard float64 NaN.
@@ -108,14 +108,14 @@ def synthesis(job, slices):
 			w_u(str(ix), v)
 			w_h(str(ix), v)
 		ds_h = dw_h.finish()
-		assert set(ds_h.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s' % (ds_h.quoted,)
+		assert set(ds_h.lines) == {0, len(values)}, f'Not all NaNs ended up in the same slice in {ds_h.quoted}'
 		expect_lines = ds_h.lines
 		ds_u = dw_u.finish()
 		ds = build('dataset_hashpart', source=ds_u, hashlabel='nan').dataset()
-		assert set(ds.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s (dataset_hashpart from %s)' % (ds.quoted, ds_u.quoted,)
-		assert expect_lines == ds.lines, 'dataset_hashpart (%s) disagrees with datasetwriter (%s) about NaN slicing' % (ds.quoted, ds_h.quoted,)
+		assert set(ds.lines) == {0, len(values)}, f'Not all NaNs ended up in the same slice in {ds.quoted} (dataset_hashpart from {ds_u.quoted})'
+		assert expect_lines == ds.lines, f'dataset_hashpart ({ds.quoted}) disagrees with datasetwriter ({ds_h.quoted}) about NaN slicing'
 		ds = build('dataset_type', source=ds_u, hashlabel='nan', column2type={'ix': 'number'}).dataset()
-		assert set(ds.lines) == {0, len(values)}, 'Not all NaNs ended up in the same slice in %s (dataset_type from %s)' % (ds.quoted, ds_u.quoted,)
-		assert expect_lines == ds.lines, 'dataset_type (%s) disagrees with datasetwriter (%s) about NaN slicing' % (ds.quoted, ds_h.quoted,)
+		assert set(ds.lines) == {0, len(values)}, f'Not all NaNs ended up in the same slice in {ds.quoted} (dataset_type from {ds_u.quoted})'
+		assert expect_lines == ds.lines, f'dataset_type ({ds.quoted}) disagrees with datasetwriter ({ds_h.quoted}) about NaN slicing'
 		rehash_lines = [len(list(ds_u.iterate(sliceno, rehash=True, hashlabel='nan'))) for sliceno in range(slices)]
-		assert expect_lines == rehash_lines, 'ds.iterate(rehash=True) of %s disagrees with datasetwriter hashing (%s) about NaN slicing' % (ds_u.quoted, ds_h.quoted,)
+		assert expect_lines == rehash_lines, f'ds.iterate(rehash=True) of {ds_u.quoted} disagrees with datasetwriter hashing ({ds_h.quoted}) about NaN slicing'

@@ -11,9 +11,9 @@ def analysis(sliceno, job):
 def synthesis(job):
 	# ...and one file in the synthesis process...
 	filename = 'myfile2'
-	data = 'this is job %s synthesis' % (job,)
+	data = f'this is job {job} synthesis'
 	job.save(data, filename)
 
 	# ...and let's return some data too.
-	returndata = 'this is job %s return value' % (job,)
+	returndata = f'this is job {job} return value'
 	return returndata

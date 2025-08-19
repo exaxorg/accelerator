@@ -119,14 +119,14 @@ def synthesis(job):
 			fh.write(contents)
 		modified_contents = get(filename)
 		if contents == modified_contents:
-			raise Exception('%s was not modified by board' % (filename,))
+			raise Exception(f'{filename} was not modified by board')
 		filename = 'modified.' + filename
 		with open(filename, 'wb') as fh:
 			fh.write(modified_contents)
 		if not any(modified_contents.startswith(v) for v in (want_head if isinstance(want_head, set) else (want_head,))):
-			raise Exception('Expected %s to start with %r, but it did not' % (filename, want_head,))
+			raise Exception(f'Expected {filename} to start with {want_head!r}, but it did not')
 		if not any(modified_contents.endswith(v) for v in (want_tail if isinstance(want_tail, set) else (want_tail,))):
-			raise Exception('Expected %s to end with %r, but it did not' % (filename, want_tail,))
+			raise Exception(f'Expected {filename} to end with {want_tail!r}, but it did not')
 		got = check_output(options.command_prefix + ['sherlock', filename])
 		got = got.decode('utf-8').strip()
 		if has_extra_block:
@@ -134,7 +134,7 @@ def synthesis(job):
 		else:
 			want_jobs = job
 		if got != want_jobs:
-			raise Exception('Expected "ax sherlock %s" to give %r, got %r' % (filename, want_jobs, got,))
+			raise Exception(f'Expected "ax sherlock {filename}" to give {want_jobs!r}, got {got!r}')
 
 	p.terminate()
 	p.wait()

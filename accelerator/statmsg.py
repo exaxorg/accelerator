@@ -128,14 +128,14 @@ def _start(msg, parent_pid, is_analysis=False):
 		analysis_cookie = ''
 	_send('start', '%d\0%s\0%s\0%f' % (parent_pid, analysis_cookie, msg, monotonic(),))
 	def update(msg):
-		_send('update', '%s\0\0%s' % (msg, analysis_cookie,))
+		_send('update', f'{msg}\x00\x00{analysis_cookie}')
 	return update
 
 def _end(pid=None):
 	_send('end', '', pid=pid)
 
 def _output(pid, msg):
-	_send('output', '%f\0%s' % (monotonic(), msg,), pid=pid)
+	_send('output', f'{monotonic():f}\x00{msg}', pid=pid)
 
 def _clear_output(pid):
 	_send('output', '', pid=pid)
@@ -162,7 +162,7 @@ def status_stacks_export():
 			current = last[0].summary
 			if len(last[0].stack) > 1 and not current[1].endswith('analysis'):
 				msg, t, _ = last[0].stack[1]
-				current = (current[0], '%s %s' % (current[1], msg,), t,)
+				current = (current[0], f'{current[1]} {msg}', t,)
 	except Exception:
 		print_exc(file=sys.stderr)
 		res.append((0, 0, 'ERROR', monotonic()))
@@ -255,9 +255,9 @@ def statmsg_sink(sock):
 						del d
 					status_tree.pop(pid, None)
 				else:
-					print('UNKNOWN MESSAGE: %r' % (data,))
+					print(f'UNKNOWN MESSAGE: {data!r}')
 		except Exception:
-			print('Failed to process %r:' % (data,), file=sys.stderr)
+			print(f'Failed to process {data!r}:', file=sys.stderr)
 			print_exc(file=sys.stderr)
 
 

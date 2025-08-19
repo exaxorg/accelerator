@@ -26,7 +26,7 @@ from accelerator import subjobs
 
 def assert_slice(ds, sliceno, want):
 	got = list(ds.iterate(sliceno))
-	assert got == want, "slice %s in %s (from %s, trigger %s) gave\n\t%r,\nwanted\n\t%r" % (sliceno, ds, ds.job.params.datasets.source, ds.job.params.options.trigger_column, got, want,)
+	assert got == want, f"slice {sliceno} in {ds} (from {ds.job.params.datasets.source}, trigger {ds.job.params.options.trigger_column}) gave\n\t{got!r},\nwanted\n\t{want!r}"
 
 def synthesis(job, slices):
 	unrr_values = [

@@ -15,7 +15,7 @@ def main(urd):
 	thehash = job.params.hash
 	prt()
 	prt('Take the hash from the built job:')
-	prt.output('"%s"' % (thehash,))
+	prt.output(f'"{thehash}"')
 	prt('and add it to the method like this')
 	prt.output('"equivalent_hashes = {\'whatever\': (\'%s\',)}"' % (thehash,))
 
@@ -32,4 +32,4 @@ def main(urd):
 	prt('to the old one.')
 	prt()
 	prt('Method source file is here')
-	prt.plain(join(dirname(__file__), 'a_%s.py' % (job.method,)))
+	prt.plain(join(dirname(__file__), f'a_{job.method}.py'))

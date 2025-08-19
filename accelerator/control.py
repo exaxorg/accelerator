@@ -153,7 +153,7 @@ class Main:
 				t_l.append(t)
 			for t in t_l:
 				t.join()
-			assert not failed, "%s failed to update" % (', '.join(failed),)
+			assert not failed, f"{', '.join(failed)} failed to update"
 		finally:
 			pool.close()
 		self.DataBase._update_finish(self.Methods.hash)
@@ -163,7 +163,7 @@ class Main:
 		""" Update database, check deps, create jobids. """
 		ws = workdir or self.target_workdir
 		if ws not in self.workspaces:
-			raise BuildError("Workdir %s does not exist" % (ws,))
+			raise BuildError(f"Workdir {ws} does not exist")
 		return dependency.initialise_jobs(
 			setup,
 			self.workspaces[ws],

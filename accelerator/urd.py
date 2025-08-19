@@ -79,11 +79,11 @@ class TimeStamp(str):
 			ts = None
 		except ValueError:
 			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)(\+\d+)?$', ts)
-			assert m, 'Invalid timestamp %s' % (ts,)
+			assert m, f'Invalid timestamp {ts}'
 			ts, integer = m.groups()
 			ts = ts.replace(' ', 'T')
 			integer = int(integer[1:], 10) if integer else None
-		assert ts is not None or integer is not None, 'Invalid timestamp %s' % (ts,)
+		assert ts is not None or integer is not None, f'Invalid timestamp {ts}'
 		if ts:
 			if integer is not None:
 				strval = '%s+%d' % (ts, integer,)
@@ -196,7 +196,7 @@ class DB:
 					print("%-30s  %7d    %7d    %7d" % (key, val, len(self.ghost_db[key]), len(self.db[key]),))
 				print()
 		else:
-			print("Creating directory \"%s\"." % (path,))
+			print(f"Creating directory \"{path}\".")
 			os.makedirs(path)
 		self._lasttime = None
 		self._initialised = True
@@ -272,7 +272,7 @@ class DB:
 			json_joblist = json.dumps(data.joblist)
 			json_caption = json.dumps(data.caption)
 			json_build_job = json.dumps(data.build_job)
-			key = '%s/%s' % (data.user, data.build,)
+			key = f'{data.user}/{data.build}'
 			flags = ','.join(data.flags)
 			for s in key, json_deps, json_joblist, json_caption, data.user, data.build, data.timestamp, flags:
 				assert '\t' not in s, s
@@ -304,9 +304,9 @@ class DB:
 
 	@locked
 	def add(self, data):
-		key = '%s/%s' % (data.user, data.build)
+		key = f'{data.user}/{data.build}'
 		flags = data.pop('flags', [])
-		assert flags in ([], ['update']), 'Unknown flags: %r' % (flags,)
+		assert flags in ([], ['update']), f'Unknown flags: {flags!r}'
 		new = False
 		changed = False
 		ghosted = 0
@@ -328,7 +328,7 @@ class DB:
 			else:
 				new = True
 		if changed and 'update' not in flags:
-			assert self._initialised, 'Log updates without update flag: %r' % (data,)
+			assert self._initialised, f'Log updates without update flag: {data!r}'
 			bottle.response.status = 409
 			return {'error': 'would update'}
 		if new or changed:
@@ -417,7 +417,7 @@ class DB:
 							extra = "  Also failed to remove partially written data."
 							stars = colour.red('****')
 							extra2 = "  " + stars + " YOUR URD DB IS PROBABLY BROKEN NOW! " + stars
-						msg = "  Failed to write %s: %s" % (fn, e)
+						msg = f"  Failed to write {fn}: {e}"
 						brk = "#" * (max(len(msg), len(extra)) + 2)
 						print("", file=sys.stderr)
 						print(brk, file=sys.stderr)
@@ -621,7 +621,7 @@ def main(argv, cfg):
 	authdict = readauth(auth_fn)
 	allow_passwordless = args.allow_passwordless
 	if not authdict and not args.allow_passwordless:
-		raise Exception('No users in %r and --allow-passwordless not specified.' % (auth_fn,))
+		raise Exception(f'No users in {auth_fn!r} and --allow-passwordless not specified.')
 	db = DB(args.path, not args.quiet)
 
 	bottle.install(jsonify)

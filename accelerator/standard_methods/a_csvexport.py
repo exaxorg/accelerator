@@ -95,7 +95,7 @@ def csvexport(sliceno, filename, labelsonfirstline):
 	if options.none_as:
 		if isinstance(options.none_as, dict):
 			bad_none = set(options.none_as) - set(options.labels)
-			assert not bad_none, 'Unknown labels in none_as: %r' % (bad_none,)
+			assert not bad_none, f'Unknown labels in none_as: {bad_none!r}'
 		else:
 			assert isinstance(options.none_as, str), "What did you pass as none_as?"
 	def resolve_none(label, col):

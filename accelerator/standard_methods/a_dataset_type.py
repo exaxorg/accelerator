@@ -131,7 +131,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	for k, v in options.rename.items():
 		if k in source.columns:
 			if v in rev_rename:
-				raise Exception('Both column %r and column %r rename to %r (in %s)' % (rev_rename[v], k, v, source_name))
+				raise Exception(f'Both column {rev_rename[v]!r} and column {k!r} rename to {v!r} (in {source_name})')
 			if v is not None:
 				rev_rename[v] = k
 			if v in column2type:
@@ -153,10 +153,10 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 	none_support = set()
 	for colname, coltype in column2type.items():
 		if colname not in source.columns:
-			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source_name, colname, set(source.columns),))
+			raise Exception(f"Dataset {source_name} doesn't have a column named {colname!r} (has {set(source.columns)!r})")
 		dc = source.columns[colname]
 		if dc.type not in byteslike_types:
-			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, colname, dc.type, byteslike_types,))
+			raise Exception(f"Dataset {source_name} column {colname!r} is type {dc.type}, must be one of {byteslike_types!r}")
 		coltype = coltype.split(':', 1)[0]
 		if coltype.endswith('+None'):
 			coltype = coltype[:-5]
@@ -187,7 +187,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		parent = source
 	if hashlabel and hashlabel not in columns:
 		if options.hashlabel:
-			raise Exception("Can't rehash %s on discarded column %r." % (source_name, hashlabel,))
+			raise Exception(f"Can't rehash {source_name} on discarded column {hashlabel!r}.")
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
 	columns = {
@@ -227,7 +227,7 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		dw = job.datasetwriter(
 			name=ds_name,
 			columns=columns,
-			caption='%s (from %s)' % (options.caption, source_name,),
+			caption=f'{options.caption} (from {source_name})',
 			hashlabel=hashlabel,
 			hashlabel_override=hashlabel_override,
 			filename=filename,
@@ -464,9 +464,9 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	offsets = []
 	max_counts = []
 	d = vars.source
-	assert colname in d.columns, '%s not in %s' % (colname, d.quoted,)
+	assert colname in d.columns, f'{colname} not in {d.quoted}'
 	if not is_null_converter:
-		assert d.columns[colname].type in byteslike_types, '%s has bad type in %s' % (colname, d.quoted,)
+		assert d.columns[colname].type in byteslike_types, f'{colname} has bad type in {d.quoted}'
 	in_fns.append(d.column_filename(colname, vars.sliceno))
 	in_msgnames.append('%s column %s slice %d' % (d.quoted, quote(colname), vars.sliceno,))
 	if d.columns[colname].offsets:
@@ -520,7 +520,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 	else:
 		# python func
 		if for_hasher:
-			raise Exception("Can't hash %s on column of type %s." % (vars.source_name, coltype,))
+			raise Exception(f"Can't hash {vars.source_name} on column of type {coltype}.")
 		nodefault = object()
 		if colname in options.defaults:
 			default_value = options.defaults[colname]
@@ -576,7 +576,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 					badmap[ix // 8] = bv | (1 << (ix % 8))
 					continue
 				else:
-					raise Exception("Invalid value %r with no default in %r in %s" % (v, colname, vars.source_name,))
+					raise Exception(f"Invalid value {v!r} with no default in {colname!r} in {vars.source_name}")
 			if do_minmax and v is not None:
 				if col_min is None:
 					col_min = col_max = v
@@ -611,8 +611,8 @@ def synthesis_one(slices, prepare_res, analysis_res):
 				ds_name = dw.quoted_ds_name
 			else:
 				ds_name = quote(dws[0].ds_name[:-1] + '<sliceno>')
-			header = '%s -> %s' % (source_name, ds_name)
-			builtins.print('%s\n%s' % (header, '=' * len(header)))
+			header = f'{source_name} -> {ds_name}'
+			builtins.print(f"{header}\n{'=' * len(header)}")
 			header_printed[0] = True
 		builtins.print(msg)
 	lines = source.lines
@@ -636,7 +636,7 @@ def synthesis_one(slices, prepare_res, analysis_res):
 		for colname in sorted(options.defaults):
 			defaulted = [data[2].get(colname, 0) for data in analysis_res]
 			if sum(defaulted):
-				print('    %s:' % (colname,))
+				print(f'    {colname}:')
 				print('        Slice   Defaulted line count')
 				slicecnt = 0
 				for sliceno, cnt in enumerate(defaulted):

@@ -98,7 +98,7 @@ def synthesis(job, slices):
 		for v in values:
 			value = v[0]
 			write(value)
-			csv_fh.write('%s\n' % (value,))
+			csv_fh.write(f'{value}\n')
 			if len(v) == 1:
 				want_bytes = encode_as_big_number(v[0])
 			else:
@@ -108,7 +108,7 @@ def synthesis(job, slices):
 				w.write(value)
 			with gzip.open('tmp', 'rb') as fh:
 				got_bytes = fh.read()
-			assert want_bytes == got_bytes, "%r gave %r, wanted %r" % (value, got_bytes, want_bytes,)
+			assert want_bytes == got_bytes, f"{value!r} gave {got_bytes!r}, wanted {want_bytes!r}"
 
 	# Make sure we get the same representation through a dataset.
 	# Assumes that the column is merged (a single file for all slices).
@@ -127,7 +127,7 @@ def synthesis(job, slices):
 	ds_typed = jid.dataset()
 	with gzip.open(ds_typed.column_filename('num'), 'rb') as fh:
 		got_bytes = fh.read()
-	assert want_bytes == got_bytes, "csvimport + dataset_type (%s) gave different bytes" % (jid,)
+	assert want_bytes == got_bytes, f"csvimport + dataset_type ({jid}) gave different bytes"
 
 	# Also test the hashing is as expected, both in DatasetWriter, dataset_type and dataset_hashpart.
 	def hash_num(num):

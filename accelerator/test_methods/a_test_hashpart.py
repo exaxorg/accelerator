@@ -85,7 +85,7 @@ def verify(slices, data, source, previous=None, **options):
 			row = dict(zip(names, row))
 			assert h(row[hl]) % slices == slice, "row %r is incorrectly in slice %d in %s" % (row, slice, ds)
 			want = good[row[hl]]
-			assert row == want, '%s (rehashed from %s) did not contain the right data for "%s".\nWanted\n%r\ngot\n%r' % (ds, source, hl, want, row)
+			assert row == want, f'{ds} (rehashed from {source}) did not contain the right data for "{hl}".\nWanted\n{want!r}\ngot\n{row!r}'
 	want_lines = len(data)
 	got_lines = ds.chain().lines()
 	assert got_lines == want_lines, '%s (rehashed from %s) had %d lines, should have had %d' % (ds, source, got_lines, want_lines,)
@@ -99,8 +99,8 @@ def verify_empty(source, previous=None, **options):
 	)
 	ds = Dataset(jid)
 	chain = ds.chain_within_job()
-	assert list(chain.iterate(None)) == [], "source=%s previous=%s did not produce empty dataset in %s" % (source, previous, ds,)
-	assert chain[0].previous == previous, "Empty %s should have had previous=%s, but had %s" % (ds, previous, chain[0].previous,)
+	assert list(chain.iterate(None)) == [], f"source={source} previous={previous} did not produce empty dataset in {ds}"
+	assert chain[0].previous == previous, f"Empty {ds} should have had previous={previous}, but had {chain[0].previous}"
 
 def synthesis(params):
 	ds = write(data)
@@ -117,7 +117,7 @@ def synthesis(params):
 	# normal chaining
 	a = verify(params.slices, data, ds, hashlabel="date")
 	b = verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", previous=a)
-	assert b.chain() == [a, b], "chain of %s is not [%s, %s] as expected" % (b, a, b)
+	assert b.chain() == [a, b], f"chain of {b} is not [{a}, {b}] as expected"
 	# chain_slices sparseness
 	empty = write([], name="empty")
 	verify_empty(empty, hashlabel="date")

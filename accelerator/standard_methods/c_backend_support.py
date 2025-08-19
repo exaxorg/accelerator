@@ -111,7 +111,7 @@ def make_source(name, functions, protos, extra_functions, extra_method_defs, wra
 	method_defs.extend(extra_method_defs)
 	code.append(_init_code_template % dict(methods=',\n\t'.join(method_defs), name=name,))
 	hash = hashlib.sha1(b''.join(c.encode('ascii') for c in code)).hexdigest()
-	code.insert(-1, 'static char source_hash[] = "%s";\n' % (hash,))
+	code.insert(-1, f'static char source_hash[] = "{hash}";\n')
 	code = ''.join(code)
 	return code, hash
 
@@ -127,7 +127,7 @@ def init(name, hash, protos, extra_protos, functions):
 				s = s.encode('utf-8')
 			return s
 	else:
-		print('[%s] Backend modified since module was compiled, falling back to cffi for development.' % (name,), file=sys.stderr)
+		print(f'[{name}] Backend modified since module was compiled, falling back to cffi for development.', file=sys.stderr)
 		import cffi
 		ffi = cffi.FFI()
 

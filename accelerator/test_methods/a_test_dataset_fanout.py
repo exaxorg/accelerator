@@ -37,19 +37,19 @@ def synthesis(job):
 	def chk(job, colnames, types, ds2lines, previous={}, hashlabel=None):
 		have_ds = set(ds.name for ds in job.datasets)
 		want_ds = set(ds2lines)
-		assert have_ds == want_ds, 'Job %r should have had datasets %r but had %r' % (job, want_ds, have_ds,)
+		assert have_ds == want_ds, f'Job {job!r} should have had datasets {want_ds!r} but had {have_ds!r}'
 		colnames = sorted(colnames)
 		for ds, lines in ds2lines.items():
 			ds = job.dataset(ds)
-			assert ds.hashlabel == hashlabel, 'Dataset %s should have had hashlabel %s but had %s' % (ds.quoted, hashlabel, ds.hashlabel,)
-			assert ds.previous == previous.get(ds.name), 'Dataset %s should have had previous %s but had %s' % (ds.quoted, previous.get(ds.name), ds.previous,)
+			assert ds.hashlabel == hashlabel, f'Dataset {ds.quoted} should have had hashlabel {hashlabel} but had {ds.hashlabel}'
+			assert ds.previous == previous.get(ds.name), f'Dataset {ds.quoted} should have had previous {previous.get(ds.name)} but had {ds.previous}'
 			ds_colnames = sorted(ds.columns)
-			assert ds_colnames == colnames, 'Dataset %s should have had columns %r but had %r' % (ds.quoted, colnames, ds_colnames,)
+			assert ds_colnames == colnames, f'Dataset {ds.quoted} should have had columns {colnames!r} but had {ds_colnames!r}'
 			ds_types = tuple(col.type for _, col in sorted(ds.columns.items()))
-			assert ds_types == types, 'Dataset %s should have had columns with types %r but had %r' % (ds.quoted, types, ds_types,)
+			assert ds_types == types, f'Dataset {ds.quoted} should have had columns with types {types!r} but had {ds_types!r}'
 			have_lines = sorted(ds.iterate(None))
 			want_lines = sorted(lines)
-			assert have_lines == want_lines, 'Dataset %s should have contained %r but contained %r' % (ds.quoted, want_lines, have_lines,)
+			assert have_lines == want_lines, f'Dataset {ds.quoted} should have contained {want_lines!r} but contained {have_lines!r}'
 
 	# just a simple splitting
 	a = mk('a', ('unicode', 'ascii', 'int64'), [('a', 'a', 1), ('b', 'b', 2), ('a', 'c', 3)], hashlabel='A')

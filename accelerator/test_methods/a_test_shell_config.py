@@ -58,10 +58,10 @@ def synthesis(job):
 		try:
 			got = ax_cmd('job', job).split('\n')[-1]
 		except CalledProcessError as e:
-			raise Exception("%r could not run: %s" % (cfgstr, e,))
-		want = '%sWARNING: Job did not finish%s' % (pre, post,)
+			raise Exception(f"{cfgstr!r} could not run: {e}")
+		want = f'{pre}WARNING: Job did not finish{post}'
 		if got != want:
-			raise Exception("%r:\nWanted %r\ngot    %r" % (cfgstr, want, got,))
+			raise Exception(f"{cfgstr!r}:\nWanted {want!r}\ngot    {got!r}")
 
 	# test the colour config
 	chk('\twarning = CYAN', '\x1b[36m', '\x1b[39m')

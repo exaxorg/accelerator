@@ -65,12 +65,12 @@ _type2iter = {
 
 def typed_writer(typename):
 	if typename not in _convfuncs:
-		raise ValueError("Unknown writer for type %s" % (typename,))
+		raise ValueError(f"Unknown writer for type {typename}")
 	return _convfuncs[typename]
 
 def typed_reader(typename):
 	if typename not in _type2iter:
-		raise ValueError("Unknown reader for type %s" % (typename,))
+		raise ValueError(f"Unknown reader for type {typename}")
 	return _type2iter[typename]
 
 _nodefault = object()

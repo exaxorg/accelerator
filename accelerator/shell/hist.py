@@ -164,7 +164,7 @@ def main(argv, cfg):
 	for ds in chain:
 		for col in args.column:
 			if col not in ds.columns:
-				print("Dataset %s does not have column %s." % (ds.quoted, col,), file=sys.stderr)
+				print(f"Dataset {ds.quoted} does not have column {col}.", file=sys.stderr)
 				ok = False
 	if not ok:
 		return 1
@@ -264,12 +264,12 @@ def main(argv, cfg):
 					if a == b:
 						return fmt_num(a)
 					else:
-						return '%s - %s' % (fmt_num(a), fmt_num(b))
+						return f'{fmt_num(a)} - {fmt_num(b)}'
 			else:
 				def name(ix):
 					a = step * ix + low
 					b = step * (ix + 1) + low
-					return '%s - %s' % (fmt_num(a), fmt_num(b))
+					return f'{fmt_num(a)} - {fmt_num(b)}'
 			bin_names = [name(ix) for ix in range(args.max_count)]
 
 	def collect_hist(hist, part):

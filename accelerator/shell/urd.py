@@ -87,7 +87,7 @@ def main(argv, cfg):
 		if path.startswith(':'):
 			a = path[1:].split(':', 1)
 			if len(a) == 1:
-				print('%r should have two or no :' % (path,), file=sys.stderr)
+				print(f'{path!r} should have two or no :', file=sys.stderr)
 				return None, None
 			path = a[0]
 			try:
@@ -99,10 +99,10 @@ def main(argv, cfg):
 			entry = tildes = None
 		path = resolve_path_part(path)
 		if len(path) != 3 and tildes:
-			print("path %r isn't walkable (~^)" % ('/'.join(path),), file=sys.stderr)
+			print(f"path {'/'.join(path)!r} isn't walkable (~^)", file=sys.stderr)
 			return None, None
 		if len(path) != 3 and entry is not None:
-			print("path %r doesn't take an entry (%r)" % ('/'.join(path), entry,), file=sys.stderr)
+			print(f"path {'/'.join(path)!r} doesn't take an entry ({entry!r})", file=sys.stderr)
 			return None, None
 		try:
 			res = urd_call_w_tildes(cfg, '/'.join(path), tildes)
@@ -139,7 +139,7 @@ def fmt(res, entry):
 		return joblist.get(entry, '')
 	if res['deps']:
 		deps = sorted(
-			('%s/%s' % (k, v['timestamp'],), v['caption'],)
+			(f"{k}/{v['timestamp']}", v['caption'],)
 			for k, v in res['deps'].items()
 		)
 		if len(deps) > 1:

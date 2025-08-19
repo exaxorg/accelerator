@@ -76,7 +76,7 @@ def number_or_None(obj):
 def number_or_error(obj):
 	number = number_or_None(obj)
 	if number is None:
-		raise re.error('%r is not a valid not a number' % (obj,))
+		raise re.error(f'{obj!r} is not a valid not a number')
 	return number
 
 def splitprefix(s, prefixes):
@@ -177,12 +177,12 @@ def main(argv, cfg):
 				else:
 					name = next(unnamed)
 				if name not in names:
-					raise ArgumentError(self, 'unknown field %r' % (name,))
+					raise ArgumentError(self, f'unknown field {name!r}')
 				name = names[name]
 				try:
 					value = int(value)
 				except ValueError:
-					raise ArgumentError(self, 'invalid int value for %s: %r' % (name, value,))
+					raise ArgumentError(self, f'invalid int value for {name}: {value!r}')
 				if value < min_value[name] or value > 9999:
 					raise ArgumentError(self, 'invalid value for %s: %d' % (name, value,))
 				tab_length[name] = value
@@ -314,7 +314,7 @@ def main(argv, cfg):
 			else:
 				patterns.append(re.compile(pattern, re_flags))
 		except re.error as e:
-			print("Bad pattern %r:\n%s" % (pattern, e,), file=sys.stderr)
+			print(f"Bad pattern {pattern!r}:\n{e}", file=sys.stderr)
 			return 1
 
 	grep_columns = set(args.grep or ())
@@ -385,7 +385,7 @@ def main(argv, cfg):
 			for ds in datasets:
 				missing = need_cols - set(ds.columns)
 				if missing:
-					print('ERROR: %s does not have columns %r' % (ds, missing,), file=sys.stderr)
+					print(f'ERROR: {ds} does not have columns {missing!r}', file=sys.stderr)
 					bad = True
 			if bad:
 				return 1
@@ -587,27 +587,27 @@ def main(argv, cfg):
 					if ds_ix == len(datasets):
 						msg = 'DONE'
 					else:
-						msg = '{0:d}% of {1:n} lines'.format(round(p * 100), total_lines_per_slice_at_ds[-1][sliceno])
+						msg = f'{round(p * 100):d}% of {total_lines_per_slice_at_ds[-1][sliceno]:n} lines'
 						if show_ds:
-							msg = '%s (in %s)' % (msg, datasets[ds_ix].quoted,)
+							msg = f'{msg} (in {datasets[ds_ix].quoted})'
 					msg = '%9d: %s' % (sliceno, msg,)
 					if p < bad_cutoff:
 						msg = colour(msg, 'grep/infohighlight')
 					else:
 						msg = colour(msg, 'grep/info')
 					write(2, msg.encode('utf-8') + b'\n')
-			msg = '{0:d}% of {1:n} lines'.format(round(progress_total * 100), total_lines)
+			msg = f'{round(progress_total * 100):d}% of {total_lines:n} lines'
 			if len(datasets) > 1:
 				min_ds = min(ds_ixes)
 				max_ds = max(ds_ixes)
 				if min_ds < len(datasets):
 					ds_name = datasets[min_ds].quoted
 					extra = '' if min_ds == max_ds else ' ++'
-					msg = '%s (in %s%s)' % (msg, ds_name, extra,)
+					msg = f'{msg} (in {ds_name}{extra})'
 			worst = min(progress_fraction)
 			if worst < bad_cutoff:
 				msg = '%s, worst %d%%' % (msg, round(worst * 100),)
-			msg = colour('  SUMMARY: %s' % (msg,), 'grep/info')
+			msg = colour(f'  SUMMARY: {msg}', 'grep/info')
 			write(2, msg.encode('utf-8') + b'\n')
 		for signame in ('SIGINFO', 'SIGUSR1'):
 			if hasattr(signal, signame):
@@ -1329,7 +1329,7 @@ def main(argv, cfg):
 			unique_columns = tuple(col for col in columns_for_ds(ds) if unique_filter(col))
 			if check_unique_columns_existance and len(unique_columns) != len(args.unique):
 				missing = args.unique - set(unique_columns)
-				print('ERROR: %s does not have columns %r' % (ds.quoted, missing,), file=sys.stderr)
+				print(f'ERROR: {ds.quoted} does not have columns {missing!r}', file=sys.stderr)
 				bad = True
 			if unique_columns not in unique_columns2ix:
 				unique_columns2ix[unique_columns] = unique_columns_ix

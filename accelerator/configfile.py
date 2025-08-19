@@ -83,7 +83,7 @@ def load_config(filename):
 	def parse_package(val):
 		if len(val) == 2:
 			if val[1] != 'auto-discover':
-				raise _E('Either no option or "auto-discover" for package %r.' % (val[0],))
+				raise _E(f'Either no option or "auto-discover" for package {val[0]!r}.')
 			else:
 				return (val[0], True)
 		return (val[0], False)
@@ -95,7 +95,7 @@ def load_config(filename):
 		if val[0] == 'DEFAULT':
 			raise _E("Don't override DEFAULT interpreter")
 		if not os.path.isfile(val[1]):
-			raise _E('%r does not exist' % (val,))
+			raise _E(f'{val!r} does not exist')
 	def check_workdirs(val):
 		name, path = val
 		if val in cfg['workdirs']:
@@ -107,11 +107,11 @@ def load_config(filename):
 			# in your config, and have it still work for the foo and bar users.
 			return
 		if name in (v[0] for v in cfg['workdirs']):
-			raise _E('Workdir %s redefined' % (name,))
+			raise _E(f'Workdir {name} redefined')
 		if path in (v[1] for v in cfg['workdirs']):
-			raise _E('Workdir path %r re-used' % (path,))
+			raise _E(f'Workdir path {path!r} re-used')
 		if project_directory == path or project_directory.startswith(path + '/'):
-			raise _E('project directory (%r) is under workdir %s (%r)' % (project_directory, name, path))
+			raise _E(f'project directory ({project_directory!r}) is under workdir {name} ({path!r})')
 
 	def resolve_urd(val):
 		orig_val = val
@@ -122,7 +122,7 @@ def load_config(filename):
 			else:
 				val = [val[1]]
 		if len(val) != 1:
-			raise _E("urd takes 1 or 2 values (expected %s, got %r)" % (' '.join(parsers['urd'][0]), orig_val))
+			raise _E(f"urd takes 1 or 2 values (expected {' '.join(parsers['urd'][0])}, got {orig_val!r})")
 		return is_local, resolve_listen(val[0])
 
 	parsers = {
@@ -155,7 +155,7 @@ def load_config(filename):
 					raise _E('Expected a ":"')
 				key, val = line.split(':', 1)
 				if key not in known:
-					raise _E('Unknown key %r' % (key,))
+					raise _E(f'Unknown key {key!r}')
 			else:
 				if not key:
 					raise _E('First line indented')
@@ -166,7 +166,7 @@ def load_config(filename):
 	def just_project_directory(key, val):
 		if key == 'project directory':
 			if len(val) != 1:
-				raise _E("%s takes a single value path (maybe you meant to quote it?)" % (key,))
+				raise _E(f"{key} takes a single value path (maybe you meant to quote it?)")
 			project_directory[0] = val[0]
 	def everything(key, val):
 		if key in parsers:
@@ -179,23 +179,23 @@ def load_config(filename):
 				want_count_str = str(want_count[0])
 			if len(val) not in want_count:
 				if len(args) == 1:
-					raise _E("%s takes a single value %s (maybe you meant to quote it?)" % (key, args[0]))
+					raise _E(f"{key} takes a single value {args[0]} (maybe you meant to quote it?)")
 				else:
-					raise _E("%s takes %s values (expected %s, got %r)" % (key, want_count_str, ' '.join(args), val))
+					raise _E(f"{key} takes {want_count_str} values (expected {' '.join(args)}, got {val!r})")
 			if len(args) == 1:
 				val = val[0]
 			val = p(val)
 		elif len(val) == 1:
 			val = val[0]
 		else:
-			raise _E("%s takes a single value (maybe you meant to quote it?)" % (key,))
+			raise _E(f"{key} takes a single value (maybe you meant to quote it?)")
 		if key in checkers:
 			checkers[key](val)
 		if key in multivalued:
 			cfg[key].append(val)
 		else:
 			if key in cfg:
-				raise _E("%r doesn't take multiple values" % (key,))
+				raise _E(f"{key!r} doesn't take multiple values")
 			cfg[key] = val
 
 	try:
@@ -212,7 +212,7 @@ def load_config(filename):
 			if not cfg[req]:
 				missing.add(req)
 		if missing:
-			raise _E('Missing required keys %r' % (missing,))
+			raise _E(f'Missing required keys {missing!r}')
 
 		# Reformat result a bit so the new format doesn't require code changes all over the place.
 		rename = {
@@ -237,10 +237,10 @@ def load_config(filename):
 			res.result_directory = fixpath('')
 		res.workdirs = dict(res.workdirs)
 		if res.target_workdir not in res.workdirs:
-			raise _E('target workdir %r not in defined workdirs %r' % (res.target_workdir, set(res.workdirs),))
+			raise _E(f'target workdir {res.target_workdir!r} not in defined workdirs {set(res.workdirs)!r}')
 		res.interpreters = dict(res.interpreters)
 		for exe in res.interpreters.values():
-			assert os.path.exists(exe), 'Executable %r does not exist.' % (exe,)
+			assert os.path.exists(exe), f'Executable {exe!r} does not exist.'
 		res.listen, res.url = fixup_listen(res.project_directory, res.listen)
 		if res.get('urd'):
 			res.urd_local, listen = res.urd
@@ -251,7 +251,7 @@ def load_config(filename):
 		res.method_directories = dict(res.method_directories)
 	except _E as e:
 		if lineno[0] is None:
-			prefix = 'Error in %s:\n' % (filename,)
+			prefix = f'Error in {filename}:\n'
 		else:
 			prefix = 'Error on line %d of %s:\n' % (lineno[0], filename,)
 		raise UserError(prefix + e.args[0])

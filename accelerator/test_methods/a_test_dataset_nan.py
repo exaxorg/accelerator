@@ -59,8 +59,8 @@ def synthesis(prepare_res):
 		ds = dw.finish()
 		for colname, want_min, want_max in zip(['float32', 'float64', 'number'], want_min, want_max):
 			col = ds.columns[colname]
-			assert eq(col.min, want_min), "%s.%s should have had min value %s, but had %s" % (ds, colname, want_min, col.min)
-			assert eq(col.max, want_max), "%s.%s should have had max value %s, but had %s" % (ds, colname, want_max, col.max)
+			assert eq(col.min, want_min), f"{ds}.{colname} should have had min value {want_min}, but had {col.min}"
+			assert eq(col.max, want_max), f"{ds}.{colname} should have had max value {want_max}, but had {col.max}"
 	check(a, [nan, nan, nan], [nan, nan, nan])
 	check(b, [nan, 2, nan], [nan, 2, nan])
 	check(c, [0, 1, 1], [inf, 1, 2])

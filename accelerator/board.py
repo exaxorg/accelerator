@@ -81,14 +81,14 @@ def ax_repr(o):
 	res = []
 	if isinstance(o, JobWithFile):
 		link = '/job/' + bottle.html_escape(o.job)
-		res.append('JobWithFile(<a href="%s">job=' % (link,))
+		res.append(f'JobWithFile(<a href="{link}">job=')
 		res.append(ax_repr(o.job))
 		name = bottle.html_escape(o.name)
 		if o.sliced:
 			name += '.0'
-		res.append('</a>, <a href="%s/%s">name=' % (link, name,))
+		res.append(f'</a>, <a href="{link}/{name}">name=')
 		res.append(ax_repr(o.name))
-		res.append('</a>, sliced=%s, extra=%s' % (ax_repr(o.sliced), ax_repr(o.extra),))
+		res.append(f'</a>, sliced={ax_repr(o.sliced)}, extra={ax_repr(o.extra)}')
 		res.append(')')
 	elif isinstance(o, (list, tuple)):
 		bra, ket = ('[', ']',) if isinstance(o, list) else ('(', ')',)
@@ -115,17 +115,17 @@ def ax_repr(o):
 
 def ax_link(v):
 	if isinstance(v, tuple):
-		return '(%s)' % (', '.join(ax_link(vv) for vv in v),)
+		return f'({", ".join(ax_link(vv) for vv in v)})'
 	elif isinstance(v, list):
-		return '[%s]' % (', '.join(ax_link(vv) for vv in v),)
+		return f'[{", ".join(ax_link(vv) for vv in v)}]'
 	elif v:
 		ev = bottle.html_escape(v)
 		if isinstance(v, Dataset):
 			job = bottle.html_escape(v.job)
 			name = bottle.html_escape(v.name)
-			return '<a href="/job/%s">%s</a>/<a href="/dataset/%s">%s</a>' % (url_quote(v.job), job, url_quote(v), name,)
+			return f'<a href="/job/{url_quote(v.job)}">{job}</a>/<a href="/dataset/{url_quote(v)}">{name}</a>'
 		elif isinstance(v, Job):
-			return '<a href="/job/%s">%s</a>' % (url_quote(v), ev,)
+			return f'<a href="/job/{url_quote(v)}">{ev}</a>'
 		else:
 			return ev
 	else:
@@ -261,7 +261,7 @@ def run(cfg, from_shell=False, development=False):
 	_development = development
 
 	project = os.path.split(cfg.project_directory)[1]
-	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
+	setproctitle(f'ax board-server for {project} on {cfg.board_listen}')
 
 	# The default path filter (i.e. <something:path>) does not match newlines,
 	# but we want it to do so (e.g. in case someone names a dataset with one).
@@ -362,7 +362,7 @@ def run(cfg, from_shell=False, development=False):
 			if not ranges:
 				return bottle.HTTPError(416, "Requested Range Not Satisfiable")
 			offset, end = ranges[0]
-			headers['Content-Range'] = 'bytes %d-%d/%d' % (offset, end-1, clen)
+			headers['Content-Range'] = f'bytes {offset}-{end-1}/{clen}'
 			headers['Content-Length'] = str(end-offset)
 			if body:
 				body = file_parts_iter(file_parts, clen, body, offset, end)
@@ -471,7 +471,7 @@ def run(cfg, from_shell=False, development=False):
 				job = None
 			return static_file(path, root=cfg.result_directory, job=job)
 		else:
-			return {'missing': 'result directory %r missing' % (cfg.result_directory,)}
+			return {'missing': f'result directory {cfg.result_directory!r} missing'}
 
 	@bottle.get('/status')
 	@view('status')
@@ -482,7 +482,7 @@ def run(cfg, from_shell=False, development=False):
 				return 'idle'
 			else:
 				t, msg, _ = status.current
-				return '%s (%s)' % (msg, fmttime(status.report_t - t, short=True),)
+				return f'{msg} ({fmttime(status.report_t - t, short=True)})'
 		else:
 			status.tree = list(fix_stacks(status.pop('status_stacks', ()), status.report_t))
 			return status
@@ -565,7 +565,7 @@ def run(cfg, from_shell=False, development=False):
 				try:
 					v, lr = job.load('link_result.pickle')
 					if v == 0:
-						results = '[%s]' % ', '.join(v for _, v in lr)
+						results = f'[{", ".join(v for _, v in lr)}]'
 				except FileNotFoundError:
 					pass
 		else:
@@ -663,7 +663,7 @@ def run(cfg, from_shell=False, development=False):
 	def method(name):
 		methods = call_s('methods')
 		if name not in methods:
-			return bottle.HTTPError(404, 'Method %s not found' % (name,))
+			return bottle.HTTPError(404, f'Method {name} not found')
 		return dict(name=name, data=methods[name], cfg=cfg)
 
 	@bottle.get('/urd')
@@ -697,7 +697,7 @@ def run(cfg, from_shell=False, development=False):
 				bjob = name2job(cfg, d['build_job'])
 				v, lr = bjob.load('link_result.pickle')
 				if v == 0:
-					results = '[%s]' % (', '.join(v for k, v in lr if k == key),)
+					results = f'[{", ".join(v for k, v in lr if k == key)}]'
 			except (FileNotFoundError, NoSuchJobError):
 				pass
 		return dict(key=key, entry=d, results=results)

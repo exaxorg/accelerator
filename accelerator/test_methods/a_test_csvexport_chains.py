@@ -28,7 +28,7 @@ def verify(want, **kw):
 	job = subjobs.build('csvexport', labelsonfirstline=False, **kw)
 	with job.open('result.csv') as fh:
 		got = fh.read()
-	assert want == got, 'wanted %r, got %r' % (want, got,)
+	assert want == got, f'wanted {want!r}, got {got!r}'
 	return job
 
 def synthesis(job):

@@ -40,8 +40,8 @@ def _fn(filename, jobid, sliceno):
 	if isinstance(filename, pathlib.Path):
 		filename = str(filename)
 	if filename.startswith('/'):
-		assert not jobid, "Don't specify full path (%r) and jobid (%s)." % (filename, jobid,)
-		assert not sliceno, "Don't specify full path (%r) and sliceno." % (filename,)
+		assert not jobid, f"Don't specify full path ({filename!r}) and jobid ({jobid})."
+		assert not sliceno, f"Don't specify full path ({filename!r}) and sliceno."
 	elif jobid:
 		filename = Job(jobid).filename(filename, sliceno)
 	elif sliceno is not None:
@@ -293,7 +293,7 @@ def debug_print_options(options, title=''):
 		print('-' * 53)
 	max_k = max(len(str(k)) for k in options)
 	for key, val in sorted(options.items()):
-		print("%s = %r" % (str(key).ljust(max_k), val))
+		print(f"{str(key).ljust(max_k)} = {val!r}")
 	print('-' * 53)
 
 
@@ -518,7 +518,7 @@ class _ListTypePreserver(list):
 		return self.__class__(list.__add__(other, self))
 
 	def __repr__(self):
-		return '%s(%s)' % (self.__class__.__name__, list.__repr__(self))
+		return f'{self.__class__.__name__}({list.__repr__(self)})'
 
 class OptionEnumValue(str):
 
@@ -614,7 +614,7 @@ class _OptionString(str):
 		return _OptionString(example)
 	def __repr__(self):
 		if self:
-			return 'OptionString(%r)' % (str(self),)
+			return f'OptionString({str(self)!r})'
 		else:
 			return 'OptionString'
 OptionString = _OptionString('')

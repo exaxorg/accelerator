@@ -72,7 +72,7 @@ def synthesis(prepare_res, slices):
 	child = dw.finish()
 	for colname in in_parent + in_child:
 		data = set(child.iterate(None, colname))
-		assert data == {colname + " 1", colname + " 2"}, "Bad data for %s: %r" % (colname, data)
+		assert data == {colname + " 1", colname + " 2"}, f"Bad data for {colname}: {data!r}"
 
 	def chk_internal(name, **kw):
 		internal = ("writers", "w_l", "cyc", "hsh", "next",)

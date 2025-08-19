@@ -82,7 +82,7 @@ class XtdHandler(BaseWebHandler):
 		return json_encode(body)
 
 	def handle_req(self, path, args):
-		if self.DEBUG:  print("@server.py:  Handle_req, path = \"%s\", args = %s" %( path, args ), file=sys.stderr)
+		if self.DEBUG:  print(f"@server.py:  Handle_req, path = \"{path}\", args = {args}", file=sys.stderr)
 		try:
 			self._handle_req( path, args )
 		except Exception:
@@ -172,11 +172,11 @@ class XtdHandler(BaseWebHandler):
 			else:
 				start_ix = len(jobs) - 1
 			if start_ix is None:
-				res = {'error': '%s is not a %s %s job' % (start_from, typ, method,)}
+				res = {'error': f'{start_from} is not a {typ} {method} job'}
 			else:
 				num = int(args.get('offset', 0))
 				if not jobs:
-					res = {'error': 'no %s jobs with method %s available' % (typ, method,)}
+					res = {'error': f'no {typ} jobs with method {method} available'}
 				elif 0 <= start_ix + num < len(jobs):
 					res = {'id': jobs[start_ix + num]}
 				else:
@@ -207,7 +207,7 @@ class XtdHandler(BaseWebHandler):
 				job = self.ctrl.workspaces[workdir].allocate_jobs(1)[0]
 				self.do_response(200, 'text/json', {'jobid': job})
 			else:
-				self.do_response(500, 'text/json', {'error': 'workdir %r does not exist' % (workdir,)})
+				self.do_response(500, 'text/json', {'error': f'workdir {workdir!r} does not exist'})
 
 		elif path==['submit']:
 			if self.ctrl.broken:
@@ -360,7 +360,7 @@ class DeadlyThread(Thread):
 		except Exception:
 			traceback.print_exc(file=sys.stderr)
 		finally:
-			print("Thread %r died. That's bad." % (self.name,))
+			print(f"Thread {self.name!r} died. That's bad.")
 			exitfunction(DeadlyThread)
 
 
@@ -383,7 +383,7 @@ def check_socket(fn):
 		except OSError:
 			pass
 		return
-	raise Exception("Socket %s already listening" % (fn,))
+	raise Exception(f"Socket {fn} already listening")
 
 def siginfo(sig, frame):
 	print_status_stacks()
@@ -496,5 +496,5 @@ def main(argv, config):
 		print("%17s: %s%s" % (n, v, extra,))
 	print()
 
-	print("Serving on %s\n" % (config.listen,), file=sys.stderr)
+	print(f"Serving on {config.listen}\n", file=sys.stderr)
 	server.serve_forever()

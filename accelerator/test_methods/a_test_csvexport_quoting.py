@@ -82,13 +82,13 @@ def verify(source, lazy_quotes, q, sep, expect, **kw):
 		quote_func = lambda v: q + v.replace(q, q + q) + q
 	want = '\n'.join(sep.join(map(quote_func, line)) for line in expect)
 	if want != got:
-		print('Unhappy with %s:' % (j.filename('result.csv'),))
+		print(f"Unhappy with {j.filename('result.csv')}:")
 		print()
 		print('Expected:')
 		print(want)
 		print('Got:')
 		print(got)
-		raise Exception('csvexport failed with quote_fields=%r, separator=%r, lazy_quotes=%r' % (q, sep, lazy_quotes,))
+		raise Exception(f'csvexport failed with quote_fields={q!r}, separator={sep!r}, lazy_quotes={lazy_quotes!r}')
 
 def make_lazy(sep, q):
 	if q == '"':

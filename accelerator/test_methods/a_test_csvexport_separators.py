@@ -45,7 +45,7 @@ def synthesis(job):
 			open_func = open
 		with open_func(j.filename(filename), 'rb') as fh:
 			got = fh.read()
-		assert want == got, "Expected %s/%s to contain %r, but contained %r" % (j, filename, want, got,)
+		assert want == got, f"Expected {j}/{filename} to contain {want!r}, but contained {got!r}"
 	for separator in ('', '\0', 'wheeee'):
 		for line_separator in ('', '\0', 'woooooo'):
 			for quote in ('', 'qqq'):

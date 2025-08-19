@@ -47,7 +47,7 @@ def synthesis(job):
 		'unicode',
 	}
 	check = {n for n in _convfuncs if not n.startswith('parsed:')}
-	assert todo == check, 'Missing/extra column types: %r %r' % (check - todo, todo - check,)
+	assert todo == check, f'Missing/extra column types: {check - todo!r} {todo - check!r}'
 	for name in sorted(todo):
 		t = name
 		dw.add(name, t, none_support=True)
@@ -122,13 +122,13 @@ def synthesis(job):
 			'None', 'never', 'None',
 		)),
 	):
-		with status("Checking with sep=%r, q=%r, none_as=%r" % (sep, q, none_as,)):
+		with status(f"Checking with sep={sep!r}, q={q!r}, none_as={none_as!r}"):
 			exp = subjobs.build('csvexport', filename='test.csv', separator=sep, source=ds, quote_fields=q, none_as=none_as, lazy_quotes=False)
 			with exp.open('test.csv', 'r', encoding='utf-8') as fh:
 				def expect(*a):
 					want = sep.join(q + v.replace(q, q + q) + q for v in a) + '\n'
 					got = next(fh)
-					assert want == got, 'wanted %r, got %r from %s (export of %s)' % (want, got, exp, ds,)
+					assert want == got, f'wanted {want!r}, got {got!r} from {exp} (export of {ds})'
 				expect(*sorted(todo))
 				expect(
 					'a', 'True', 'hello',

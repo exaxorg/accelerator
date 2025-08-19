@@ -109,4 +109,4 @@ def synthesis(params):
 	good = sorted(all_data, key=lambda t: (noneninf(t[int64_off]), noneninf(t[int32_off]),), reverse=True)
 	ds = Dataset(jid)
 	check = list(ds.iterate(None))
-	assert unnan(check) == unnan(good), "Sorting across slices on [int64, int32] bad (%s)" % (jid,)
+	assert unnan(check) == unnan(good), f"Sorting across slices on [int64, int32] bad ({jid})"

@@ -45,4 +45,4 @@ def synthesis(job):
 		res = ax_ds(spec)
 		got_ds = res[0]
 		ds = quote(ds)
-		assert ds == got_ds, 'Spec %r should have given %r but gave %r' % (spec, ds, got_ds,)
+		assert ds == got_ds, f'Spec {spec!r} should have given {ds!r} but gave {got_ds!r}'

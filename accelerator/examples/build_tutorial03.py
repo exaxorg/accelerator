@@ -64,16 +64,16 @@ def main(urd):
 	with prt.header('INSPECTING DATASET CHAINS'):
 		prt('  The flags -s, -S, and -c to "ax ds" are useful when looking')
 		prt('  at chained datasets')
-		prt.command('ax ds -s %s' % (imp,))
-		prt.command('ax ds -S %s' % (imp,))
-		prt.command('ax ds -c %s' % (imp,))
+		prt.command(f'ax ds -s {imp}')
+		prt.command(f'ax ds -S {imp}')
+		prt.command(f'ax ds -c {imp}')
 		prt('As always, see info and more options using')
 		prt.command('ax ds --help')
 
 	prt()
 	with prt.header('PRINTING A DATASET CHAIN'):
 		prt('This is a small example, so we can print all data using')
-		prt.command('ax cat -c %s' % (imp,))
+		prt.command(f'ax cat -c {imp}')
 
 	prt()
 	with prt.header('GREPPING'):
@@ -82,4 +82,4 @@ def main(urd):
 			"String" column, but show "Date", "Float", and "Int"
 			columns only.
 		''')
-		prt.command('ax grep bb -c -g String %s Date Float Int' % (imp,))
+		prt.command(f'ax grep bb -c -g String {imp} Date Float Int')

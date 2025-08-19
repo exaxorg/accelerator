@@ -38,13 +38,13 @@ def main(argv, cfg):
 			error = call(cfg.url + '/last_error')
 			t = datetime.fromtimestamp(error.time).replace(microsecond=0)
 			print()
-			print('Last error at %s:' % (t,))
+			print(f'Last error at {t}:')
 			for jobid, method, status in error.last_error:
 				e = JobError(Job(jobid, method), method, status)
 				print(e.format_msg(), file=sys.stderr)
 	else:
 		if args.short:
 			t = fmttime(status.report_t - status.current[0], True)
-			print('%s (%s)' % (status.current[1], t))
+			print(f'{status.current[1]} ({t})')
 		else:
 			print_status_stacks(status.status_stacks)

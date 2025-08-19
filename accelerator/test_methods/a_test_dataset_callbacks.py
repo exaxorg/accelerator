@@ -157,7 +157,7 @@ def synthesis(job, slices):
 		if slices == 3 and ds.name == '3':
 			# ('3', 3) never happens, so fake it.
 			current_expect.append(5)
-		assert current_expect == current, '%s %r %r'%(ds,current_expect, current)
+		assert current_expect == current, f'{ds} {current_expect!r} {current!r}'
 	for v in ds4.iterate_chain(None, 'a', pre_callback=chk_both_pre, post_callback=chk_both_post):
 		current.append(v)
 	assert seen_pre == set.union(*(set((n, s) for s in range(slices)) for n in '1234'))

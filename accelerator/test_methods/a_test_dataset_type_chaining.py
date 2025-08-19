@@ -41,7 +41,7 @@ def synthesis(job, slices):
 			b_data = list(map(str, Dataset.iterate_list(None, col, b)))
 			a_data.sort()
 			b_data.sort()
-			assert a_data == b_data, '%r has different contents to %r in column %s' % (a, b, col,)
+			assert a_data == b_data, f'{a!r} has different contents to {b!r} in column {col}'
 	def write(name, previous, low, high, filter=lambda ix: True):
 		dw = job.datasetwriter(
 			name=name,

@@ -37,10 +37,10 @@ def synthesis(job):
 		ds = j.dataset()
 		want = set(want)
 		got = set(ds.columns)
-		assert got == want, "%s should have had columns %r but had %r" % (ds, want, got,)
+		assert got == want, f"{ds} should have had columns {want!r} but had {got!r}"
 		want = list(zip(*[(ord(c) - 96, ord(c)) for c in sorted(want)]))
 		got = list(ds.iterate(None))
-		assert got == want, "%s should have had %r but had %r" % (ds, want, got,)
+		assert got == want, f"{ds} should have had {want!r} but had {got!r}"
 	chk(job, 'a', 'b', 'c', 'd')
 	j = subjobs.build('dataset_filter_columns', source=ds, keep_columns=['a'])
 	chk(j, 'a')

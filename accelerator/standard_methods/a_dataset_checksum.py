@@ -91,7 +91,7 @@ def prepare():
 			translators[n] = sortdicts
 		elif col.type == 'pickle':
 			translators[n] = sortdicts
-			print('WARNING: Column %s is pickle, may not work' % (n,))
+			print(f'WARNING: Column {n} is pickle, may not work')
 		else:
 			translators[n] = bytesrepr
 	return columns, translators
@@ -116,5 +116,5 @@ def synthesis(prepare_res, analysis_res):
 	else:
 		all = chain.from_iterable(analysis_res)
 	res = md5(b''.join(all)).hexdigest()
-	print("%s: %s" % (datasets.source, res,))
+	print(f"{datasets.source}: {res}")
 	return DotDict(sum=int(res, 16), sort=options.sort, columns=prepare_res[0], source=datasets.source)

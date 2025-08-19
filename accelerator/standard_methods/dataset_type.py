@@ -650,8 +650,8 @@ def _test():
 	known = set(v for v in _convfuncs if ':' not in v)
 	copy_missing = known - set(copy_types)
 	copy_extra = set(copy_types) - known
-	assert not copy_missing, 'copy_types missing %r' % (copy_missing,)
-	assert not copy_extra, 'copy_types contains unexpected %r' % (copy_extra,)
+	assert not copy_missing, f'copy_types missing {copy_missing!r}'
+	assert not copy_extra, f'copy_types contains unexpected {copy_extra!r}'
 
 
 convert_template = r'''

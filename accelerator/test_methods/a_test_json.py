@@ -34,15 +34,15 @@ def test(name, input, want_obj, want_bytes, **kw):
 		got_bytes_raw = got_bytes_raw[:-1]
 	as_str = json_encode(input, as_str=True, **kw)
 	as_bytes = json_encode(input, as_str=False, **kw)
-	assert isinstance(as_str, str) and isinstance(as_bytes, bytes), "json_encode returns the wrong types: %s %s" % (type(as_str), type(as_bytes),)
+	assert isinstance(as_str, str) and isinstance(as_bytes, bytes), f"json_encode returns the wrong types: {type(as_str)} {type(as_bytes)}"
 	assert as_bytes == got_bytes_raw, "json_save doesn't save the same thing json_encode returns for " + name
 	as_str = as_str.encode("utf-8")
 	assert as_bytes == as_str, "json_encode doesn't return the same data for as_str=True and False"
 	got_obj = json_load(name)
-	assert want_obj == got_obj, "%s roundtrips wrong (wanted %r, got %r)" % (name, want_obj, got_obj)
+	assert want_obj == got_obj, f"{name} roundtrips wrong (wanted {want_obj!r}, got {got_obj!r})"
 	with open(name, "rb") as fh:
 		got_bytes_fuzzy = b"".join(line.strip() for line in fh)
-	assert want_bytes == got_bytes_fuzzy, "%s wrong on disk (but decoded right)" % (name,)
+	assert want_bytes == got_bytes_fuzzy, f"{name} wrong on disk (but decoded right)"
 
 def synthesis():
 	test(
@@ -105,7 +105,7 @@ def synthesis():
 		s = "{"
 		for k, v in pairs:
 			d[k] = v
-			s += '"%s": %s,' % (k, v)
+			s += f'"{k}": {v},'
 		s = (s[:-1] + "}").encode("ascii")
 		if not sorted_s:
 			sorted_s = s

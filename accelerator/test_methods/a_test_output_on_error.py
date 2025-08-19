@@ -53,4 +53,4 @@ def synthesis():
 			if attempt > 1:
 				print('Output from %s has not appeared yet, waiting more (%d).' % (job, attempt,))
 			sleep(attempt / 10.0)
-		raise Exception('Not all output from %s was saved in OUTPUT' % (job,))
+		raise Exception(f'Not all output from {job} was saved in OUTPUT')

@@ -19,4 +19,4 @@ def main(urd):
 
 	prt()
 	prt('For convenience, the jobid can be used as a reference to the default')
-	prt('dataset in a job.  The full name is "%s/default".' % (job,))
+	prt(f'dataset in a job.  The full name is "{job}/default".')

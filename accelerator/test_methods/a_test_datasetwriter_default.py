@@ -48,7 +48,7 @@ def synthesis(job):
 			try:
 				dw.add('data', t, default=bad_default)
 				dw.get_split_write()
-				raise Exception('%s accepted %r as default value' % (t, bad_default,))
+				raise Exception(f'{t} accepted {bad_default!r} as default value')
 			except (TypeError, ValueError, OverflowError):
 				pass
 			dw.discard()
@@ -61,7 +61,7 @@ def synthesis(job):
 		ds = dw.finish()
 		want = [good_value, default_value, default_value]
 		got = list(ds.iterate(0, 'data'))
-		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
+		assert got == want, f'{ds.quoted} failed, wanted {want!r} but got {got!r}'
 
 		dw = job.datasetwriter(name=t + ' default=None', allow_missing_slices=True)
 		dw.add('data', t, default=None, none_support=True)
@@ -72,7 +72,7 @@ def synthesis(job):
 		ds = dw.finish()
 		want = [good_value, None, None]
 		got = list(ds.iterate(0, 'data'))
-		assert got == want, '%s failed, wanted %r but got %r' % (ds.quoted, want, got,)
+		assert got == want, f'{ds.quoted} failed, wanted {want!r} but got {got!r}'
 
 		# make sure default=None hashes correctly
 		if t != 'json':
@@ -85,4 +85,4 @@ def synthesis(job):
 			ds = dw.finish()
 			want = [None, None, None]
 			got = list(ds.iterate(0, 'data'))
-			assert got == want, '%s slice 0 failed, wanted %r but got %r' % (ds.quoted, want, got,)
+			assert got == want, f'{ds.quoted} slice 0 failed, wanted {want!r} but got {got!r}'

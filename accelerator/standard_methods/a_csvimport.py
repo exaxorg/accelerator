@@ -88,7 +88,7 @@ def reader_status(status_fd, update):
 		pass
 	count = 0
 	while True:
-		update('{0:n} lines read'.format(count))
+		update(f'{count:n} lines read')
 		data = os.read(status_fd, 8)
 		if not data:
 			break
@@ -122,7 +122,7 @@ def char2int(name, empty_value, specials="empty"):
 	char = options.get(name)
 	if not char:
 		return empty_value
-	msg = "%s must be a single iso-8859-1 character (or %s)" % (name, specials,)
+	msg = f"{name} must be a single iso-8859-1 character (or {specials})"
 	if isinstance(char, bytes):
 		char = uni(char)
 	try:
@@ -226,7 +226,7 @@ def prepare(job, slices):
 	if options.strip_labels:
 		labels = [x.strip() for x in labels]
 	labels = [options.rename.get(x, x) for x in labels]
-	assert len(labels) == len(set(labels)), "Duplicate labels: %r" % (labels,)
+	assert len(labels) == len(set(labels)), f"Duplicate labels: {labels!r}"
 
 	dw = job.datasetwriter(
 		columns={n: 'bytes' for n in labels if n not in options.discard},

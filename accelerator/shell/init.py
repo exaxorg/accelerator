@@ -197,7 +197,7 @@ def main(argv, cfg):
 					if default.lower() == 'true':
 						bool_fallbacks.add(cfg_name.replace('-', '_'))
 					elif default.lower() != 'false':
-						raise UserError("Configuration init.%s must be either true or false, not %r." % (cfg_name, default,))
+						raise UserError(f"Configuration init.{cfg_name} must be either true or false, not {default!r}.")
 					default = None
 				elif 'type' in kw:
 					default = kw['type'](default)
@@ -311,7 +311,7 @@ def main(argv, cfg):
 
 	if not options.force:
 		if exists(options.directory) and set(listdir(options.directory)) - {'venv', '.venv'}:
-			raise UserError('Directory %r is not empty.' % (options.directory,))
+			raise UserError(f'Directory {options.directory!r} is not empty.')
 		def plausible_jobdir(n):
 			parts = n.rsplit('-', 1)
 			return len(parts) == 2 and parts[0] == options.name and parts[1].isnumeric()
@@ -322,7 +322,7 @@ def main(argv, cfg):
 				if workdir_slices not in (None, options.slices):
 					raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
 		if exists(first_workdir_path) and any(map(plausible_jobdir, listdir(first_workdir_path))):
-			raise UserError('Workdir %r already has jobs in it.' % (first_workdir_path,))
+			raise UserError(f'Workdir {first_workdir_path!r} already has jobs in it.')
 
 	if not exists(options.directory):
 		makedirs(options.directory)
@@ -357,7 +357,7 @@ def main(argv, cfg):
 		examples = 'examples'
 	else:
 		examples = '# accelerator.examples'
-	all_workdirs = ['%s %s' % (shell_quote(name), shell_quote(path),) for name, path in workdirs]
+	all_workdirs = [f'{shell_quote(name)} {shell_quote(path)}' for name, path in workdirs]
 	with open('accelerator.conf', 'w') as fh:
 		fh.write(config_template.format(
 			name=shell_quote(options.name),

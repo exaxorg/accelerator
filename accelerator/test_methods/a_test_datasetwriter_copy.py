@@ -62,6 +62,6 @@ def synthesis(job, slices, prepare_res):
 	ds = dw_nonetest_removed.finish()
 	for name, col in ds.columns.items():
 		if name == 'unicode':
-			assert col.none_support, "%s:%s should have none_support" % (ds, name,)
+			assert col.none_support, f"{ds}:{name} should have none_support"
 		else:
-			assert not col.none_support, "%s:%s shouldn't have none_support" % (ds, name,)
+			assert not col.none_support, f"{ds}:{name} shouldn't have none_support"

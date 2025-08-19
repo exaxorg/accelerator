@@ -249,7 +249,7 @@ def create_graph(inputitem, urdinfo=()):
 		else:
 			# dataset
 			n.columns = sorted((colname, dscol.type) for colname, dscol in n.payload.columns.items())
-			n.lines = "%d x % s" % (len(n.payload.columns), '{:,}'.format(sum(n.payload.lines)).replace(',', '_'))
+			n.lines = "%d x % s" % (len(n.payload.columns), f'{sum(n.payload.lines):,}'.replace(',', '_'))
 			n.ds = n.payload
 	graph.populate_with_neighbours()
 	return graph
@@ -314,7 +314,7 @@ def graph(inp, gtype):
 		jobid2urddep = defaultdict(list)
 		for key, urditem in inp.deps.items():
 			for _, jid in urditem.joblist:
-				jobid2urddep[jid].append("%s/%s" % (key, urditem.timestamp))
+				jobid2urddep[jid].append(f"{key}/{urditem.timestamp}")
 		jobid2urddep = {key: sorted(val) for key, val in jobid2urddep.items()}
 		jlist = inp.joblist
 		inp = tuple(Job(jid) for _, jid in jlist)

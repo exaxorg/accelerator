@@ -459,7 +459,7 @@ def insert_metadata(filename, fh, job, size):
 					traceback.print_exc(file=sys.stderr)
 				if res:
 					break
-				print("Failed to generate %s metadata." % (name,), file=sys.stderr)
+				print(f"Failed to generate {name} metadata.", file=sys.stderr)
 	return res or [(0, size)]
 
 def extract_metadata(filename, fh):

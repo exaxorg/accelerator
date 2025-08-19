@@ -72,7 +72,7 @@ def workdir_jids(cfg, name):
 			if wd == name and num.isdigit():
 				jidlist.append(int(num))
 	jidlist.sort()
-	return ['%s-%s' % (name, jid,) for jid in jidlist]
+	return [f'{name}-{jid}' for jid in jidlist]
 
 def main(argv, cfg):
 	usage = "%(prog)s [-p] [-a | [workdir [workdir [...]]]"

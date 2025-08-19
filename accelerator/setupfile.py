@@ -62,7 +62,7 @@ def load_setup(jobid):
 	try:
 		d = json_load('setup.json', jobid)
 	except IOError:
-		raise NoSuchJobError('Job %r not found' % (jobid,))
+		raise NoSuchJobError(f'Job {jobid!r} not found')
 	version = d.version
 	if version == 1:
 		d.jobs = d.pop('jobids')
@@ -128,7 +128,7 @@ def encode_setup(data, sort_keys=True, as_str=False):
 		elif isinstance(src, timedelta):
 			return src.total_seconds()
 		else:
-			assert isinstance(src, (str, int, float, bool)) or src is None, "%s not supported in data" % (type(src),)
+			assert isinstance(src, (str, int, float, bool)) or src is None, f"{type(src)} not supported in data"
 			return src
 	res = _encode_with_compact(
 		copy(data),
@@ -161,7 +161,7 @@ def _encode_with_compact(data, compact_keys, extra_indent=0, separator='\n', spe
 				fmted = _encode_with_compact(d, ('analysis', 'per_slice',), 1, '')
 			else:
 				fmted = dumps(data[k])
-			compact.append('    "%s": %s,' % (k, fmted,))
+			compact.append(f'    "{k}": {fmted},')
 			del data[k]
 	for k in special_keys:
 		if k in data:

@@ -34,11 +34,11 @@ def synthesis():
 		if want_files != got_files:
 			extra_files = got_files - want_files
 			missing_files = want_files - got_files
-			msg = "Got the wrong files from %s: %r" % (method, got_files,)
+			msg = f"Got the wrong files from {method}: {got_files!r}"
 			if extra_files:
-				msg += ", did not expect %r" % (extra_files,)
+				msg += f", did not expect {extra_files!r}"
 			if missing_files:
-				msg += ", also wanted %r" % (missing_files,)
+				msg += f", also wanted {missing_files!r}"
 			raise Exception(msg)
 
 	test('test_register_file_auto', 'analysis slice 0.txt', 'synthesis file.txt', 'result.pickle')

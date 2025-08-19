@@ -322,7 +322,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 
 	g.server_url       = server_url
 	g.running          = 'launch'
-	statmsg._start('%s %s' % (jobid, params.method,), parent_pid)
+	statmsg._start(f'{jobid} {params.method}', parent_pid)
 
 	def dummy():
 		pass

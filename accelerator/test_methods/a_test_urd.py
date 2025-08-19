@@ -67,7 +67,7 @@ def synthesis(job):
 	headers = {'Content-Type': 'application/json', 'Authorization': 'Basic dGVzdDpwYXNz'}
 	def check(url_part, want, post_data=None):
 		got = call(url + url_part, server_name='urd', data=post_data, headers=headers, fmt=json.loads)
-		assert want == got, '\nWanted %r,\ngot    %r' % (want, got,)
+		assert want == got, f'\nWanted {want!r},\ngot    {got!r}'
 
 	check('list', ['test/ing', 'test/two'])
 	check('test/ing/since/0', ['2023-01', '2023-02', '2023-06', '2024-03'])
@@ -126,7 +126,7 @@ def synthesis(job):
 		for got, want in zip(fh, want_it):
 			assert got.startswith('4\t'), got
 			got = got.split('\t', 2)[2]
-			assert want == got, '\nWanted %r,\ngot    %r' % (want, got,)
+			assert want == got, f'\nWanted {want!r},\ngot    {got!r}'
 		assert next(want_it) == 'END'
 
 	p.terminate()

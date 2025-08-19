@@ -103,7 +103,7 @@ class DataBase:
 	def _update_workspace(self, WorkSpace, pool, verbose=False):
 		"""Insert all items in WorkSpace in database (call update_finish too)"""
 		if verbose:
-			print("DATABASE:  update for \"%s\"" % WorkSpace.name)
+			print(f"DATABASE:  update for \"{WorkSpace.name}\"")
 		filesystem_jobids = WorkSpace.valid_jobids
 		self._fsjid.update(filesystem_jobids)
 		if verbose > 1:
@@ -113,7 +113,7 @@ class DataBase:
 		if new_jobids:
 			_paramsdict.update(pool.imap_unordered(_get_params, new_jobids, chunksize=64))
 		if verbose:
-			print("DATABASE:  Database \"%s\" contains %d potential items" % (WorkSpace.name, len(filesystem_jobids), ))
+			print(f"DATABASE:  Database \"{WorkSpace.name}\" contains {len(filesystem_jobids)} potential items")
 
 	def _update_finish(self, dict_of_hashes, verbose=False):
 		"""Filters in-use database on valid hashes.
@@ -172,7 +172,7 @@ class DataBase:
 			l.sort(key=lambda jid: _paramsdict[jid][0].starttime)
 		if verbose:
 			if discarded_due_to_hash_list:
-				print("DATABASE:  discarding due to unknown hash: %s" % ', '.join(discarded_due_to_hash_list))
+				print(f"DATABASE:  discarding due to unknown hash: {', '.join(discarded_due_to_hash_list)}")
 			print("DATABASE:  Full database contains %d items" % (sum(len(v) for v in itervalues(self.db_by_method)),))
 
 	def match_complex(self, reqlist):

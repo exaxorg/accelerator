@@ -50,8 +50,8 @@ def synthesis(job, slices):
 		try:
 			got = next(it)
 		except StopIteration:
-			raise Exception('missing lines in %s' % (ds_unrr,))
-		assert got == (a, b), "Wanted %r, got %r from %s" % ((a, b,), got, ds_unrr,)
+			raise Exception(f'missing lines in {ds_unrr}')
+		assert got == (a, b), f"Wanted {(a, b)!r}, got {got!r} from {ds_unrr}"
 	for sliceno in range(slices):
 		want(sliceno, 'u %d' % (sliceno,))
 	for sliceno in range(slices):
@@ -61,7 +61,7 @@ def synthesis(job, slices):
 	want(-1, 'line 4 just in slice 0')
 	try:
 		next(it)
-		raise Exception("Extra lines in %s" % (ds_unrr,))
+		raise Exception(f"Extra lines in {ds_unrr}")
 	except StopIteration:
 		pass
 

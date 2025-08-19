@@ -44,7 +44,7 @@ def grep_text(args, want, sep='\t', encoding='utf-8', unordered=False, check_out
 	res = check_output(cmd)
 	res = res.split(b'\n')[:-1]
 	if len(want) != len(res):
-		raise Exception('%r gave %d lines, wanted %d.\n%r' % (cmd, len(res), len(want), res,))
+		raise Exception(f'{cmd!r} gave {len(res)} lines, wanted {len(want)}.\n{res!r}')
 	if encoding:
 		res = [el.decode(encoding, 'replace') for el in res]
 	typ = type(sep)
@@ -81,7 +81,7 @@ def grep_json(args, want):
 	res = res.decode('utf-8', 'surrogatepass')
 	res = res.split('\n')[:-1]
 	if len(want) != len(res):
-		raise Exception('%r gave %d lines, wanted %d.\n%r' % (cmd, len(res), len(want), res,))
+		raise Exception(f'{cmd!r} gave {len(res)} lines, wanted {len(want)}.\n{res!r}')
 	for lineno, (want, got) in enumerate(zip(want, res), 1):
 		try:
 			got = json.loads(got)
@@ -681,7 +681,7 @@ def synthesis(job, slices):
 		{'dataset': d, 'sliceno': 1, 'lineno': 0, 'data': want_json[1]},
 	])
 	all_types = {n for n in _convfuncs if not n.startswith('parsed:')}
-	assert used_types == all_types, 'Missing/extra column types: %r %r' % (all_types - used_types, used_types - all_types,)
+	assert used_types == all_types, f'Missing/extra column types: {all_types - used_types!r} {used_types - all_types!r}'
 
 	# test the smart tab mode with various lengths
 
@@ -1149,7 +1149,7 @@ def synthesis(job, slices):
 	cmd = options.command_prefix + ['grep', '--unique=c', '--chain', '000', uniq3]
 	try:
 		check_output(cmd)
-		raise Exception("%r worked, should have complained that %s doesn't have column c" % (cmd, uniq.quoted,))
+		raise Exception(f"{cmd!r} worked, should have complained that {uniq.quoted} doesn't have column c")
 	except CalledProcessError:
 		pass
 

@@ -158,7 +158,7 @@ class Automata:
 					current = (now - t0, self.job_method, 0,)
 				if self.verbose == 'dots':
 					if waited % 60 == 0:
-						sys.stdout.write('[%d]\n ' % (now - t0,))
+						sys.stdout.write(f'[{now - t0}]\n ')
 					else:
 						sys.stdout.write('.')
 				elif self.verbose == 'log':
@@ -175,7 +175,7 @@ class Automata:
 		if self.verbose == 'dots':
 			print('(%d)]' % (last_time,))
 		elif self.verbose:
-			print('\r\033[K              %s' % (fmttime(last_time),))
+			print(f'\r\x1b[K              {fmttime(last_time)}')
 
 	def jobid(self, method):
 		"""
@@ -189,7 +189,7 @@ class Automata:
 		path = ['status']
 		if self.verbose:
 			path.append('full')
-		path.append('?subjob_cookie=%s&timeout=%s' % (self.subjob_cookie or '', timeout,))
+		path.append(f"?subjob_cookie={self.subjob_cookie or ''}&timeout={timeout}")
 		resp = self._url_json(*path)
 		if 'last_error_time' in resp and resp.last_error_time != self.last_error_time:
 			self.last_error_time = resp.last_error_time
@@ -223,7 +223,7 @@ class Automata:
 				link_msg = Job(item.link).path
 			else:
 				link_msg = item.link
-			msg = '   - %-35s %-5s %s' % (method, make_msg, link_msg,)
+			msg = f'   - {method:35} {make_msg:5} {link_msg}'
 			if item.make != True and 'total_time' in item:
 				msg = msg + ' ' + fmttime(item.total_time).rjust(78 - len(msg))
 			print(msg)
@@ -247,7 +247,7 @@ class Automata:
 
 	def call_method(self, method, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
 		if method not in self._method_info:
-			raise BuildError('Unknown method %s' % (method,))
+			raise BuildError(f'Unknown method {method}')
 		info = self._method_info[method]
 		params = dict(options=dict(options), datasets=dict(datasets), jobs=dict(jobs))
 		argmap = defaultdict(list)
@@ -256,9 +256,9 @@ class Automata:
 				argmap[n].append(thing)
 		for k, v in kw.items():
 			if k not in argmap:
-				raise BuildError('Keyword %s not in options/datasets/jobs for method %s' % (k, method,))
+				raise BuildError(f'Keyword {k} not in options/datasets/jobs for method {method}')
 			if len(argmap[k]) != 1:
-				raise BuildError('Keyword %s has several targets on method %s: %r' % (k, method, argmap[k],))
+				raise BuildError(f'Keyword {k} has several targets on method {method}: {argmap[k]!r}')
 			params[argmap[k][0]][k] = v
 		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, **params)
 		if why_build: # specified by caller
@@ -417,7 +417,7 @@ def _urd_typeify(d):
 def _tsfix(ts):
 	if ts is None:
 		return None
-	errmsg = 'Specify timestamps as strings, ints, datetimes or (timestamp, integer), not %r' % (ts,)
+	errmsg = f'Specify timestamps as strings, ints, datetimes or (timestamp, integer), not {ts!r}'
 	if isinstance(ts, (tuple, list,)):
 		assert len(ts) == 2, errmsg
 		ts, integer = ts
@@ -437,14 +437,14 @@ class Urd(object):
 	def __init__(self, a, info, user, password, horizon=None, default_workdir=None):
 		self._a = a
 		if info.urd:
-			assert '://' in str(info.urd), 'Bad urd URL: %s' % (info.urd,)
+			assert '://' in str(info.urd), f'Bad urd URL: {info.urd}'
 		self._url = info.urd or ''
 		self._user = user
 		self.info = info
 		self.flags = set(a.flags)
 		self.horizon = horizon
 		self.default_workdir = default_workdir
-		auth = '%s:%s' % (user, password,)
+		auth = f'{user}:{password}'
 		auth = b64encode(auth.encode('utf-8')).decode('ascii')
 		self._headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + auth}
 		self._auth_tested = False
@@ -468,7 +468,7 @@ class Urd(object):
 
 	def _path(self, path):
 		if '/' not in path:
-			path = '%s/%s' % (self._user, path,)
+			path = f'{self._user}/{path}'
 		return path
 
 	def _call(self, url, data=None, fmt=_urd_typeify):
@@ -516,7 +516,7 @@ class Urd(object):
 
 	def since(self, path, timestamp):
 		path = self._path(path)
-		url = '%s/%s/since/%s' % (self._url, path, _tsfix(timestamp),)
+		url = f'{self._url}/{path}/since/{_tsfix(timestamp)}'
 		return self._call(url, fmt=json.loads)
 
 	def list(self):
@@ -526,7 +526,7 @@ class Urd(object):
 	def _test_auth(self):
 		if not self._auth_tested:
 			try:
-				self._call('%s/test/%s' % (self._url, self._user,), True)
+				self._call(f'{self._url}/test/{self._user}', True)
 			except UrdPermissionError:
 				return False
 			self._auth_tested = True
@@ -541,7 +541,7 @@ class Urd(object):
 		self._link_result_current = []
 
 	def begin(self, path, timestamp=None, caption=None, update=False):
-		assert not self._current, 'Tried to begin %s while running %s' % (path, self._current,)
+		assert not self._current, f'Tried to begin {path} while running {self._current}'
 		if not self._test_auth():
 			raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
 		self._move_link_result()
@@ -559,9 +559,9 @@ class Urd(object):
 
 	def finish(self, path, timestamp=None, caption=None):
 		path = self._path(path)
-		assert self._current, 'Tried to finish %s with nothing running' % (path,)
-		assert path == self._current, 'Tried to finish %s while running %s' % (path, self._current,)
-		assert self.joblist, 'Tried to finish %s without building any jobs' % (path,)
+		assert self._current, f'Tried to finish {path} with nothing running'
+		assert path == self._current, f'Tried to finish {path} while running {self._current}'
+		assert self.joblist, f'Tried to finish {path} without building any jobs'
 		user, build = path.split('/')
 		self._current = None
 		caption = caption or self._current_caption or ''
@@ -569,7 +569,7 @@ class Urd(object):
 			timestamp = self._current_timestamp
 		else:
 			timestamp = _tsfix(timestamp)
-		assert timestamp, 'No timestamp specified in begin or finish for %s' % (path,)
+		assert timestamp, f'No timestamp specified in begin or finish for {path}'
 		self._move_link_result(path + '/' + timestamp)
 		data = DotDict(
 			user=user,
@@ -586,7 +586,7 @@ class Urd(object):
 		return self._call(url, data)
 
 	def truncate(self, path, timestamp):
-		url = '%s/truncate/%s/%s' % (self._url, self._path(path), _tsfix(timestamp),)
+		url = f'{self._url}/truncate/{self._path(path)}/{_tsfix(timestamp)}'
 		return self._call(url, '')
 
 	def set_workdir(self, workdir):
@@ -669,7 +669,7 @@ def find_automata(a, script):
 					package = [cand]
 					break
 			else:
-				raise BuildError('No method directory found for %r in %r' % (package, all_packages))
+				raise BuildError(f'No method directory found for {package!r} in {all_packages!r}')
 	else:
 		package = all_packages
 	if not script.startswith('build'):
@@ -705,7 +705,7 @@ def prepare_for_run(options, cfg):
 		user = os.environ.get('USER')
 		if not user:
 			user = 'NO-USER'
-			print("No $URD_AUTH or $USER in environment, using %r" % (user,), file=sys.stderr)
+			print(f"No $URD_AUTH or $USER in environment, using {user!r}", file=sys.stderr)
 		password = ''
 	info = a.info()
 	urd = Urd(a, info, user, password, options.horizon, options.workdir)
@@ -729,7 +729,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 	if 'error' in job:
 		print(job.error, file=sys.stderr)
 		return 1
-	print('%s running as job %s' % (module_ref.__name__, job.jobid,))
+	print(f'{module_ref.__name__} running as job {job.jobid}')
 	setup = setupfile.generate(caption='build script', method=module_ref.__name__, input_directory=cfg.input_directory)
 	setup.starttime = time.time()
 	setup.is_build = True
@@ -819,7 +819,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 			ts = str(ts).replace(' ', 'T')
 			urd.begin('__auto__', ts)
 			urd._a.joblist = urd.joblist_all # fake it
-			setup.options['urd-list'] = '%s/%s' % (urd._current, ts)
+			setup.options['urd-list'] = f'{urd._current}/{ts}'
 			try:
 				urd.finish('__auto__')
 			except UrdError as e:
@@ -883,7 +883,7 @@ def main(argv, cfg):
 				method, v = v.split('=', 1)
 				concurrency_map[method] = int(v)
 			except ValueError:
-				raise BuildError('Bad concurrency spec %r' % (v,))
+				raise BuildError(f'Bad concurrency spec {v!r}')
 	options.concurrency_map = concurrency_map
 
 	urd, modules = prepare_for_run(options, cfg)

@@ -72,7 +72,7 @@ def format_location(loc):
 	is_local, ds, colname = loc
 	if is_local:
 		return 'local'
-	return '%s in %s' % (quote(colname), ds.quoted,)
+	return f'{quote(colname)} in {ds.quoted}'
 
 def typed_from(ds, loc):
 	if not loc:
@@ -85,7 +85,7 @@ def typed_from(ds, loc):
 	res = 'typed from ' + format_location((False, src_ds, colname))
 	orig_loc = original_location(src_ds, colname)
 	if orig_loc and not orig_loc[0]:
-		return '%s, originally %s' % (res, format_location(orig_loc))
+		return f'{res}, originally {format_location(orig_loc)}'
 	else:
 		return res
 
@@ -116,7 +116,7 @@ def main(argv, cfg):
 		if badinput and not args.suppress_errors:
 			print('Error, failed to resolve datasets:', file=sys.stderr)
 			for n, e in badinput:
-				print('    %r: %s' % (n, e,), file=sys.stderr)
+				print(f'    {n!r}: {e}', file=sys.stderr)
 			exit(1)
 		exit()
 
@@ -133,7 +133,7 @@ def main(argv, cfg):
 				badinput.append((n, e))
 				dsvec = None
 			if dsvec:
-				print('%s' % (dsvec[0].job,))
+				print(f'{dsvec[0].job}')
 				v = []
 				for ds in dsvec:
 					if args.chainedlist:
@@ -212,8 +212,8 @@ def main(argv, cfg):
 					except Exception:
 						# source job might be deleted
 						pass
-			print("    {0} columns".format(fmt_num(len(ds.columns))))
-		print("    {0} lines".format(fmt_num(sum(ds.lines))))
+			print(f"    {fmt_num(len(ds.columns))} columns")
+		print(f"    {fmt_num(sum(ds.lines))} lines")
 
 		if ds.previous or args.chain:
 			chain = ds.chain()
@@ -223,15 +223,15 @@ def main(argv, cfg):
 				if in_job == len(chain):
 					in_job = ' (all within job)'
 				else:
-					in_job = ' ({0} within job)'.format(fmt_num(in_job))
+					in_job = f' ({fmt_num(in_job)} within job)'
 			else:
 				in_job = ''
-			print("    {0} length {1}{2}, from {3} to {4}".format(full_name, fmt_num(len(chain)), in_job, chain[0], chain[-1]))
+			print(f"    {full_name} length {fmt_num(len(chain))}{in_job}, from {chain[0]} to {chain[-1]}")
 			if args.non_empty_chain:
 				chain = [ds for ds in chain if sum(ds.lines)]
-				print("    Filtered chain length {0}".format(fmt_num(len(chain))))
+				print(f"    Filtered chain length {fmt_num(len(chain))}")
 			if args.chain:
-				data = tuple((ix, "%s/%s" % (x.job, x.name), fmt_num(sum(x.lines))) for ix, x in enumerate(chain))
+				data = tuple((ix, f"{x.job}/{x.name}", fmt_num(sum(x.lines))) for ix, x in enumerate(chain))
 				max_n, max_l = colwidth(x[1:] for x in data)
 				template = "{0:3}: {1:%d} ({2:>%d})" % (max_n, max_l)
 				printcolwise(data, template, lambda x: (x[0], x[1], x[2]), minrows=8, indent=8)
@@ -254,6 +254,6 @@ def main(argv, cfg):
 			print("    Max to average ratio: " + locale.format_string("%2.3f", (max(x[2] for x in data) / ((s or 1e20) / len(data)),) ))
 
 		if ds.previous:
-			print("    {0} total lines in chain".format(fmt_num(sum(sum(ds.lines) for ds in chain))))
+			print(f"    {fmt_num(sum((sum(ds.lines) for ds in chain)))} total lines in chain")
 
 	finish(badinput)
