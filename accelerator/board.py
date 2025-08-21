@@ -385,14 +385,14 @@ def run(cfg, from_shell=False, development=False):
 
 	# Look for actual workdirs, so things like /workdirs/foo/foo-37/foo-1/bar
 	# resolves to ('foo-37', 'foo-1/bar') and not ('foo-1', 'bar').
-	path2wd = {v: k for k, v in cfg.workdirs.items()}
+	path2wd = {Path(v): k for k, v in cfg.workdirs.items()}
 	def job_and_file(path, default_name):
-		wd = ''
-		path = iter(path.split('/'))
+		wd = Path('')
+		path = iter(path.parts)
 		for name in path:
 			if not name:
 				continue
-			wd = wd + '/' + name
+			wd.joinpath(name)
 			if wd in path2wd:
 				break
 		else:
@@ -414,7 +414,7 @@ def run(cfg, from_shell=False, development=False):
 			prefix = Path(prefix, part)
 			if not default_jobid:
 				try:
-					default_jobid, default_prefix = job_and_file(os.readlink(prefix), '')
+					default_jobid, default_prefix = job_and_file(prefix.readlink(), '')
 					if default_jobid and default_prefix:
 						default_prefix += '/'
 				except OSError:
@@ -427,8 +427,8 @@ def run(cfg, from_shell=False, development=False):
 			try:
 				lstat = fn.lstat()
 				if S_ISLNK(lstat.st_mode):
-					link_dest = os.readlink(fn)
-					stat = os.stat(link_dest)
+					link_dest = fn.readlink()
+					stat = link_dest.stat()
 					jobid, name = job_and_file(link_dest, fn.name)
 				else:
 					stat = lstat
@@ -465,8 +465,7 @@ def run(cfg, from_shell=False, development=False):
 				return json.dumps(results_contents(path))
 		elif path:
 			try:
-				link_dest = os.readlink(abspath)
-				job, _ = job_and_file(link_dest, None)
+				job, _ = job_and_file(abspath.readlink(), None)
 			except OSError:
 				job = None
 			return static_file(path, root=cfg.result_directory, job=job)
