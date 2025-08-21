@@ -409,9 +409,9 @@ def run(cfg, from_shell=False, development=False):
 		res = {'files': files, 'dirs': dirs}
 		default_jobid = None
 		default_prefix = ''
-		prefix = cfg.result_directory
-		for part in path.strip('/').split('/'):
-			prefix = os.path.join(prefix, part)
+		prefix = Path(cfg.result_directory)
+		for part in Path(path).parts:
+			prefix = Path(prefix, part)
 			if not default_jobid:
 				try:
 					default_jobid, default_prefix = job_and_file(os.readlink(prefix), '')
@@ -421,35 +421,32 @@ def run(cfg, from_shell=False, development=False):
 					pass
 			elif default_prefix:
 				default_prefix += part + '/'
-		filenames = os.listdir(prefix)
-		for fn in filenames:
-			if fn.startswith('.') or fn.endswith('_'):
+		for fn in prefix.iterdir():
+			if fn.name.startswith('.') or fn.name.endswith('_'):
 				continue
-			ffn = os.path.join(prefix, fn)
 			try:
-				lstat = os.lstat(ffn)
+				lstat = fn.lstat()
 				if S_ISLNK(lstat.st_mode):
-					link_dest = os.readlink(ffn)
+					link_dest = os.readlink(fn)
 					stat = os.stat(link_dest)
-					jobid, name = job_and_file(link_dest, fn)
+					jobid, name = job_and_file(link_dest, fn.name)
 				else:
 					stat = lstat
 					jobid = default_jobid
-					name = default_prefix + fn
+					name = default_prefix + fn.name
 			except OSError:
 				continue
 			if S_ISDIR(stat.st_mode):
-				dirs[fn] = os.path.join('/results', path, fn, '')
+				dirs[fn.name] = Path('/results', path, fn.name).as_posix()
 			else:
-				files[fn] = dict(
+				files[fn.name] = dict(
 					jobid=jobid,
 					name=name,
 					ts=lstat.st_mtime,
 					size=stat.st_size,
 				)
 		if path:
-			a, b = os.path.split(path)
-			dirs['..'] = os.path.join('/results', a, '') if a else '/'
+			dirs['..'] = Path('/results', Path(path).parent).as_posix()
 		return res
 
 	@bottle.get('/results')
@@ -457,17 +454,18 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/results/<path:path>')
 	def results(path=''):
 		path = path.strip('/')
-		if os.path.isdir(os.path.join(cfg.result_directory, path)):
+		abspath = Path(cfg.result_directory, path)
+		if abspath.is_dir():
 			accept = get_best_accept('text/html', 'application/json', 'text/json')
 			if accept == 'text/html':
-				return main_page(path=os.path.join('/results', path).rstrip('/'))
+				return main_page(path=Path('/results', path).as_posix())
 			else:
 				bottle.response.content_type = accept + '; charset=UTF-8'
 				bottle.response.set_header('Cache-Control', 'no-cache')
 				return json.dumps(results_contents(path))
 		elif path:
 			try:
-				link_dest = os.readlink(os.path.join(cfg.result_directory, path))
+				link_dest = os.readlink(abspath)
 				job, _ = job_and_file(link_dest, None)
 			except OSError:
 				job = None
@@ -526,9 +524,10 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
 		job = name2job(cfg, jobid)
-		if os.path.isdir(job.filename(name)):
-			files = {fn for fn in os.listdir(job.filename(name))}
-			dirs = {dn for dn in files if os.path.isdir(job.filename(name + '/' + dn))}
+		fn = Path(job.filename(name))
+		if fn.is_dir():
+			files = {f.name for f in fn.iterdir()}
+			dirs = {dn for dn in files if fn.joinpath(dn).is_dir()}
 			files -= dirs
 			res = dict(dirs=sorted(dirs), files=sorted(files), dirname=name, job=job)
 			accept = get_best_accept('application/json', 'text/json', 'text/html')
@@ -556,7 +555,7 @@ def run(cfg, from_shell=False, development=False):
 		if post:
 			aborted = False
 			files = {fn for fn in job.files() if fn[0] != '/'}
-			dirs = {dn for dn in files if os.path.isdir(job.filename(dn))}
+			dirs = {dn for dn in files if Path(job.filename(dn)).is_dir()}
 			files -= dirs
 			jobs = list(post.subjobs)
 			jobs.append(job)
@@ -579,7 +578,7 @@ def run(cfg, from_shell=False, development=False):
 			job=job,
 			aborted=aborted,
 			current=current,
-			output=os.path.exists(job.filename('OUTPUT')),
+			output=Path(job.filename('OUTPUT')).exists(),
 			datasets=job.datasets,
 			params=job.params,
 			subjobs=subjobs,
