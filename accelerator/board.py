@@ -3,6 +3,7 @@
 #                                                                          #
 # Copyright (c) 2020-2024 Carl Drougge                                     #
 # Modifications copyright (c) 2024 Anders Berkeman                         #
+# Copyright (c) 2025 Pablo Correa Gomez                                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -29,6 +30,7 @@ import functools
 import mimetypes
 import time
 from stat import S_ISDIR, S_ISLNK
+from pathlib import Path
 
 from accelerator.job import Job, JobWithFile
 from accelerator.dataset import Dataset
@@ -140,15 +142,14 @@ hashed = {}
 def populate_hashed():
 	from hashlib import sha1
 	from base64 import b64encode
-	dirname = os.path.join(os.path.dirname(__file__), 'board')
+	dirname = Path(__file__).parent.joinpath('board')
 	for filename, ctype in [
 		('style.css', 'text/css; charset=UTF-8'),
 		('script.js', 'text/javascript; charset=UTF-8'),
 		('graph.js', 'text/javascript; charset=UTF-8'),
 	]:
 		try:
-			with open(os.path.join(dirname, filename), 'rb') as fh:
-				data = fh.read()
+			data = dirname.joinpath(filename).read_bytes()
 			h = b64encode(sha1(data).digest(), b'_-').rstrip(b'=').decode('ascii')
 			h_name = f'{h}/{filename}'
 			name2hashed[filename] = f'/h/{h_name}'
@@ -260,7 +261,7 @@ def run(cfg, from_shell=False, development=False):
 	global _development
 	_development = development
 
-	project = os.path.split(cfg.project_directory)[1]
+	project = Path(cfg.project_directory).name
 	setproctitle(f'ax board-server for {project} on {cfg.board_listen}')
 
 	# The default path filter (i.e. <something:path>) does not match newlines,
@@ -316,6 +317,7 @@ def run(cfg, from_shell=False, development=False):
 
 	# Based on the one in bottle but modified for our needs.
 	def static_file(filename, root, job=None):
+		# Should port to pathlib after https://github.com/bottlepy/bottle/issues/1311
 		root = os.path.abspath(root) + os.sep
 		filename = os.path.abspath(os.path.join(root, filename))
 		if not filename.startswith(root):
@@ -729,7 +731,7 @@ def run(cfg, from_shell=False, development=False):
 		from accelerator.colour import bold, red, green
 		print(bold("\nINFO: Install \"pygments\" to have " + red("prett") + green("ified") + " source code in board.\n"))
 
-	bottle.TEMPLATE_PATH = [os.path.join(os.path.dirname(__file__), 'board')]
+	bottle.TEMPLATE_PATH = [Path(__file__).parent.joinpath('board')]
 	kw = {}
 	if development:
 		kw['reloader'] = True
