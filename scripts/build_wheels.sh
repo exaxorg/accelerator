@@ -58,7 +58,7 @@ if [ "$0" != "/tmp/accelerator/scripts/build_wheels.sh" ]; then
 fi
 
 case "$1" in
-	20[2-9][0-9].[01][0-9].[0-3][0-9])
+	20[2-9][0-9].[01][0-9].[0-3][0-9]?(.[1-9]*([0-9])))
 		ACCELERATOR_BUILD=IS_RELEASE
 		;;
 	20[2-9][0-9].[01][0-9].[0-3][0-9].@(dev|rc)[1-9])

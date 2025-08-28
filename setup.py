@@ -72,7 +72,7 @@ else:
 	if os.environ.get('ACCELERATOR_BUILD') == 'IS_RELEASE':
 		if not env_version:
 			raise Exception("Refusing to build release without a specified version")
-		assert re.match(r'20\d\d\.\d\d\.\d\d$', env_version)
+		assert re.match(r'20\d\d\.\d\d\.\d\d(?:\.\d+)?$', env_version)
 		version = env_version
 	else:
 		if env_version:
