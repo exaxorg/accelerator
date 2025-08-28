@@ -87,7 +87,7 @@ iskeyword = frozenset(kwlist).__contains__
 def _clean_name(n, seen_n):
 	n = ''.join(c if c.isalnum() else '_' for c in n)
 	if not n or n[0].isdigit():
-		n = '_' + n
+		n = f'_{n}'
 	while n in seen_n or iskeyword(n):
 		n += '_'
 	seen_n.add(n)
@@ -173,7 +173,7 @@ _dir_name_blacklist = {chr(c): f'\\x{c:02x}' for c in _dir_name_blacklist}
 _dir_name_blacklist['\\'] = '\\\\' # make sure names can't collide
 
 def _fs_name(name):
-	return 'DS/' + ''.join(_dir_name_blacklist.get(c, c) for c in name)
+	return f'DS/{"".join(_dir_name_blacklist.get(c, c) for c in name)}'
 
 class Dataset(str):
 	"""
@@ -780,7 +780,7 @@ class Dataset(str):
 					arg_n.append(n)
 					arg_v.append(f)
 					fs.append(f'{n}(t[{ix}])')
-			f = 'lambda t: ' + ' and '.join(fs)
+			f = f'lambda t: {" and ".join(fs)}'
 			# Add another lambda to put all fN into local variables.
 			# (This is faster than putting them in "locals", you get
 			# LOAD_DEREF instead of LOAD_GLOBAL.)
@@ -815,7 +815,7 @@ class Dataset(str):
 				sliceno = 'REHASH'
 			return f'{d.quoted}:{sliceno}'
 		if len(to_iter) == 1:
-			msg_head = 'Iterating ' + fmt_dsname(*to_iter[0])
+			msg_head = f'Iterating {fmt_dsname(*to_iter[0])}'
 			def update_status(ix, d, sliceno, rehash):
 				pass
 		else:
@@ -1431,7 +1431,7 @@ class DatasetWriter(object):
 		w_d = dict(zip(w_names, w_l))
 		errcls = _clean_name('DatasetUsageError', used_names)
 		w_d[errcls] = DatasetUsageError
-		f = ['def write(' + ', '.join(names) + '):']
+		f = [f'def write({", ".join(names)}):']
 		f_list = ['def write_list(values):']
 		if len(names) == 1: # only the hashlabel, no check needed
 			f.append(f' {w_names[0]}({names[0]})')
@@ -1490,7 +1490,7 @@ class DatasetWriter(object):
 			return self._order.index(t[0])
 		def d2l(d):
 			return [w.write for _, w in sorted(d.items(), key=key)]
-		f_____ = ['def split(' + ', '.join(names) + '):']
+		f_____ = [f'def split({", ".join(names)}):']
 		f_list = ['def split_list(v):']
 		f_dict = ['def split_dict(d):']
 		from accelerator.g import slices
@@ -1572,7 +1572,7 @@ class DatasetWriter(object):
 		if self._finished:
 			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		del _datasetwriters[self.name]
-		self._finished = 'deleted dataset ' + self.name
+		self._finished = f'deleted dataset {self.name}'
 		from shutil import rmtree
 		rmtree(self.fs_name)
 

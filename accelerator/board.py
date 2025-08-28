@@ -80,7 +80,7 @@ json_enc = JSONEncoderWithSet(indent=4, ensure_ascii=False).encode
 def ax_repr(o):
 	res = []
 	if isinstance(o, JobWithFile):
-		link = '/job/' + bottle.html_escape(o.job)
+		link = f'/job/{bottle.html_escape(o.job)}'
 		res.append(f'JobWithFile(<a href="{link}">job=')
 		res.append(ax_repr(o.job))
 		name = bottle.html_escape(o.name)
@@ -150,8 +150,8 @@ def populate_hashed():
 			with open(os.path.join(dirname, filename), 'rb') as fh:
 				data = fh.read()
 			h = b64encode(sha1(data).digest(), b'_-').rstrip(b'=').decode('ascii')
-			h_name = h + '/' + filename
-			name2hashed[filename] = '/h/' + h_name
+			h_name = f'{h}/{filename}'
+			name2hashed[filename] = f'/h/{h_name}'
 			hashed[h_name] = (data, ctype,)
 		except OSError as e:
 			name2hashed[filename] = '/h/ERROR'
@@ -284,7 +284,7 @@ def run(cfg, from_shell=False, development=False):
 	def call_u(*path, **kw):
 		url = os.path.join(cfg.urd, *map(url_quote, path))
 		if kw:
-			url = url + '?' + urlencode(kw)
+			url = f'{url}?{urlencode(kw)}'
 		return call(url, server_name='urd')
 
 	# yield chunks of a file, optionally inserting some bonus content somewhere
@@ -515,7 +515,7 @@ def run(cfg, from_shell=False, development=False):
 						from pygments.lexers import PythonLexer
 						from pygments.formatters import HtmlFormatter
 						data = highlight(code, PythonLexer(), HtmlFormatter())
-						code = '<style>\n' + HtmlFormatter().get_style_defs('.highlight') + '</style>\n' + data
+						code = f'<style>\n{HtmlFormatter().get_style_defs(".highlight")}</style>\n{data}'
 						bottle.response.content_type = 'text/html; charset=UTF-8'
 					except Exception:
 						pass
@@ -623,7 +623,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/graph/urd/<user>/<build>/<ts>')
 	@view('rendergraph', prefer_ctype='image/svg+xml')
 	def urd_graph(user, build, ts):
-		key = user + '/' + build + '/' + ts
+		key = f'{user}/{build}/{ts}'
 		d = call_u(key)
 		ret = graph.graph(d, 'urd')
 		return ret
@@ -679,7 +679,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/urd/<user>/<build>/')
 	@view('urdlist', 'timestamps')
 	def urdlist(user, build):
-		key = user + '/' + build
+		key = f'{user}/{build}'
 		return dict(
 			key=key,
 			timestamps=call_u(key, 'since/0', captions=1),
@@ -688,9 +688,9 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/urd/<user>/<build>/<ts>')
 	@view('urditem', 'entry')
 	def urditem(user, build, ts):
-		key = user + '/' + build + '/' + ts
+		key = f'{user}/{build}/{ts}'
 		d = call_u(key)
-		key = user + '/' + build + '/' + d.timestamp
+		key = f'{user}/{build}/{d.timestamp}'
 		results = None
 		if d.get('build_job'):  # non-existing on older versions
 			try:

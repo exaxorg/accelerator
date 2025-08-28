@@ -66,7 +66,7 @@ class Automata:
 		self.verbose = verbose
 		self.monitor = None
 		self.flags = flags or []
-		last_error = self._url_json('last_error?subjob_cookie=' + (subjob_cookie or ''))
+		last_error = self._url_json(f'last_error?subjob_cookie={subjob_cookie or ""}')
 		self.last_error_time = last_error.get('time')
 		# Workspaces should be per Automata
 		from accelerator.job import WORKDIRS
@@ -206,7 +206,7 @@ class Automata:
 		postdata = urlencode({'json': setupfile.encode_setup(json)}).encode('utf-8')
 		res = self._url_json('submit', data=postdata)
 		if 'error' in res:
-			raise ServerError('Submit failed: ' + res.error)
+			raise ServerError(f'Submit failed: {res.error}')
 		if 'why_build' not in res:
 			if not self.subjob_cookie:
 				self._printlist(res.jobs)
@@ -225,7 +225,7 @@ class Automata:
 				link_msg = item.link
 			msg = f'   - {method:35} {make_msg:5} {link_msg}'
 			if item.make != True and 'total_time' in item:
-				msg = msg + ' ' + fmttime(item.total_time).rjust(78 - len(msg))
+				msg = f'{msg} {fmttime(item.total_time).rjust(78 - len(msg))}'
 			print(msg)
 
 	def method_info(self, method):
@@ -446,7 +446,7 @@ class Urd(object):
 		self.default_workdir = default_workdir
 		auth = f'{user}:{password}'
 		auth = b64encode(auth.encode('utf-8')).decode('ascii')
-		self._headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + auth}
+		self._headers = {'Content-Type': 'application/json', 'Authorization': f'Basic {auth}'}
 		self._auth_tested = False
 		self._reset()
 
@@ -480,7 +480,7 @@ class Urd(object):
 	def _get(self, path, *a):
 		assert self._current, "Can't record dependency with nothing running"
 		path = self._path(path)
-		assert path not in self._deps, 'Duplicate ' + path
+		assert path not in self._deps, f'Duplicate {path}'
 		url = '/'.join((self._url, path,) + a)
 		res = UrdResponse(self._call(url))
 		if res:
@@ -490,7 +490,7 @@ class Urd(object):
 
 	def _latest_str(self):
 		if self.horizon:
-			return '<=' + self.horizon
+			return f'<={self.horizon}'
 		else:
 			return 'latest'
 
@@ -570,7 +570,7 @@ class Urd(object):
 		else:
 			timestamp = _tsfix(timestamp)
 		assert timestamp, f'No timestamp specified in begin or finish for {path}'
-		self._move_link_result(path + '/' + timestamp)
+		self._move_link_result(f'{path}/{timestamp}')
 		data = DotDict(
 			user=user,
 			build=build,
@@ -665,7 +665,7 @@ def find_automata(a, script):
 			package = [package]
 		else:
 			for cand in all_packages:
-				if cand.endswith('.' + package):
+				if cand.endswith(f'.{package}'):
 					package = [cand]
 					break
 			else:
@@ -673,9 +673,9 @@ def find_automata(a, script):
 	else:
 		package = all_packages
 	if not script.startswith('build'):
-		script = 'build_' + script
+		script = f'build_{script}'
 	for p in package:
-		module_name = p + '.' + script
+		module_name = f'{p}.{script}'
 		try:
 			module_ref = import_module(module_name)
 			return module_ref
@@ -724,7 +724,7 @@ def prepare_for_run(options, cfg):
 
 
 def run_automata(urd, options, cfg, module_ref, main_args):
-	url = 'allocate_job?' + urlencode({'workdir': options.workdir or '' })
+	url = f'allocate_job?{urlencode({"workdir": options.workdir or "" })}'
 	job = urd._a._url_json(url)
 	if 'error' in job:
 		print(job.error, file=sys.stderr)

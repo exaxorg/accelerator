@@ -207,7 +207,7 @@ def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, bac
 # default is 'ascii', which is pretty terrible too.)
 def pickle_load(filename='result.pickle', jobid=None, sliceno=None, encoding='bytes'):
 	filename = _fn(filename, jobid, sliceno)
-	with status('Loading ' + filename):
+	with status(f'Loading {filename}'):
 		with open(filename, 'rb') as fh:
 			return pickle.load(fh, encoding=encoding)
 
@@ -324,7 +324,7 @@ class FileWriteMove(object):
 		self._hidden = _hidden
 
 	def __enter__(self):
-		self._status = status('Saving ' + self.filename)
+		self._status = status(f'Saving {self.filename}')
 		self._status.__enter__()
 		fh = getattr(self, '_open', open)(self.tmp_filename, 'xb')
 		self.close = fh.close
