@@ -155,7 +155,16 @@ class XtdHandler(BaseWebHandler):
 			tokill = list(children)
 			print('Force abort', tokill)
 			for child in tokill:
-				os.killpg(child, signal.SIGKILL)
+				try:
+					os.killpg(child, signal.SIGINT)
+				except Exception:
+					pass
+			time.sleep(0.2) # give any inner cleanup a chance to happen
+			for child in list(children):
+				try:
+					os.killpg(child, signal.SIGKILL)
+				except Exception:
+					pass
 			self.do_response(200, 'text/json', {'killed': len(tokill)})
 
 		elif path[0] == 'method2job':
@@ -346,7 +355,13 @@ def exitfunction(*a):
 	print()
 	print('The deathening! %d %s' % (os.getpid(), children,))
 	print()
-	for child in children:
+	for child in list(children):
+		try:
+			os.killpg(child, signal.SIGINT)
+		except Exception:
+			pass
+	time.sleep(0.2) # give any inner cleanup a chance to happen
+	for child in list(children):
 		try:
 			os.killpg(child, signal.SIGKILL)
 		except Exception:
