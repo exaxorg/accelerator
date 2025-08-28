@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test writing datasets with strange column names, column names whose cleaned
 names collide and column names used in the generated split_write function.
@@ -40,14 +36,14 @@ def prepare():
 	return mk_dw("internal_names_analysis", internal_names_analysis)
 
 def analysis(sliceno, prepare_res):
-	prepare_res.write(*['a %d' % (sliceno,)] * 5)
-	prepare_res.write_list(['b %d' % (sliceno,)] * 5)
-	prepare_res.write_dict(dict(zip(internal_names_analysis, ['c %d' % (sliceno,)] * 5)))
+	prepare_res.write(*[f'a {sliceno}'] * 5)
+	prepare_res.write_list([f'b {sliceno}'] * 5)
+	prepare_res.write_dict(dict(zip(internal_names_analysis, [f'c {sliceno}'] * 5)))
 
 def synthesis(prepare_res, slices):
 	ds = prepare_res.finish()
 	for sliceno in range(slices):
-		assert list(ds.iterate(sliceno, internal_names_analysis)) == [('a %d' % (sliceno,),) * 5, ('b %d' % (sliceno,),) *5, ('c %d' % (sliceno,),) *5]
+		assert list(ds.iterate(sliceno, internal_names_analysis)) == [(f'a {sliceno}',) * 5, (f'b {sliceno}',) *5, (f'c {sliceno}',) *5]
 
 	in_parent = [ # list because order matters
 		"-",      # becomes _ because everything must be a valid python identifier.
@@ -76,7 +72,7 @@ def synthesis(prepare_res, slices):
 	child = dw.finish()
 	for colname in in_parent + in_child:
 		data = set(child.iterate(None, colname))
-		assert data == {colname + " 1", colname + " 2"}, "Bad data for %s: %r" % (colname, data)
+		assert data == {colname + " 1", colname + " 2"}, f"Bad data for {colname}: {data!r}"
 
 	def chk_internal(name, **kw):
 		internal = ("writers", "w_l", "cyc", "hsh", "next",)

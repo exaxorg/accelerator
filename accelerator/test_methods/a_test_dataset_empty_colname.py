@@ -52,7 +52,7 @@ def synthesis(job):
 		ds = dw.finish()
 		for col in want:
 			# '' hashes to 0, so if the hashlabel worked both are in slice 0.
-			assert list(ds.iterate(0, col)) == [col, col], '%r bad in %s' % (col, ds,)
+			assert list(ds.iterate(0, col)) == [col, col], f'{col!r} bad in {ds}'
 		return ds
 	chk_order(['@', '_', ''], {'@': '_', '_': '__', '': '___'})
 	chk_order(['@', '', '_'], {'@': '_', '': '__', '_': '___'})
@@ -68,7 +68,7 @@ def synthesis(job):
 		except DatasetUsageError:
 			pass
 		else:
-			raise Exception('%s accepted hashlabel %r' % (ds, bad,))
+			raise Exception(f'{ds} accepted hashlabel {bad!r}')
 	chk_mismatch(ds, '', '@')
 	dw = job.datasetwriter(name='hl_', hashlabel='_')
 	dw.add('_', 'int32')

@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 description = r'''
 Take a chain of datasets and make a checksum of one or more columns.
 See dataset_checksum.description for more information.
@@ -48,5 +44,5 @@ def synthesis():
 	for src in jobs:
 		data = build('dataset_checksum', columns=options.columns, sort=options.sort, source=src).load()
 		sum ^= data.sum
-	print("Total: %016x" % (sum,))
+	print(f"Total: {sum:016x}")
 	return DotDict(sum=sum, columns=data.columns, sort=options.sort, sources=jobs)

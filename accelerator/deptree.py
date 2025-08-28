@@ -19,16 +19,13 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from traceback import print_exc
 from collections import OrderedDict
 from datetime import datetime, date, time, timedelta
 from pathlib import Path, PosixPath, PurePath, PurePosixPath
 import sys
 
-from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types, unicode
+from accelerator.compat import iteritems, itervalues, first_value, str_types, int_types, num_types
 
 from accelerator.extras import OptionEnum, OptionEnumValue, _OptionString, OptionDefault, RequiredOption, typing_conv
 from accelerator.job import JobWithFile
@@ -77,10 +74,10 @@ class DepTree:
 		for jobid_name in method_wants:
 			if isinstance(jobid_name, str_types):
 				value = data.get(jobid_name)
-				assert value is None or isinstance(value, str), 'Input %s on %s not a string as required' % (jobid_name, method,)
+				assert value is None or isinstance(value, str), f'Input {jobid_name} on {method} not a string as required'
 			elif isinstance(jobid_name, list):
 				if len(jobid_name) != 1 or not isinstance(jobid_name[0], str_types):
-					raise OptionException('Bad %s item on %s: %s' % (key, method, repr(jobid_name),))
+					raise OptionException(f'Bad {key} item on {method}: {jobid_name!r}')
 				jobid_name = jobid_name[0]
 				value = data.get(jobid_name)
 				if value:
@@ -88,14 +85,14 @@ class DepTree:
 						value = [e.strip() for e in value.split(',')]
 				else:
 					value = []
-				assert isinstance(value, list), 'Input %s on %s not a list or string as required' % (jobid_name, method,)
+				assert isinstance(value, list), f'Input {jobid_name} on {method} not a list or string as required'
 			else:
-				raise OptionException('%s item of unknown type %s on %s: %s' % (key, type(jobid_name), method, repr(jobid_name),))
+				raise OptionException(f'{key} item of unknown type {type(jobid_name)} on {method}: {jobid_name!r}')
 			res[jobid_name] = value
 		self.params[key] = res
 		spill = set(data) - set(res)
 		if spill:
-			raise OptionException('Unknown %s on %s: %s' % (key, method, ', '.join(sorted(spill)),))
+			raise OptionException(f"Unknown {key} on {method}: {', '.join(sorted(spill))}")
 
 	def _fix_options(self, fill_in):
 		method = self.method
@@ -110,13 +107,13 @@ class DepTree:
 		def convert(default_v, v):
 			if isinstance(default_v, RequiredOption):
 				if v is None and not default_v.none_ok:
-					raise OptionException('Option %s on method %s requires a non-None value (%r)' % (k, method, default_v.value,))
+					raise OptionException(f'Option {k} on method {method} requires a non-None value ({default_v.value!r})')
 				default_v = default_v.value
 			if default_v is None or v is None:
 				if isinstance(default_v, _OptionString):
-					raise OptionException('Option %s on method %s requires a non-empty string value' % (k, method,))
+					raise OptionException(f'Option {k} on method {method} requires a non-empty string value')
 				if hasattr(default_v, '_valid') and v not in default_v._valid:
-					raise OptionException('Option %s on method %s requires a value in %s' % (k, method, default_v._valid,))
+					raise OptionException(f'Option {k} on method {method} requires a value in {default_v._valid}')
 				if isinstance(default_v, OptionDefault):
 					v = default_v.default
 				return v
@@ -148,15 +145,15 @@ class DepTree:
 							ok = True
 							break
 					if not ok:
-						raise OptionException('%r not a permitted value for option %s on method %s (%s)' % (v, k, method, default_v._valid))
+						raise OptionException(f'{v!r} not a permitted value for option {k} on method {method} ({default_v._valid})')
 				return v or None
 			if isinstance(default_v, str_types + num_types) and isinstance(v, str_types + num_types):
 				if isinstance(default_v, _OptionString):
 					v = str(v)
 					if not v:
-						raise OptionException('Option %s on method %s requires a non-empty string value' % (k, method,))
+						raise OptionException(f'Option {k} on method {method} requires a non-empty string value')
 					return v
-				if isinstance(default_v, unicode) and isinstance(v, bytes):
+				if isinstance(default_v, str) and isinstance(v, bytes):
 					return v.decode('utf-8')
 				return type(default_v)(v)
 			if (isinstance(default_v, type) and isinstance(v, typefuzz(default_v))) or isinstance(v, typefuzz(type(default_v))):
@@ -177,7 +174,7 @@ class DepTree:
 				try:
 					return typing_conv[default_v.__name__](v)
 				except Exception:
-					raise OptionException('Failed to convert option %s %r to %s on method %s' % (k, v, default_v, method,))
+					raise OptionException(f'Failed to convert option {k} {v!r} to {default_v} on method {method}')
 			if isinstance(v, str_types) and not v:
 				return type(default_v)()
 			if isinstance(default_v, JobWithFile) or default_v is JobWithFile:
@@ -185,13 +182,13 @@ class DepTree:
 				if default_v is JobWithFile:
 					default_v = defaults
 				if not isinstance(v, (list, tuple,)) or not (2 <= len(v) <= 4):
-					raise OptionException('Option %s (%r) on method %s is not %s compatible' % (k, v, method, type(default_v)))
+					raise OptionException(f'Option {k} ({v!r}) on method {method} is not {type(default_v)} compatible')
 				v = tuple(v) + defaults[len(v):] # so all of default_v gets convert()ed.
 				v = [convert(dv, vv) for dv, vv in zip(default_v, v)]
 				return JobWithFile(*v)
 			if type(default_v) != type:
 				default_v = type(default_v)
-			raise OptionException('Failed to convert option %s of %s to %s on method %s' % (k, type(v), default_v, method,))
+			raise OptionException(f'Failed to convert option {k} of {type(v)} to {default_v} on method {method}')
 		for k, v in iteritems(self.params['options']):
 			if k in options:
 				try:
@@ -200,9 +197,9 @@ class DepTree:
 					raise
 				except Exception:
 					print_exc(file=sys.stderr)
-					raise OptionException('Failed to convert option %s on method %s' % (k, method,))
+					raise OptionException(f'Failed to convert option {k} on method {method}')
 			else:
-				raise OptionException('Unknown option %s on method %s' % (k, method,))
+				raise OptionException(f'Unknown option {k} on method {method}')
 		if fill_in:
 			missing = set(options) - set(res_options)
 			missing_required = missing & self.methods.params[method].required

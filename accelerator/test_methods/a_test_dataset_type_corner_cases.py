@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify various corner cases in dataset_type.
 '''
@@ -37,7 +33,7 @@ from accelerator import subjobs
 from accelerator.dispatch import JobError
 from accelerator.dataset import Dataset, DatasetWriter
 from accelerator.dsutil import typed_writer
-from accelerator.compat import PY3, UTC
+from accelerator.compat import UTC
 from accelerator.standard_methods import dataset_type
 from accelerator import g
 
@@ -60,7 +56,7 @@ def verify(name, types, bytes_data, want, default=no_default, want_fail=False, a
 		uni_data = [v.decode('ascii') for v in bytes_data]
 		todo += [('ascii', uni_data,), ('unicode', uni_data,)]
 	for coltype, data in todo:
-		dsname = '%s %s' % (name, coltype,)
+		dsname = f'{name} {coltype}'
 		_verify(dsname, types, data, coltype, want, default, want_fail, exact_types, kw)
 
 def _verify(name, types, data, coltype, want, default, want_fail, exact_types, kw):
@@ -75,7 +71,7 @@ def _verify(name, types, data, coltype, want, default, want_fail, exact_types, k
 			if exact_types:
 				got = [(v, type(v).__name__) for v in got]
 				want1 = [(v, type(v).__name__) for v in want1]
-			assert got == want1, 'Expected %r, got %r from %s.' % (want1, got, fromstr,)
+			assert got == want1, f'Expected {want1!r}, got {got!r} from {fromstr}.'
 	dw = DatasetWriter(name=name, columns={'data': coltype, 'extra': 'bytes'})
 	dw.set_slice(0)
 	for ix, v in enumerate(data):
@@ -93,26 +89,26 @@ def _verify(name, types, data, coltype, want, default, want_fail, exact_types, k
 		except JobError:
 			if want_fail:
 				continue
-			raise Exception('Typing %r as %s failed.' % (bytes_ds, typ,))
-		assert not want_fail, "Typing %r as %s should have failed, but didn't (%s)." % (bytes_ds, typ, jid)
+			raise Exception(f'Typing {bytes_ds!r} as {typ} failed.')
+		assert not want_fail, f"Typing {bytes_ds!r} as {typ} should have failed, but didn't ({jid})."
 		typed_ds = Dataset(jid)
 		got = list(typed_ds.iterate(0, 'data'))
-		check(got, '%s (typed as %s from %r)' % (typed_ds, typ, bytes_ds,))
+		check(got, f'{typed_ds} (typed as {typ} from {bytes_ds!r})')
 		if opts.get('filter_bad'):
 			bad_ds = Dataset(jid, 'bad')
 			got_bad = list(bad_ds.iterate(0, 'data'))
-			assert got_bad == [b'nah'], "%s should have had a single b'nah', but had %r" % (bad_ds, got_bad,)
+			assert got_bad == [b'nah'], f"{bad_ds} should have had a single b'nah', but had {got_bad!r}"
 		if 'filter_bad' not in opts and not callable(want):
 			opts['filter_bad'] = True
 			opts['column2type']['extra'] = 'int32_10'
 			jid = subjobs.build('dataset_type', datasets=dict(source=bytes_ds), options=opts)
 			typed_ds = Dataset(jid)
 			got = list(typed_ds.iterate(0, 'data'))
-			check(got, '%s (typed as %s from %r with every other line skipped from filter_bad)' % (typed_ds, typ, bytes_ds,), True)
+			check(got, f'{typed_ds} (typed as {typ} from {bytes_ds!r} with every other line skipped from filter_bad)', True)
 			want_bad = [t for t in bytes_ds.iterate(0) if t[1] == b'skip']
 			bad_ds = Dataset(jid, 'bad')
 			got_bad = list(bad_ds.iterate(0))
-			assert got_bad == want_bad, "Expected %r, got %r from %s" % (want_bad, got_bad, bad_ds,)
+			assert got_bad == want_bad, f"Expected {want_bad!r}, got {got_bad!r} from {bad_ds}"
 		used_type(typ)
 
 def test_numbers():
@@ -129,22 +125,21 @@ def test_numbers():
 		(16, (b'1b', b'0x1b', b'\r001b',),),
 		( 0, (b'27', b'\r033', b'0x1b',),),
 	):
-		types = ['%s_%d' % (typ, base,) for typ in ('int32', 'int64',)]
-		verify('base %d' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
+		types = [f'{typ}_{base}' for typ in ('int32', 'int64',)]
+		verify(f'base {base}', types, values, [27, 27, 27], all_source_types=all_source_types)
 		types = [typ + 'i' for typ in types]
 		if base == 10:
 			types += ['float32i', 'float64i']
 		values = [v + b'garbage' for v in values]
-		verify('base %d i' % (base,), types, values, [27, 27, 27], all_source_types=all_source_types)
+		verify(f'base {base} i', types, values, [27, 27, 27], all_source_types=all_source_types)
 		all_source_types = False
-	# python2 has both int and long, let's not check exact types there.
-	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=PY3)
+	verify('inty numbers', ['number', 'number:int'], [b'42', b'42.0', b'42.0000000', b'43.', b'.0'], [42, 42, 42, 43, 0], exact_types=True)
 	if options.numeric_comma:
-		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True, exact_types=PY3)
+		verify('inty numbers numeric_comma', ['number', 'number:int'], [b'42', b'42,0', b'42,0000000', b'43,', b',0'], [42, 42, 42, 43, 0], numeric_comma=True, exact_types=True)
 
-	# Python 2 accepts 42L as an integer, python 3 doesn't. The number
+	# Python 3 does not accepts 42L as an integer. The number
 	# type falls back to python parsing, verify this works properly.
-	verify('integer with L', ['number'], [b'42L'], [42], want_fail=PY3)
+	verify('integer with L', ['number'], [b'42L'], [42], want_fail=True)
 
 	# tests both that values outside the range are rejected
 	# and that None works as a default value.
@@ -166,7 +161,7 @@ def test_numbers():
 	verify('floatbool false', ['floatbool'], [b'0', b'-0', b'1', b'1004', b'0.00001', b'inf', b'-1', b' 0 ', b'0.00'], [False, False, True, True, True, True, True, False, False], exact_types=True)
 	verify('floatbool i', ['floatbooli'], [b'1 yes', b'0 no', b'0.00 also no', b'inf yes', b' 0.01y', b''], [True, False, False, True, True, False], exact_types=True)
 	def check_special(got, fromstr):
-		msg = 'Expected [inf, -inf, nan, nan, nan, nan, inf], got %r from %s.' % (got, fromstr,)
+		msg = f'Expected [inf, -inf, nan, nan, nan, nan, inf], got {got!r} from {fromstr}.'
 		for ix, v in ((0, float('inf')), (1, float('-inf')), (-1, float('inf'))):
 			assert got[ix] == v, msg
 		for ix in range(2, 6):
@@ -296,18 +291,18 @@ def test_datetimes():
 		for value in a:
 			tests[pattern].append((value, want))
 			got = strptime(value, pattern)
-			assert got == want, "Parsing %r as %r\n    expected %s\n    got      %s" % (value, pattern, want, got,)
+			assert got == want, f"Parsing {value!r} as {pattern!r}\n    expected {want}\n    got      {got}"
 			value += 'x'
 			got, remaining = strptime_i(value, pattern)
-			assert got == want, "Parsing %r as %r\n    expected %s\n    got      %s" % (value, pattern, want, got,)
-			assert remaining == b'x', "Parsing %r as %r left %r unparsed, expected %r" % (value, pattern, remaining, b'x',)
+			assert got == want, f"Parsing {value!r} as {pattern!r}\n    expected {want}\n    got      {got}"
+			assert remaining == b'x', f"Parsing {value!r} as {pattern!r} left {remaining!r} unparsed, expected {b'x'!r}"
 
 	def bad(*a):
 		for value in a:
 			tests[pattern].append((value, None))
 			try:
 				got = strptime(value, pattern)
-				raise Exception("Parsing %r as %r gave %s, should have failed" % (value, pattern, got,))
+				raise Exception(f"Parsing {value!r} as {pattern!r} gave {got}, should have failed")
 			except ValueError:
 				pass
 
@@ -926,7 +921,7 @@ def test_datetimes():
 				for got, wrote, good in zip(got, wrote, good):
 					if good is not None:
 						good = fix(good)
-					assert got == good, 'Typing %r as %r gave %r, expected %r' % (wrote, column2type[col], got, good,)
+					assert got == good, f'Typing {wrote!r} as {column2type[col]!r} gave {got!r}, expected {good!r}'
 
 		check('datetime', lambda dt: dt)
 		check('date', lambda dt: dt.date())
@@ -948,7 +943,7 @@ def test_datetimes():
 			('date', date),
 			('datetime', datetime),
 		):
-			verify('nearly good %s YYYY-MM-DD' % (type_as,), ['%s:%s' % (type_as, pattern,)], [b'2019-02-29', b'1970-02-31', b'1980-06-31', b'1992-02-29'], [None, None, None, func(1992, 2, 29)], None, False)
+			verify(f'nearly good {type_as} YYYY-MM-DD', [f'{type_as}:{pattern}'], [b'2019-02-29', b'1970-02-31', b'1980-06-31', b'1992-02-29'], [None, None, None, func(1992, 2, 29)], None, False)
 
 
 def test_filter_bad_across_types():
@@ -981,19 +976,17 @@ def test_filter_bad_across_types():
 	want_bad = [tuple(l[1:]) for l in data if not l[0]]
 	dw = DatasetWriter(name="filter bad across types", columns=columns, allow_missing_slices=True)
 	cols_to_check = ['int32_10', 'bytes', 'json', 'unicode:utf-8']
-	if PY3:
-		# z so it sorts last.
-		dw.add('zpickle', 'pickle')
-		cols_to_check.append('zpickle')
-		for ix in range(len(data)):
-			data[ix].append({ix})
+	# z so it sorts last.
+	dw.add('zpickle', 'pickle')
+	cols_to_check.append('zpickle')
+	for ix in range(len(data)):
+		data[ix].append({ix})
 	dw.set_slice(0)
 	want = []
 	def add_want(ix):
 		v = data[ix]
 		want.append((int(v[3]), v[1], json.loads(v[4]), v[6].decode('utf-8'),))
-		if PY3:
-			want[-1] = want[-1] + (v[7],)
+		want[-1] = want[-1] + (v[7],)
 	for ix, v in enumerate(data):
 		if v[0]:
 			add_want(ix)
@@ -1009,10 +1002,10 @@ def test_filter_bad_across_types():
 		)
 		typed_ds = Dataset(jid)
 		got = list(typed_ds.iterate(0, cols_to_check))
-		assert got == want, "Expected %r, got %r from %s (from %r%s)" % (want, got, typed_ds, source_ds, ' with defaults' if defaults else '')
+		assert got == want, f"Expected {want!r}, got {got!r} from {typed_ds} (from {source_ds!r}{' with defaults' if defaults else ''})"
 		bad_ds = Dataset(jid, 'bad')
 		got_bad = list(bad_ds.iterate(0, sorted(columns)))
-		assert got_bad == want_bad, "Expected %r, got %r from %s (from %r%s)" % (want_bad, got_bad, bad_ds, source_ds, ' with defaults' if defaults else '')
+		assert got_bad == want_bad, f"Expected {want_bad!r}, got {got_bad!r} from {bad_ds} (from {source_ds!r}{' with defaults' if defaults else ''})"
 		# make more lines "ok" for the second lap
 		if not defaults:
 			want_bad.pop(0) # number:int
@@ -1220,7 +1213,7 @@ def test_column_discarding():
 		column2type=dict(a='ascii', c='ascii'),
 		discard_untyped=True,
 	).dataset()
-	assert sorted(ac_implicit.columns) == ['a', 'c'], '%s: %r' % (ac_implicit, sorted(ac_implicit.columns),)
+	assert sorted(ac_implicit.columns) == ['a', 'c'], f'{ac_implicit}: {sorted(ac_implicit.columns)!r}'
 	assert list(ac_implicit.iterate(None)) == [('a', 'c',)], ac_implicit
 
 	# Discard b explicitly
@@ -1230,7 +1223,7 @@ def test_column_discarding():
 		column2type=dict(a='ascii', c='ascii'),
 		rename=dict(b=None),
 	).dataset()
-	assert sorted(ac_explicit.columns) == ['a', 'c'], '%s: %r' % (ac_explicit, sorted(ac_explicit.columns),)
+	assert sorted(ac_explicit.columns) == ['a', 'c'], f'{ac_explicit}: {sorted(ac_explicit.columns)!r}'
 	assert list(ac_explicit.iterate(None)) == [('a', 'c',)], ac_explicit
 
 	# Discard c by overwriting it with b. Keep untyped b.
@@ -1240,7 +1233,7 @@ def test_column_discarding():
 		column2type=dict(a='ascii', c='ascii'),
 		rename=dict(b='c'),
 	).dataset()
-	assert sorted(ac_bASc.columns) == ['a', 'b', 'c'], '%s: %r' % (ac_bASc, sorted(ac_bASc.columns),)
+	assert sorted(ac_bASc.columns) == ['a', 'b', 'c'], f'{ac_bASc}: {sorted(ac_bASc.columns)!r}'
 	assert list(ac_bASc.iterate(None)) == [('a', b'b', 'b',)], ac_bASc
 
 	# Discard c by overwriting it with b. Also type b as a different type.
@@ -1250,7 +1243,7 @@ def test_column_discarding():
 		column2type=dict(a='ascii', b='strbool', c='ascii'),
 		rename=dict(b='c'),
 	).dataset()
-	assert sorted(abc_bASc.columns) == ['a', 'b', 'c'], '%s: %r' % (abc_bASc, sorted(abc_bASc.columns),)
+	assert sorted(abc_bASc.columns) == ['a', 'b', 'c'], f'{abc_bASc}: {sorted(abc_bASc.columns)!r}'
 	assert list(abc_bASc.iterate(None)) == [('a', True, 'b',)], abc_bASc
 
 def test_rehash_with_empty_slices():

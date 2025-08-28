@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify that the output from methods is captured correctly for all valid
 combinations of prepare/analysis/synthesis, both in OUTPUT dir and in
@@ -43,13 +39,13 @@ def test(params, p=False, a=False, s=False):
 	cookie = randint(10000, 99999)
 	if p:
 		name += 'p'
-		opts['p'] = "Some words\nfrom prepare\nwith %d in them." % (cookie,)
+		opts['p'] = f"Some words\nfrom prepare\nwith {cookie} in them."
 	if a:
 		name += 'a'
 		opts['a'] = "A few words\nfrom analysis(%%d)\nwith the cookie %d in them." % (cookie,)
 	if s:
 		name += 's'
-		opts['s'] = "Words\nfrom synthesis\ncookie is %d." % (cookie,)
+		opts['s'] = f"Words\nfrom synthesis\ncookie is {cookie}."
 	jid = subjobs.build(name, options=opts)
 	d = jid.filename('OUTPUT/')
 	chked = set()
@@ -65,8 +61,8 @@ def test(params, p=False, a=False, s=False):
 		with open(d +  part, 'r') as fh:
 			got = fh.read().replace('\r\n', '\n')
 		want = prefix + '\n' + data + '\n'
-		assert got == prefix + '\n' + data + '\n', "%s produced %r in %s, expected %r" % (jid, got, part, want,)
-		assert output == got, 'job.output disagrees with manual file reading for %s in %s. %r != %r' % (part, jid, output, got,)
+		assert got == prefix + '\n' + data + '\n', f"{jid} produced {got!r} in {part}, expected {want!r}"
+		assert output == got, f'job.output disagrees with manual file reading for {part} in {jid}. {output!r} != {got!r}'
 		all.append(got)
 	if p:
 		chk('prepare')
@@ -76,10 +72,10 @@ def test(params, p=False, a=False, s=False):
 	if s:
 		chk('synthesis')
 	unchked = set(os.listdir(d)) - chked
-	assert not unchked, "Unexpected OUTPUT files from %s: %r" % (jid, unchked,)
+	assert not unchked, f"Unexpected OUTPUT files from {jid}: {unchked!r}"
 	output = jid.output()
 	got = ''.join(all)
-	assert output == got, 'job.output disagrees with manual file reading for <all> in %s. %r != %r' % (jid, output, got,)
+	assert output == got, f'job.output disagrees with manual file reading for <all> in {jid}. {output!r} != {got!r}'
 
 def synthesis(params):
 	test(params, s=True)
@@ -110,7 +106,7 @@ def sub_part(sliceno, opts):
 			# it might not have reached the server yet
 			timeout += 0.01
 		# we've given it 3 seconds, it's not going to happen.
-		raise Exception("Wanted to see tail output of %r, but saw %r" % (want, got,))
+		raise Exception(f"Wanted to see tail output of {want!r}, but saw {got!r}")
 	print(opts.prefix, file=sys.stderr)
 	verify(opts.prefix + '\n')
 	if isinstance(sliceno, int):

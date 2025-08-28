@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-
 description = r'''
 Test the +None types in dataset_type.
 
@@ -106,4 +104,4 @@ def synthesis(job):
 				if ds_with_None:
 					want.insert(0, None)
 				got = list(typed.iterate(0, name))
-				assert want == got, 'Column %r in %s has %r, should have %r' % (name, typed.quoted, got, want,)
+				assert want == got, f'Column {name!r} in {typed.quoted} has {got!r}, should have {want!r}'

@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from random import randint
 from collections import OrderedDict, defaultdict
 from itertools import combinations

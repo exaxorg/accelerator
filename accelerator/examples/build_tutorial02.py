@@ -37,8 +37,8 @@ def main(urd):
 	prt()
 	with prt.header('VISUALISING A JOB\'S DEPENDENCIES'):
 		prt('View the job\'s metadata using')
-		prt.command('ax job %s' % (imp,))
-		prt('We can see that the dataset "%s" is input to this job.' % (imp.params.datasets.source,))
+		prt.command(f'ax job {imp}')
+		prt(f'We can see that the dataset "{imp.params.datasets.source}" is input to this job.')
 
 	prt()
 	with prt.header('REFERENCES TO ALL JOBS ARE STORED IN THE "urd.joblist" OBJECT:'):
@@ -54,7 +54,7 @@ def main(urd):
 
 			Take a look at the dataset created by dataset_hashpart:
 		''')
-		prt.command('ax ds %s' % (imp,))
+		prt.command(f'ax ds {imp}')
 		prt('''
 			The asterisk on the row corresponding to the "String" column
 			indicates that the dataset is hash partitioned based the values
@@ -63,4 +63,4 @@ def main(urd):
 
 			We can also see how many rows there are in each slice by typing
 		''')
-		prt.command('ax ds -s %s' % (imp,))
+		prt.command(f'ax ds -s {imp}')

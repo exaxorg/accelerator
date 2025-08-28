@@ -71,4 +71,4 @@ def main(urd):
 		prt()
 		prt('Try')
 		prt.command('ax job -O', job)
-		prt('to print this output from the %s job to the terminal.' % (job.method,))
+		prt(f'to print this output from the {job.method} job to the terminal.')

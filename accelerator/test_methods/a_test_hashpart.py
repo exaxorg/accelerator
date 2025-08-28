@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify the dataset_hashpart method with various options.
 '''
@@ -87,12 +83,12 @@ def verify(slices, data, source, previous=None, **options):
 	for slice in range(slices):
 		for row in ds.iterate_chain(slice, names):
 			row = dict(zip(names, row))
-			assert h(row[hl]) % slices == slice, "row %r is incorrectly in slice %d in %s" % (row, slice, ds)
+			assert h(row[hl]) % slices == slice, f"row {row!r} is incorrectly in slice {slice} in {ds}"
 			want = good[row[hl]]
-			assert row == want, '%s (rehashed from %s) did not contain the right data for "%s".\nWanted\n%r\ngot\n%r' % (ds, source, hl, want, row)
+			assert row == want, f'{ds} (rehashed from {source}) did not contain the right data for "{hl}".\nWanted\n{want!r}\ngot\n{row!r}'
 	want_lines = len(data)
 	got_lines = ds.chain().lines()
-	assert got_lines == want_lines, '%s (rehashed from %s) had %d lines, should have had %d' % (ds, source, got_lines, want_lines,)
+	assert got_lines == want_lines, f'{ds} (rehashed from {source}) had {got_lines} lines, should have had {want_lines}'
 	return ds
 
 def verify_empty(source, previous=None, **options):
@@ -103,8 +99,8 @@ def verify_empty(source, previous=None, **options):
 	)
 	ds = Dataset(jid)
 	chain = ds.chain_within_job()
-	assert list(chain.iterate(None)) == [], "source=%s previous=%s did not produce empty dataset in %s" % (source, previous, ds,)
-	assert chain[0].previous == previous, "Empty %s should have had previous=%s, but had %s" % (ds, previous, chain[0].previous,)
+	assert list(chain.iterate(None)) == [], f"source={source} previous={previous} did not produce empty dataset in {ds}"
+	assert chain[0].previous == previous, f"Empty {ds} should have had previous={previous}, but had {chain[0].previous}"
 
 def synthesis(params):
 	ds = write(data)
@@ -121,7 +117,7 @@ def synthesis(params):
 	# normal chaining
 	a = verify(params.slices, data, ds, hashlabel="date")
 	b = verify(params.slices, data + bonus_data, bonus_ds, hashlabel="date", previous=a)
-	assert b.chain() == [a, b], "chain of %s is not [%s, %s] as expected" % (b, a, b)
+	assert b.chain() == [a, b], f"chain of {b} is not [{a}, {b}] as expected"
 	# chain_slices sparseness
 	empty = write([], name="empty")
 	verify_empty(empty, hashlabel="date")
@@ -135,7 +131,7 @@ def synthesis(params):
 	dw.write_dict(data[0])
 	ds = verify(params.slices, [data[0], data[0]], dw.finish(), hashlabel="date", chain_slices=True)
 	got_slices = len(ds.chain())
-	assert got_slices == params.slices, "%s (built with chain_slices=True) has %d datasets in chain, expected %d." % (ds, got_slices, params.slices)
+	assert got_slices == params.slices, f"{ds} (built with chain_slices=True) has {got_slices} datasets in chain, expected {params.slices}."
 
 	# test varying types and available columns over the chain (including the hashlabel type)
 	v1 = write([{'a': '101', 'b':  201 }], columns={'a': 'ascii',  'b': 'int32'}, name='varying1')

@@ -18,19 +18,10 @@
 #                                                                          #
 ############################################################################
 
-from accelerator.compat import PY3, unicode
-
-if PY3:
-	from socketserver import ThreadingMixIn
-	from http.server import HTTPServer, BaseHTTPRequestHandler
-	from socketserver import UnixStreamServer
-	from urllib.parse import parse_qs, unquote_plus
-else:
-	from SocketServer import ThreadingMixIn
-	from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-	from SocketServer import UnixStreamServer
-	from urlparse import parse_qs
-	from urllib import unquote_plus
+from socketserver import ThreadingMixIn
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import UnixStreamServer
+from urllib.parse import parse_qs, unquote_plus
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 	request_queue_size = 512
@@ -76,8 +67,7 @@ class BaseWebHandler(BaseHTTPRequestHandler):
 		bare_ctype = ctype.split(";", 1)[0].strip()
 		if bare_ctype == "application/x-www-form-urlencoded":
 			cgi_args = parse_qs(data, keep_blank_values=True)
-			if PY3:
-				cgi_args = {k.decode('ascii'): v for k, v in cgi_args.items()}
+			cgi_args = {k.decode('ascii'): v for k, v in cgi_args.items()}
 		else:
 			cgi_args = {None: [data]}
 		self.is_head = False
@@ -97,7 +87,7 @@ class BaseWebHandler(BaseHTTPRequestHandler):
 
 	def argdec(self, v):
 		if self.unicode_args:
-			if type(v) is unicode: return v
+			if type(v) is str: return v
 			try:
 				return v.decode("utf-8")
 			except Exception:

@@ -25,17 +25,17 @@ from pathlib import Path
 
 
 def save(job, name, sliceno):
-	p = job.save('contents of %s %s' % (name, sliceno,), name + '.pickle', sliceno=sliceno)
+	p = job.save(f'contents of {name} {sliceno}', name + '.pickle', sliceno=sliceno)
 	j = job.json_save({name: sliceno}, name + '.json', sliceno=sliceno)
 	name += '_path'
-	p_path = job.save('contents of %s %s' % (name, sliceno,), Path(name + '.pickle'), sliceno=sliceno)
+	p_path = job.save(f'contents of {name} {sliceno}', Path(name + '.pickle'), sliceno=sliceno)
 	j_path = job.json_save({name: sliceno}, Path(name + '.json'), sliceno=sliceno)
 	return p, j, p_path, j_path
 
 def check(job, name, sliceno, p, j, p_path, j_path):
-	assert p.load() == job.load(Path(p.filename)) == 'contents of %s %s' % (name, sliceno,)
+	assert p.load() == job.load(Path(p.filename)) == f'contents of {name} {sliceno}'
 	assert j.load() == job.json_load(Path(j.filename)) == {name: sliceno}
-	assert p_path.load() == job.load(Path(p_path.filename)) == 'contents of %s_path %s' % (name, sliceno,)
+	assert p_path.load() == job.load(Path(p_path.filename)) == f'contents of {name}_path {sliceno}'
 	assert j_path.load() == job.json_load(Path(j_path.filename)) == {name + '_path': sliceno}
 	for obj, filename in [
 		# Use Path() for files saved with strings and strings for files saved with Path.

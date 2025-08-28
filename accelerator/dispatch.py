@@ -19,13 +19,10 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 from signal import SIGTERM, SIGKILL
 
-from accelerator.compat import PY3, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.statmsg import children, statmsg_endwait
 from accelerator.build import JobError
@@ -70,10 +67,9 @@ def run(cmd, close_in_child, keep_in_child, no_stdin=True):
 		devnull = os.open('/dev/null', os.O_RDONLY)
 		os.dup2(devnull, 0)
 		os.close(devnull)
-	if PY3:
-		keep_in_child.update([1, 2])
-		for fd in keep_in_child:
-			os.set_inheritable(fd, True)
+	keep_in_child.update([1, 2])
+	for fd in keep_in_child:
+		os.set_inheritable(fd, True)
 	os.execv(cmd[0], cmd)
 	os._exit()
 
@@ -85,7 +81,7 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 		print_prefix = ''
 	else:
 		print_prefix = '    '
-	print('%s| %s [%s] |' % (print_prefix, jobid, method,))
+	print(f'{print_prefix}| {jobid} [{method}] |')
 	args = dict(
 		workdir=workdir,
 		slices=slices,
@@ -113,7 +109,7 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 				pass
 			# The dying process won't have sent an end message, so it has
 			# the endwait time until we SIGKILL it.
-			print('%s| %s [%s]  failed!    (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
+			print(f'{print_prefix}| {jobid} [{method}]  failed!    ({monotonic() - starttime:5.1f}s) |')
 		# There is a race where stuff on the status socket has not arrived when
 		# the sending process exits. This is basically benign, but let's give
 		# it a chance to arrive to cut down on confusing warnings.
@@ -134,5 +130,5 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 			pass
 	if status:
 		raise JobError(jobid, method, status)
-	print('%s| %s [%s]  completed. (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
+	print(f'{print_prefix}| {jobid} [{method}]  completed. ({monotonic() - starttime:5.1f}s) |')
 	return data

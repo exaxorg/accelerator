@@ -29,7 +29,7 @@ from collections import defaultdict
 import itertools
 import re
 
-from accelerator.compat import unicode, izip
+from accelerator.compat import izip
 from accelerator import OptionString, NoSuchDatasetError
 from accelerator import subjobs, status
 
@@ -52,7 +52,7 @@ def prepare(job):
 	seen_all = set(chain[0].columns)
 	for ds in chain:
 		if options.column not in ds.columns:
-			raise Exception('%r does not have column %r' % (ds, options.column,))
+			raise Exception(f'{ds!r} does not have column {options.column!r}')
 		hashlabel.add(ds.hashlabel)
 		seen_all &= set(ds.columns)
 		for name, col in ds.columns.items():
@@ -60,7 +60,7 @@ def prepare(job):
 			none_support[name] |= col.none_support
 	seen_all.discard(options.column)
 	if not seen_all:
-		raise Exception('Chain has no common columns (except %r)' % (options.column,))
+		raise Exception(f'Chain has no common columns (except {options.column!r})')
 	columns = {k: columns[k] for k in seen_all}
 	if len(hashlabel) == 1:
 		hashlabel = hashlabel.pop()
@@ -86,7 +86,7 @@ def prepare(job):
 		if len(types) > 1 and not (types - {'int32', 'int64', 'float32', 'float64'}):
 			types = {'number'}
 		if len(types) > 1:
-			raise Exception("Column %r has incompatible types: %r" % (name, types,))
+			raise Exception(f"Column {name!r} has incompatible types: {types!r}")
 		columns[name] = (types.pop(), none_support[name],)
 
 	collect = subjobs.build(
@@ -103,7 +103,7 @@ def prepare(job):
 	else:
 		previous = {}
 
-	with status('Creating %d datasets' % (len(values),)):
+	with status(f'Creating {len(values)} datasets'):
 		writers = {
 			name: job.datasetwriter(
 				name=name,
@@ -123,4 +123,4 @@ def analysis(sliceno, prepare_res):
 	# we can't just use chain.iterate because of protections against changing types with copy_mode
 	values_it = itertools.chain.from_iterable(ds.iterate(sliceno, columns, copy_mode=True, status_reporting=False) for ds in chain)
 	for key, values in izip(key_it, values_it):
-		writers[unicode(key)].write(*values)
+		writers[str(key)].write(*values)

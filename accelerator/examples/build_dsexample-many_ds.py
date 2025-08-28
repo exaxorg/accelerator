@@ -20,4 +20,4 @@ def main(urd):
 
 	prt()
 	prt('Print contents of a specific dataset like this')
-	prt.command('ax cat -H %s/third' % (job,))
+	prt.command(f'ax cat -H {job}/third')

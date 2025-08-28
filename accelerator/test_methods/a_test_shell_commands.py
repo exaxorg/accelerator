@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test all the ax sub-commands at least a little bit.
 '''
@@ -55,12 +51,12 @@ def chk(cmd, want_in_help=[], want_in_call=[], dont_want_in_call=[]):
 		output = ax(args)
 		for want in want_l:
 			if want not in output:
-				print("Expected to find %r in %r output:\n\n%s\n\nbut didn't." % (want, args, output,))
-				raise Exception("Failed in command %r" % (cmd[0],))
+				print(f"Expected to find {want!r} in {args!r} output:\n\n{output}\n\nbut didn't.")
+				raise Exception(f"Failed in command {cmd[0]!r}")
 		for dont_want in dont_want_l:
 			if dont_want in output:
-				print("Did not expect to find %r in %r output:\n\n%s\n\nbut did." % (dont_want, args, output,))
-				raise Exception("Failed in command %r" % (cmd[0],))
+				print(f"Did not expect to find {dont_want!r} in {args!r} output:\n\n{output}\n\nbut did.")
+				raise Exception(f"Failed in command {cmd[0]!r}")
 
 def synthesis(job):
 	print('look for this later')

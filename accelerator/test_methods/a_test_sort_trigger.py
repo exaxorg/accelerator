@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test dataset_sort with trigger_column
 '''
@@ -32,7 +28,7 @@ from accelerator import subjobs
 def sort(src, ix, **kw):
 	ds = subjobs.build('dataset_sort', source=src, sort_across_slices=True, **kw).dataset()
 	want = sorted(src.iterate(None), key=itemgetter(ix))
-	assert list(ds.iterate(None)) == want, '%s != sorted(%s)' % (ds, src,)
+	assert list(ds.iterate(None)) == want, f'{ds} != sorted({src})'
 	return ds
 
 def synthesis(job):
@@ -51,14 +47,14 @@ def synthesis(job):
 	src = dw.finish()
 	# Unchanging trigger
 	a = sort(src, 0, sort_columns='a', trigger_column='a')
-	assert set(a.lines) == {0, 60}, '%s %r' % (a, a.lines,)
+	assert set(a.lines) == {0, 60}, f'{a} {a.lines!r}'
 	# Just two trigger values
 	b = sort(src, 1, sort_columns='b', trigger_column='b')
-	assert set(b.lines) == {0, 30}, '%s %r' % (b, b.lines,)
+	assert set(b.lines) == {0, 30}, f'{b} {b.lines!r}'
 	# Trigger value changes every time - trigger_column should affect nothing
 	c = sort(src, 2, sort_columns='c')
 	ct = sort(src, 2, sort_columns='c', trigger_column='c')
-	assert c.lines == ct.lines, '%s %r != %s %r' % (c, c.lines, ct, ct.lines,)
+	assert c.lines == ct.lines, f'{c} {c.lines!r} != {ct} {ct.lines!r}'
 	# check that using second sort column as trigger works
 	bc = sort(src, 2, sort_columns=['c', 'b'], trigger_column='b')
-	assert set(bc.lines) == {0, 30}, '%s %r' % (bc, bc.lines,)
+	assert set(bc.lines) == {0, 30}, f'{bc} {bc.lines!r}'

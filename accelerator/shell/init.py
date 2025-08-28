@@ -19,10 +19,6 @@
 ############################################################################
 
 
-from __future__ import print_function
-from __future__ import division
-
-
 a_example = r"""description = r'''
 This is just an example. It doesn't even try to do anything useful.
 
@@ -127,7 +123,7 @@ def find_free_ports(low, high, count=3, hostname='localhost'):
 	for port in ports:
 		if all(free(port + n) for n in range(count)):
 			return port
-	raise Exception('Failed to find %d consecutive free TCP ports on %s in range(%d, %d)' % (count, hostname, low, high))
+	raise Exception(f'Failed to find {count} consecutive free TCP ports on {hostname} in range({low}, {high})')
 
 
 def git(method_dir):
@@ -201,7 +197,7 @@ def main(argv, cfg):
 					if default.lower() == 'true':
 						bool_fallbacks.add(cfg_name.replace('-', '_'))
 					elif default.lower() != 'false':
-						raise UserError("Configuration init.%s must be either true or false, not %r." % (cfg_name, default,))
+						raise UserError(f"Configuration init.{cfg_name} must be either true or false, not {default!r}.")
 					default = None
 				elif 'type' in kw:
 					default = kw['type'](default)
@@ -248,9 +244,9 @@ def main(argv, cfg):
 		else:
 			port = find_free_ports(0x3000, 0x8000)
 		listen = DotDict(
-			server='%s:%d' % (host, port,),
-			board='%s:%d' % (host, port + 1,),
-			urd='%s:%d' % (host, port + 2,),
+			server=f'{host}:{port}',
+			board=f'{host}:{port + 1}',
+			urd=f'{host}:{port + 2}',
 		)
 
 	if options.slices is None:
@@ -315,7 +311,7 @@ def main(argv, cfg):
 
 	if not options.force:
 		if exists(options.directory) and set(listdir(options.directory)) - {'venv', '.venv'}:
-			raise UserError('Directory %r is not empty.' % (options.directory,))
+			raise UserError(f'Directory {options.directory!r} is not empty.')
 		def plausible_jobdir(n):
 			parts = n.rsplit('-', 1)
 			return len(parts) == 2 and parts[0] == options.name and parts[1].isnumeric()
@@ -324,9 +320,9 @@ def main(argv, cfg):
 			if exists(workdir):
 				workdir_slices = slice_count(workdir)
 				if workdir_slices not in (None, options.slices):
-					raise UserError('Workdir %r has %d slices, refusing to continue with %d slices' % (workdir, workdir_slices, options.slices,))
+					raise UserError(f'Workdir {workdir!r} has {workdir_slices} slices, refusing to continue with {options.slices} slices')
 		if exists(first_workdir_path) and any(map(plausible_jobdir, listdir(first_workdir_path))):
-			raise UserError('Workdir %r already has jobs in it.' % (first_workdir_path,))
+			raise UserError(f'Workdir {first_workdir_path!r} already has jobs in it.')
 
 	if not exists(options.directory):
 		makedirs(options.directory)
@@ -342,7 +338,7 @@ def main(argv, cfg):
 			makedirs(path)
 		if options.force or not exists(slices_conf(path)):
 			with open(slices_conf(path), 'w') as fh:
-				fh.write('%d\n' % (options.slices,))
+				fh.write(f'{options.slices}\n')
 	method_dir = options.name
 	if not exists(method_dir):
 		makedirs(method_dir)
@@ -361,7 +357,7 @@ def main(argv, cfg):
 		examples = 'examples'
 	else:
 		examples = '# accelerator.examples'
-	all_workdirs = ['%s %s' % (shell_quote(name), shell_quote(path),) for name, path in workdirs]
+	all_workdirs = [f'{shell_quote(name)} {shell_quote(path)}' for name, path in workdirs]
 	with open('accelerator.conf', 'w') as fh:
 		fh.write(config_template.format(
 			name=shell_quote(options.name),

@@ -18,11 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 description = r'''
 Call csvimport on one or more files in a zip file.
 
@@ -125,7 +120,7 @@ def prepare(job):
 				used_names.add(name)
 				res.append((next(tmpfn), info, name, fn,))
 	if namemap:
-		raise Exception("The following files were not found in %s: %r" % (options.filename, set(namemap),))
+		raise Exception(f"The following files were not found in {options.filename}: {set(namemap)!r}")
 	if options.chaining == 'by_filename':
 		res.sort(key=lambda x: x[3])
 	if options.chaining == 'by_dsname':
@@ -152,7 +147,7 @@ class ProgressMsg:
 		self.z_so_far += self.z[self.cnt_so_far]
 		self.cnt_so_far += 1
 		percent = self.z_so_far / self.z_total * 100
-		return '%s %s (file %d/%d, up to %d%% of total size)' % (msg, fn, self.cnt_so_far, self.cnt_total, percent,)
+		return f'{msg} {fn} (file {self.cnt_so_far}/{self.cnt_total}, up to {percent}% of total size)'
 
 def analysis(sliceno, slices, prepare_res, job):
 	lst = prepare_res[sliceno::slices]
@@ -174,7 +169,7 @@ def synthesis(prepare_res):
 		for fn, info, dsn in lst:
 			update(msg.step('importing'))
 			opts.filename = fn
-			show_fn = '%s:%s' % (options.filename, info.filename,)
+			show_fn = f'{options.filename}:{info.filename}'
 			ds = build('csvimport', options=opts, previous=previous, caption='Import of ' + show_fn).dataset()
 			previous = ds.link_to_here(dsn, filename=show_fn)
 			if options.chaining == 'off':

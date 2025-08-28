@@ -16,4 +16,4 @@ def main(urd):
 
 	prt()
 	prt('source code is here:')
-	prt.plain(join(dirname(__file__), 'a_%s.py' % (job.method,)))
+	prt.plain(join(dirname(__file__), f'a_{job.method}.py'))

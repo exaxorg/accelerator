@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Tests the parsed:type writers.
 With plain values, parsable values and unparsable values.
@@ -53,18 +49,18 @@ def synthesis(job, slices):
 			try:
 				write(value)
 			except Exception as e:
-				raise Exception('Failed to write %r to %s column: %r' % (value, typ, e))
+				raise Exception(f'Failed to write {value!r} to {typ} column: {e!r}')
 		for value in ['foo', '1 two'] + bad_values:
 			try:
 				write(value)
-				raise Exception('writer for parsed:%s allowed %r' % (typ, value,))
+				raise Exception(f'writer for parsed:{typ} allowed {value!r}')
 			except (ValueError, OverflowError):
 				pass
 		ds = dw.finish()
 		for sliceno in range(slices):
 			want_slice = hashfilter(typ, want_values, sliceno)
 			got_slice = list(ds.iterate(sliceno, 'value'))
-			assert nanfix(got_slice) == nanfix(want_slice), "%s got %r, wanted %r in slice %d" % (typ, got_slice, want_slice, sliceno)
+			assert nanfix(got_slice) == nanfix(want_slice), f"{typ} got {got_slice!r}, wanted {want_slice!r} in slice {sliceno}"
 
 	inf = float('inf')
 	nan = float('nan')

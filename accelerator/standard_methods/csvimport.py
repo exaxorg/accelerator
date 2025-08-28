@@ -20,10 +20,6 @@
 # This is a separate file from a_csvimport so setup.py can import
 # it and make the _csvimport module at install time.
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from . import c_backend_support
 
 all_c_functions = r'''

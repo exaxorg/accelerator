@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify that lists of chains are handled in csvexport, including changing
 column types.
@@ -32,7 +28,7 @@ def verify(want, **kw):
 	job = subjobs.build('csvexport', labelsonfirstline=False, **kw)
 	with job.open('result.csv') as fh:
 		got = fh.read()
-	assert want == got, 'wanted %r, got %r' % (want, got,)
+	assert want == got, f'wanted {want!r}, got {got!r}'
 	return job
 
 def synthesis(job):

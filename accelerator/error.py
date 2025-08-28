@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 class AcceleratorError(Exception):
 	"""Base class for all accelerator exception types"""
 	__slots__ = ()
@@ -73,15 +69,15 @@ class BuildError(AcceleratorError):
 
 class JobError(BuildError):
 	def __init__(self, job, method, status):
-		AcceleratorError.__init__(self, "Failed to build %s (%s)" % (job, method,))
+		AcceleratorError.__init__(self, f"Failed to build {job} ({method})")
 		self.job = job
 		self.method = method
 		self.status = status
 
 	def format_msg(self):
-		res = ["%s (%s):" % (self.job, self.method,)]
+		res = [f"{self.job} ({self.method}):"]
 		for component, msg in self.status.items():
-			res.append("  %s:" % (component,))
+			res.append(f"  {component}:")
 			res.append("    %s" % (msg.replace("\n", "\n    "),))
 		return "\n".join(res)
 

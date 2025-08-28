@@ -6,7 +6,7 @@ def prepare():
 
 
 def analysis(sliceno, prepare_res):
-	return 'this is analysis %s with prepare_res=%s' % (str(sliceno), prepare_res)
+	return f'this is analysis {sliceno!s} with prepare_res={prepare_res}'
 
 
 def synthesis(analysis_res, prepare_res):

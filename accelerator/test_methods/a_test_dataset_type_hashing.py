@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify that using dataset_type with a hashlabel gives the same result as
 first typing and then rehashing for various hashlabel types, including
@@ -34,7 +30,7 @@ hashlabel is inherited or discarded as appropriate.
 from itertools import cycle
 from datetime import date, time, datetime
 
-from accelerator.compat import unicode, PY3
+from accelerator.compat import unicode
 from accelerator import subjobs
 from accelerator.extras import DotDict
 from accelerator.dsutil import typed_writer
@@ -83,7 +79,7 @@ def synthesis(job, slices):
 
 	# Test various types for hashing and discarding of bad lines.
 	for hl in (None, 'a', 'b', 'c'):
-		dw = job.datasetwriter(name='hashed on %s' % (hl,), columns={'a': 'unicode', 'b': 'unicode', 'c': 'unicode'}, hashlabel=hl)
+		dw = job.datasetwriter(name=f'hashed on {hl}', columns={'a': 'unicode', 'b': 'unicode', 'c': 'unicode'}, hashlabel=hl)
 		w = dw.get_split_write()
 		for ix in range(1000):
 			w(unicode(ix), '%d.%d' % (ix, ix % 5 == 0), ('{"a": %s}' if ix % 3 else '%d is bad') % (ix,))
@@ -99,10 +95,10 @@ def synthesis(job, slices):
 	dw = job.datasetwriter(name='more types')
 	cols = {
 		'floatbooli': cycle(['1.42 or so', '0 maybe', '1 (exactly)']),
-		'datetime:%Y%m%d %H:%M': ['2019%02d%02d 17:%02d' % (t % 12 + 1, t % 28 + 1, t % 60) for t in range(1000)],
-		'date:%Y%m%d': ['2019%02d%02d' % (t % 12 + 1, t % 28 + 1,) for t in range(1000)],
-		'time:%H:%M': ['%02d:%02d' % (t // 60, t % 60) for t in range(1000)],
-		'timei:%H:%M': ['%02d:%02d%c' % (t // 60, t % 60, chr(t % 26 + 65)) for t in range(1000)],
+		'datetime:%Y%m%d %H:%M': [f'2019{t % 12 + 1:02}{t % 28 + 1:02} 17:{t % 60:02}' for t in range(1000)],
+		'date:%Y%m%d': [f'2019{t % 12 + 1:02}{t % 28 + 1:02}' for t in range(1000)],
+		'time:%H:%M': [f'{t // 60:02}:{t % 60:02}' for t in range(1000)],
+		'timei:%H:%M': [f'{t // 60:02}:{t % 60:02}{chr(t % 26 + 65)}' for t in range(1000)],
 	}
 	gens = []
 	for coltype, gen in cols.items():
@@ -158,19 +154,17 @@ def synthesis(job, slices):
 		'time'    : ('time', True),
 		'unicode' : ('unicode', True),
 	})
-	if PY3:
-		# name it with z so it's last during iteration.
-		dw.add('zpickle', 'pickle', none_support=True)
+	# name it with z so it's last during iteration.
+	dw.add('zpickle', 'pickle', none_support=True)
 	write = dw.get_split_write()
 	data = {
 		'42': ('ascii string', True, b'bytes string',  1+2j, 2+3j, date(2019, 12, 11), datetime(2019, 12, 11, 20, 7, 21), 1.5, 0.00000001, 99, -11, {"a": "b"}, 1e100, time(20, 7, 21), 'unicode string'),
 		None: (          None, None,            None,  None, None,               None,                             None, None,      None, None, None,     None,  None,            None,             None),
 		'18': ('ASCII STRING', False, b'BYTES STRING', 3-4j, 4-5j, date(1868,  1,  3), datetime(1868,  1,  3, 13, 14, 5), 2.5, -0.0000001, 67, -99, [42, ".."], 5e100, time(13, 14, 5), 'UNICODE STRING'),
 	}
-	if PY3:
-		data['42'] += ([date(1, 2, 3), 'foo'],)
-		data[None] += (None,)
-		data['18'] += ({1, 2, 'c', b'bar'},)
+	data['42'] += ([date(1, 2, 3), 'foo'],)
+	data[None] += (None,)
+	data['18'] += ({1, 2, 'c', b'bar'},)
 	write('42', *data['42'])
 	write(None, *data[None])
 	write('18', *data['18'])
@@ -206,12 +200,12 @@ def synthesis(job, slices):
 					key = key.decode('ascii')
 				else:
 					key = unicode(key)
-				assert data.get(key) == line[1:], "%s (hl %s) didn't have the right data for line %r" % (ds, hl, line[0],)
+				assert data.get(key) == line[1:], f"{ds} (hl {hl}) didn't have the right data for line {line[0]!r}"
 				hv = line[sorted(src_ds.columns).index(hl)]
-				assert hl_hash(hv) % slices == sliceno, "%s (hl %s) didn't hash %r correctly" % (ds, hl, hv,)
-				assert key not in seen, "%s (hl %s) repeated line %s" % (ds, hl, line[0],)
+				assert hl_hash(hv) % slices == sliceno, f"{ds} (hl {hl}) didn't hash {hv!r} correctly"
+				assert key not in seen, f"{ds} (hl {hl}) repeated line {line[0]}"
 				seen.add(key)
-		assert seen == {'42', 'None', '18'}, "%s didn't have all lines (%r)" % (ds, seen,)
+		assert seen == {'42', 'None', '18'}, f"{ds} didn't have all lines ({seen!r})"
 
 def test(src_ds, opts, expect_lines):
 	opts = DotDict(opts)
@@ -219,7 +213,7 @@ def test(src_ds, opts, expect_lines):
 		return opts.get('rename', {}).get(colname, colname)
 	cols = set(opts.column2type)
 	opts.discard_untyped = True
-	msg = 'Testing with types %s' % (', '.join(v for k, v in sorted(opts.column2type.items())),)
+	msg = f"Testing with types {', '.join((v for k, v in sorted(opts.column2type.items())))}"
 	expect_hl = None
 	if src_ds.hashlabel and opts.column2type.get(src_ds.hashlabel) == 'json':
 		# json is not hashable, so we have to override the hashlabel to nothing in this case.
@@ -228,7 +222,7 @@ def test(src_ds, opts, expect_lines):
 	elif src_ds.hashlabel:
 		expect_hl = rename(src_ds.hashlabel)
 		if expect_hl in opts.column2type:
-			msg += ' (hashed on %s)' % (opts.column2type[expect_hl],)
+			msg += f' (hashed on {opts.column2type[expect_hl]})'
 		else:
 			expect_hl = None
 			msg += ' (hashed on <untyped column>)'
@@ -258,7 +252,7 @@ def test(src_ds, opts, expect_lines):
 			# not hashable
 			continue
 		opts['hashlabel'] = hashlabel
-		print('%s rehashed on %s' % (msg, opts.column2type[hashlabel],))
+		print(f'{msg} rehashed on {opts.column2type[hashlabel]}')
 		hashed_by_type = subjobs.build('dataset_type', options=opts, datasets=dict(source=src_ds)).dataset()
 		assert hashed_by_type.hashlabel == hashlabel, hashed_by_type
 		assert set(hashed_by_type.columns) == cols, hashed_by_type

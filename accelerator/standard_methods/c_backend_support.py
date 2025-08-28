@@ -17,16 +17,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 import hashlib
 from importlib import import_module
 from collections import namedtuple
 
-from accelerator.compat import unicode, str_types
+from accelerator.compat import str_types
 
 
 _prologue_code_template = r'''
@@ -115,7 +111,7 @@ def make_source(name, functions, protos, extra_functions, extra_method_defs, wra
 	method_defs.extend(extra_method_defs)
 	code.append(_init_code_template % dict(methods=',\n\t'.join(method_defs), name=name,))
 	hash = hashlib.sha1(b''.join(c.encode('ascii') for c in code)).hexdigest()
-	code.insert(-1, 'static char source_hash[] = "%s";\n' % (hash,))
+	code.insert(-1, f'static char source_hash[] = "{hash}";\n')
 	code = ''.join(code)
 	return code, hash
 
@@ -127,11 +123,11 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return [0] * count
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return s
 	else:
-		print('[%s] Backend modified since module was compiled, falling back to cffi for development.' % (name,), file=sys.stderr)
+		print(f'[{name}] Backend modified since module was compiled, falling back to cffi for development.', file=sys.stderr)
 		import cffi
 		ffi = cffi.FFI()
 
@@ -139,7 +135,7 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return ffi.new('uint64_t []', [0] * count)
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return ffi.new('char []', s)
 

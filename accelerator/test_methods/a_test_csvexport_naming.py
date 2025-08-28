@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify filename (sliced and unsliced) and gzip in csvexport.
 '''
@@ -55,4 +51,4 @@ def synthesis(job):
 			want = b'a\n1\n'
 		else:
 			want = b'a\n0\n1\n2\n'
-		assert want == got, 'wanted %r, got %r in %s' % (want, got, fn)
+		assert want == got, f'wanted {want!r}, got {got!r} in {fn}'

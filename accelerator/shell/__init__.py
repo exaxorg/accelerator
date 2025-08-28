@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 import errno
 import os
@@ -83,13 +79,13 @@ def load_some_cfg(basedir='.', all=False):
 				# As long as we find at least one we're happy.
 				pass
 		if not found_any:
-			raise UserError("Could not find 'accelerator*.conf' in %r or any of its parents." % (basedir,))
+			raise UserError(f"Could not find 'accelerator*.conf' in {basedir!r} or any of its parents.")
 		cfg.config_filename = None
 	else:
 		try:
 			fn = next(cfgs)
 		except StopIteration:
-			raise UserError("Could not find 'accelerator.conf' in %r or any of its parents." % (basedir,))
+			raise UserError(f"Could not find 'accelerator.conf' in {basedir!r} or any of its parents.")
 		load_cfg(fn)
 
 def load_cfg(fn):
@@ -101,7 +97,7 @@ def load_cfg(fn):
 	cfg = load_config(fn)
 	for k, v in cfg.workdirs.items():
 		if WORKDIRS.get(k, v) != v:
-			print("WARNING: %s overrides workdir %s" % (fn, k,), file=sys.stderr)
+			print(f"WARNING: {fn} overrides workdir {k}", file=sys.stderr)
 		WORKDIRS[k] = v
 	return cfg
 
@@ -193,7 +189,7 @@ def cmd_abort(argv):
 	a = Automata(cfg.url)
 	res = a.abort()
 	if not args.quiet:
-		print("Killed %d running job%s." % (res.killed, '' if res.killed == 1 else 's'))
+		print(f"Killed {res.killed} running job{'' if res.killed == 1 else 's'}.")
 cmd_abort.help = '''abort running job(s)'''
 
 def cmd_alias(argv):
@@ -273,7 +269,7 @@ def cmd_version(argv, as_command=True):
 			py_version = sys.implementation.name
 			suffix = ' (%s)' % (suffix.split('\n')[0].strip(),)
 			impl_version = '.'.join(map(str, sys.implementation.version))
-			py_version = '%s %s' % (py_version, impl_version,)
+			py_version = f'{py_version} {impl_version}'
 		except Exception:
 			pass
 		print('Running on ' + py_version + suffix)
@@ -308,7 +304,6 @@ def _unesc(m):
 		return _unesc_v.get(v.lower(), v)
 
 def parse_user_config():
-	from accelerator.compat import open
 	from configparser import ConfigParser
 	from os import environ
 	fns = []
@@ -342,7 +337,7 @@ def parse_user_config():
 			for include in shlex.split(include):
 				include = join(dirname(fn), expanduser(include))
 				if include in seen_fns:
-					raise Exception('Config include loop: %r goes back to %r' % (fn, include,))
+					raise Exception(f'Config include loop: {fn!r} goes back to {include!r}')
 				read(include, seen_fns, True)
 		# Append this file after the included files, so this file takes priority.
 		all_cfg.append((fn, contents))
@@ -365,7 +360,7 @@ def printdesc(items, columns, colour_prefix, full=False):
 				if len(description) + len(part) + 1 > max_len:
 					break
 				if description:
-					description = '%s %s' % (description, part,)
+					description = f'{description} {part}'
 				else:
 					description = part
 			description += colour.faint(ddot)
@@ -413,7 +408,7 @@ def expand_env(words, alias):
 				try:
 					expanded = shlex.split(environ[k])
 				except ValueError as e:
-					raise ValueError('Failed to expand alias %s (%s -> %r): %s' % (alias, word, environ[k], e,))
+					raise ValueError(f'Failed to expand alias {alias} ({word} -> {environ[k]!r}): {e}')
 				for word in expanded:
 					yield word
 		else:
@@ -428,7 +423,7 @@ def expand_aliases(main_argv, argv):
 		try:
 			expanded = shlex.split(aliases[alias])
 		except ValueError as e:
-			raise ValueError('Failed to expand alias %s (%r): %s' % (argv[0], aliases[argv[0]], e,))
+			raise ValueError(f'Failed to expand alias {argv[0]} ({aliases[argv[0]]!r}): {e}')
 		expanded = list(expand_env(expanded, alias))
 		more_main_argv, argv = split_args(expanded + argv[1:])
 		main_argv.extend(more_main_argv)
@@ -436,7 +431,7 @@ def expand_aliases(main_argv, argv):
 			break
 		used_aliases.append(alias)
 		if alias in used_aliases[:-1]:
-			raise ValueError('Alias loop: %r' % (used_aliases,))
+			raise ValueError(f'Alias loop: {used_aliases!r}')
 
 	while argv and argv[0] == 'noalias':
 		argv.pop(0)
@@ -539,7 +534,7 @@ def main():
 		parser.print_help(file=sys.stderr)
 		if args.command is not None:
 			print(file=sys.stderr)
-			print('Unknown command "%s"' % (args.command,), file=sys.stderr)
+			print(f'Unknown command "{args.command}"', file=sys.stderr)
 		sys.exit(2)
 	config_fn = args.config
 	if args.command in ('init', 'intro', 'version', 'alias',):
@@ -548,7 +543,7 @@ def main():
 	debug_cmd = getattr(cmd, 'is_debug', False)
 	try:
 		setup(config_fn, debug_cmd)
-		argv.insert(0, '%s %s' % (basename(sys.argv[0]), args.command,))
+		argv.insert(0, f'{basename(sys.argv[0])} {args.command}')
 		return cmd(argv)
 	except UserError as e:
 		print(e, file=sys.stderr)

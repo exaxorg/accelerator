@@ -35,9 +35,9 @@ def prepare(job):
 	hashlabel = datasets.source.hashlabel
 	for ds in chain:
 		if columns != {name: col.type for name, col in ds.columns.items()}:
-			raise Exception('Dataset %s does not have the same columns as %s' % (ds.quoted, datasets.source.quoted,))
+			raise Exception(f'Dataset {ds.quoted} does not have the same columns as {datasets.source.quoted}')
 		if hashlabel != ds.hashlabel:
-			raise Exception('Dataset %s has hashlabel %r, expected %r' % (ds.quoted, ds.hashlabel, hashlabel,))
+			raise Exception(f'Dataset {ds.quoted} has hashlabel {ds.hashlabel!r}, expected {hashlabel!r}')
 	dw = job.datasetwriter(hashlabel=hashlabel, previous=datasets.previous, copy_mode=True)
 	for name, t in sorted(columns.items()):
 		dw.add(name, t, none_support=chain.none_support(name))

@@ -17,15 +17,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division, print_function
-
 from itertools import cycle
 import errno
 import os
 import sys
 
 from accelerator.colourwrapper import colour
-from accelerator.compat import PY2
 from accelerator import mp
 
 
@@ -46,7 +43,7 @@ def split_colour(spec):
 		elif 40 <= code <= 48 or 100 <= code <= 107:
 			target = bg
 		elif code not in (39, 49):
-			print("Sorry, %s can only use colours, not attributes" % (spec,), file=sys.stderr)
+			print(f"Sorry, {spec} can only use colours, not attributes", file=sys.stderr)
 			sys.exit(1)
 		target.append(part)
 	return ';'.join(fg), ';'.join(bg)
@@ -99,7 +96,7 @@ class Liner:
 		os.close(self.saved_stdout)
 		self.process.join()
 		if self.process.exitcode and self.process.exitcode != _RC_EPIPE:
-			raise Exception('Liner process exited with %s' % (self.process.exitcode,))
+			raise Exception(f'Liner process exited with {self.process.exitcode}')
 
 
 def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, after=0):
@@ -128,12 +125,8 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, 
 			(pre_fg1, pre_bg1),
 		])
 
-		if PY2:
-			in_fh = sys.stdin
-			errors = 'replace'
-		else:
-			in_fh = sys.stdin.buffer.raw
-			errors = 'surrogateescape'
+		in_fh = sys.stdin.buffer.raw
+		errors = 'surrogateescape'
 
 		if decode_lines:
 			if lined:
@@ -176,11 +169,11 @@ def enable_lines(colour_prefix, lined=True, decode_lines=False, max_count=None, 
 				todo = iter(line)
 				data = []
 				if line_fg and line_bg:
-					data.append('\x1b[%s;%sm' % (line_fg, line_bg,))
+					data.append(f'\x1b[{line_fg};{line_bg}m')
 				elif line_bg:
-					data.append('\x1b[%sm' % (line_bg,))
+					data.append(f'\x1b[{line_bg}m')
 				elif line_fg:
-					data.append('\x1b[%sm' % (line_fg,))
+					data.append(f'\x1b[{line_fg}m')
 				if line_bg and not decode_lines:
 					data.append('\x1b[K') # try to fill the line with bg (if terminal does BCE)
 				for c in todo:

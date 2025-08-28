@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 from glob import glob
 from os.path import dirname, basename
@@ -61,7 +57,7 @@ def main(argv, cfg):
 				try:
 					module = import_module(modname)
 				except Exception as e:
-					print(colour('%s: %s' % (item, e,), 'script/warning'), file=sys.stderr)
+					print(colour(f'{item}: {e}', 'script/warning'), file=sys.stderr)
 					continue
 				scripts.append((name, getattr(module, 'description', '')))
 

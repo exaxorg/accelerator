@@ -27,7 +27,7 @@ from collections import namedtuple, OrderedDict
 from functools import wraps
 from pathlib import Path
 
-from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
+from accelerator.compat import iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 
@@ -44,9 +44,9 @@ def dirnamematcher(name):
 def _assert_is_normrelpath(path, dirtype):
 	norm = os.path.normpath(path)
 	if (norm != path and norm + '/' != path) or norm.startswith('/'):
-		raise AcceleratorError('%r is not a normalised relative path' % (path,))
+		raise AcceleratorError(f'{path!r} is not a normalised relative path')
 	if norm == '..' or norm.startswith('../'):
-		raise AcceleratorError('%r is above the %s dir' % (path, dirtype))
+		raise AcceleratorError(f'{path!r} is above the {dirtype} dir')
 
 
 def _cachedprop(meth):
@@ -61,7 +61,7 @@ def _cachedprop(meth):
 _cache = {}
 _nodefault = object()
 
-class Job(unicode):
+class Job(str):
 	"""
 	A string that is a jobid, but also has some extra properties:
 	.method The job method (can be the "name" when from build or urd).
@@ -82,7 +82,7 @@ class Job(unicode):
 	.link_result to put a link in result_directory that points to a file in this job.
 	.link_to_here to expose a subjob result in its parent.
 
-	Decays to a (unicode) string when pickled.
+	Decays to a string when pickled.
 	"""
 
 	__slots__ = ('workdir', 'number', '_cache')
@@ -91,12 +91,12 @@ class Job(unicode):
 		k = (jobid, method)
 		if k in _cache:
 			return _cache[k]
-		obj = unicode.__new__(cls, jobid)
+		obj = str.__new__(cls, jobid)
 		try:
 			obj.workdir, tmp = jobid.rsplit('-', 1)
 			obj.number = int(tmp)
 		except ValueError:
-			raise NoSuchJobError('Not a valid jobid: "%s".' % (jobid,))
+			raise NoSuchJobError(f'Not a valid jobid: "{jobid}".')
 		obj._cache = {}
 		if method:
 			obj._cache['method'] = method
@@ -105,7 +105,7 @@ class Job(unicode):
 
 	@classmethod
 	def _create(cls, name, number):
-		return Job('%s-%d' % (name, number,))
+		return Job(f'{name}-{number}')
 
 	@_cachedprop
 	def method(self):
@@ -134,14 +134,14 @@ class Job(unicode):
 	@property
 	def path(self):
 		if self.workdir not in WORKDIRS:
-			raise NoSuchWorkdirError('Not a valid workdir: "%s"' % (self.workdir,))
+			raise NoSuchWorkdirError(f'Not a valid workdir: "{self.workdir}"')
 		return os.path.join(WORKDIRS[self.workdir], self)
 
 	def filename(self, filename, sliceno=None):
 		if isinstance(filename, Path):
 			filename = str(filename)
 		if sliceno is not None:
-			filename = '%s.%d' % (filename, sliceno,)
+			filename = f'{filename}.{sliceno}'
 		return os.path.join(self.path, filename)
 
 	def open(self, filename, mode='r', sliceno=None, encoding=None, errors=None):
@@ -196,7 +196,7 @@ class Job(unicode):
 				raise
 			return default
 
-	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		from accelerator.extras import json_load
 		try:
 			return json_load(self.filename(filename, sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
@@ -223,7 +223,7 @@ class Job(unicode):
 		if isinstance(what, int):
 			fns = [what]
 		else:
-			assert what in (None, 'prepare', 'analysis', 'synthesis'), 'Unknown output %r' % (what,)
+			assert what in (None, 'prepare', 'analysis', 'synthesis'), f'Unknown output {what!r}'
 			if what in (None, 'analysis'):
 				fns = list(range(self.params.slices))
 				if what is None:
@@ -262,14 +262,14 @@ class Job(unicode):
 			else:
 				linkname += os.path.basename(filename)
 		source_fn = os.path.join(self.path, filename)
-		assert os.path.exists(source_fn), "Filename \"%s\" does not exist in jobdir \"%s\"!" % (filename, self.path)
+		assert os.path.exists(source_fn), f"Filename \"{filename}\" does not exist in jobdir \"{self.path}\"!"
 		result_directory = cfg['result_directory']
 		dest_fn = result_directory
 		for part in linkname.split('/'):
 			if not os.path.exists(dest_fn):
 				os.mkdir(dest_fn)
 			elif dest_fn != result_directory and os.path.islink(dest_fn):
-				raise AcceleratorError("Refusing to create link %r: %r is a symlink" % (linkname, dest_fn))
+				raise AcceleratorError(f"Refusing to create link {linkname!r}: {dest_fn!r} is a symlink")
 			dest_fn = os.path.join(dest_fn, part)
 		try:
 			os.remove(dest_fn + '_')
@@ -318,7 +318,7 @@ class Job(unicode):
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 
 class CurrentJob(Job):
@@ -360,7 +360,7 @@ class CurrentJob(Job):
 			return Job.open(self, filename, mode, sliceno, encoding, errors)
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
-		if PY3 and 'x' not in mode:
+		if 'x' not in mode:
 			mode = mode.replace('w', 'x')
 		def _open(fn, _mode):
 			# ignore the passed mode, use the one we have
@@ -380,11 +380,11 @@ class CurrentJob(Job):
 		from accelerator.extras import saved_files
 		saved_files[filename] = 0
 
-	def register_files(self, pattern='**/*' if PY3 else '*'):
+	def register_files(self, pattern='**/*'):
 		"""Bulk register files matching a pattern.
 		Tries to exclude internal files automatically.
 		Does not register temp-files.
-		The default pattern registers everything (recursively, unless python 2).
+		The default pattern registers everything, recursively.
 		Returns which files were registered.
 		"""
 		from accelerator.extras import saved_files
@@ -394,11 +394,7 @@ class CurrentJob(Job):
 		assert not pattern.startswith('../')
 		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.pickle')
 		res = set()
-		if PY3:
-			files = iglob(pattern, recursive=True)
-		else:
-			# No recursive support on python 2.
-			files = iglob(pattern)
+		files = iglob(pattern, recursive=True)
 		for fn in files:
 			if (
 				fn in forbidden or
@@ -444,7 +440,7 @@ class NoJob(Job):
 	number = version = -1
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	def dataset(self, name='default'):
 		raise NoSuchDatasetError('NoJob has no datasets')
@@ -464,7 +460,7 @@ class NoJob(Job):
 			raise NoSuchJobError('Can not load named / sliced file on <NoJob>')
 		return None
 
-	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		return self.load(filename, sliceno, default=default)
 
 	@property # so it can return the same instance as all other NoJob things
@@ -500,7 +496,7 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 				raise
 			return default
 
-	def json_load(self, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, sliceno=None, unicode_as_utf8bytes=False, default=_nodefault):
 		from accelerator.extras import json_load
 		try:
 			return json_load(self.filename(sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)

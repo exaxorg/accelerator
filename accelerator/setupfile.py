@@ -20,15 +20,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 from collections import OrderedDict
 from json import dumps
 from datetime import datetime, date, time, timedelta
 from pathlib import PosixPath, PurePosixPath
 
-from accelerator.compat import iteritems, unicode, long, PY3, PY2, uni
+from accelerator.compat import iteritems, uni
 
 from accelerator.error import AcceleratorError, NoSuchJobError
 from accelerator.extras import DotDict, json_load, json_save, json_encode
@@ -65,7 +62,7 @@ def load_setup(jobid):
 	try:
 		d = json_load('setup.json', jobid)
 	except IOError:
-		raise NoSuchJobError('Job %r not found' % (jobid,))
+		raise NoSuchJobError(f'Job {jobid!r} not found')
 	version = d.version
 	if version == 1:
 		d.jobs = d.pop('jobids')
@@ -82,7 +79,7 @@ def load_setup(jobid):
 		# no changes here, it's only used to know how to find datasets
 		version = 4
 	if version != 4:
-		raise AcceleratorError("Don't know how to load setup.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError(f"Don't know how to load setup.json version {d.version} (in {jobid})")
 	return d
 
 def update_setup(jobid, **kw):
@@ -130,17 +127,15 @@ def encode_setup(data, sort_keys=True, as_str=False):
 			return [1970, 1, 1, src.hour, src.minute, src.second, src.microsecond]
 		elif isinstance(src, timedelta):
 			return src.total_seconds()
-		elif PY2 and isinstance(src, bytes):
-			return uni(src)
 		else:
-			assert isinstance(src, (str, unicode, int, float, long, bool)) or src is None, "%s not supported in data" % (type(src),)
+			assert isinstance(src, (str, int, float, bool)) or src is None, f"{type(src)} not supported in data"
 			return src
 	res = _encode_with_compact(
 		copy(data),
 		compact_keys=('starttime', 'endtime', 'exectime', '_typing',),
 		special_keys=('options', 'datasets', 'jobs',),
 	)
-	if PY3 and not as_str:
+	if not as_str:
 		res = res.encode('ascii')
 	return res
 
@@ -166,7 +161,7 @@ def _encode_with_compact(data, compact_keys, extra_indent=0, separator='\n', spe
 				fmted = _encode_with_compact(d, ('analysis', 'per_slice',), 1, '')
 			else:
 				fmted = dumps(data[k])
-			compact.append('    "%s": %s,' % (k, fmted,))
+			compact.append(f'    "{k}": {fmted},')
 			del data[k]
 	for k in special_keys:
 		if k in data:

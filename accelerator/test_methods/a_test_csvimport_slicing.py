@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-
 description = r'''
 Verify that csvimport puts lines in the expected slice.
 
@@ -53,8 +51,8 @@ def check(job, name, labels_txt=[], initial_skipped=[], sometimes='', comments=F
 				if sometimes and randint(0, 9) == 3:
 					add_comment(sometimes % (ix, sliceno,))
 				if comments and sliceno % comments == 0:
-					add_comment('# line %d, before %d,%d' % (lineno[0], ix, sliceno,))
-				fh.write('%d,%d\n' % (ix, sliceno,))
+					add_comment(f'# line {lineno[0]}, before {ix},{sliceno}')
+				fh.write(f'{ix},{sliceno}\n')
 				want_linenos[sliceno].append(lineno[0])
 				lineno[0] += 1
 	job = subjobs.build(
@@ -69,16 +67,16 @@ def check(job, name, labels_txt=[], initial_skipped=[], sometimes='', comments=F
 	ds = job.dataset()
 	for sliceno in range(job.params.slices):
 		got = [int(x) for x in ds.iterate(sliceno, 'sliceno')]
-		assert got == [sliceno] * 10, "Slice %d has wrong slices in %s: %r" % (sliceno, ds.quoted, got,)
+		assert got == [sliceno] * 10, f"Slice {sliceno} has wrong slices in {ds.quoted}: {got!r}"
 		got = [int(x) for x in ds.iterate(sliceno, 'ix')]
-		assert got == list(range(10)), "Slice %d has wrong ixes in %s: %r" % (sliceno, ds.quoted, got,)
+		assert got == list(range(10)), f"Slice {sliceno} has wrong ixes in {ds.quoted}: {got!r}"
 		got = list(ds.iterate(sliceno, 'lineno'))
-		assert got == want_linenos[sliceno], "Slice %d has wrong lines in %s:\n    wanted %r\n    got    %r" % (sliceno, ds.quoted, want_linenos[sliceno], got,)
+		assert got == want_linenos[sliceno], f"Slice {sliceno} has wrong lines in {ds.quoted}:\n    wanted {want_linenos[sliceno]!r}\n    got    {got!r}"
 	if comments or sometimes or initial_skipped:
 		ds = job.dataset('skipped')
 		for sliceno in range(job.params.slices):
 			got = list(ds.iterate(sliceno, ('lineno', 'data')))
-			assert got == want_comments[sliceno], "Slice %d has wrong skipped lines in %s:\n    wanted %r\n    got    %r" % (sliceno, ds.quoted, want_comments[sliceno], got,)
+			assert got == want_comments[sliceno], f"Slice {sliceno} has wrong skipped lines in {ds.quoted}:\n    wanted {want_comments[sliceno]!r}\n    got    {got!r}"
 
 
 def synthesis(job):

@@ -3,6 +3,7 @@
 #                                                                          #
 # Copyright (c) 2020-2024 Carl Drougge                                     #
 # Modifications copyright (c) 2024 Anders Berkeman                         #
+# Copyright (c) 2025 Pablo Correa Gomez                                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -18,8 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 import bottle
 import json
 import sys
@@ -31,6 +30,7 @@ import functools
 import mimetypes
 import time
 from stat import S_ISDIR, S_ISLNK
+from pathlib import Path
 
 from accelerator.job import Job, JobWithFile
 from accelerator.dataset import Dataset
@@ -82,15 +82,15 @@ json_enc = JSONEncoderWithSet(indent=4, ensure_ascii=False).encode
 def ax_repr(o):
 	res = []
 	if isinstance(o, JobWithFile):
-		link = '/job/' + bottle.html_escape(o.job)
-		res.append('JobWithFile(<a href="%s">job=' % (link,))
+		link = f'/job/{bottle.html_escape(o.job)}'
+		res.append(f'JobWithFile(<a href="{link}">job=')
 		res.append(ax_repr(o.job))
 		name = bottle.html_escape(o.name)
 		if o.sliced:
 			name += '.0'
-		res.append('</a>, <a href="%s/%s">name=' % (link, name,))
+		res.append(f'</a>, <a href="{link}/{name}">name=')
 		res.append(ax_repr(o.name))
-		res.append('</a>, sliced=%s, extra=%s' % (ax_repr(o.sliced), ax_repr(o.extra),))
+		res.append(f'</a>, sliced={ax_repr(o.sliced)}, extra={ax_repr(o.extra)}')
 		res.append(')')
 	elif isinstance(o, (list, tuple)):
 		bra, ket = ('[', ']',) if isinstance(o, list) else ('(', ')',)
@@ -117,17 +117,17 @@ def ax_repr(o):
 
 def ax_link(v):
 	if isinstance(v, tuple):
-		return '(%s)' % (', '.join(ax_link(vv) for vv in v),)
+		return f'({", ".join(ax_link(vv) for vv in v)})'
 	elif isinstance(v, list):
-		return '[%s]' % (', '.join(ax_link(vv) for vv in v),)
+		return f'[{", ".join(ax_link(vv) for vv in v)}]'
 	elif v:
 		ev = bottle.html_escape(v)
 		if isinstance(v, Dataset):
 			job = bottle.html_escape(v.job)
 			name = bottle.html_escape(v.name)
-			return '<a href="/job/%s">%s</a>/<a href="/dataset/%s">%s</a>' % (url_quote(v.job), job, url_quote(v), name,)
+			return f'<a href="/job/{url_quote(v.job)}">{job}</a>/<a href="/dataset/{url_quote(v)}">{name}</a>'
 		elif isinstance(v, Job):
-			return '<a href="/job/%s">%s</a>' % (url_quote(v), ev,)
+			return f'<a href="/job/{url_quote(v)}">{ev}</a>'
 		else:
 			return ev
 	else:
@@ -142,18 +142,17 @@ hashed = {}
 def populate_hashed():
 	from hashlib import sha1
 	from base64 import b64encode
-	dirname = os.path.join(os.path.dirname(__file__), 'board')
+	dirname = Path(__file__).parent.joinpath('board')
 	for filename, ctype in [
 		('style.css', 'text/css; charset=UTF-8'),
 		('script.js', 'text/javascript; charset=UTF-8'),
 		('graph.js', 'text/javascript; charset=UTF-8'),
 	]:
 		try:
-			with open(os.path.join(dirname, filename), 'rb') as fh:
-				data = fh.read()
+			data = dirname.joinpath(filename).read_bytes()
 			h = b64encode(sha1(data).digest(), b'_-').rstrip(b'=').decode('ascii')
-			h_name = h + '/' + filename
-			name2hashed[filename] = '/h/' + h_name
+			h_name = f'{h}/{filename}'
+			name2hashed[filename] = f'/h/{h_name}'
 			hashed[h_name] = (data, ctype,)
 		except OSError as e:
 			name2hashed[filename] = '/h/ERROR'
@@ -262,8 +261,8 @@ def run(cfg, from_shell=False, development=False):
 	global _development
 	_development = development
 
-	project = os.path.split(cfg.project_directory)[1]
-	setproctitle('ax board-server for %s on %s' % (project, cfg.board_listen,))
+	project = Path(cfg.project_directory).name
+	setproctitle(f'ax board-server for {project} on {cfg.board_listen}')
 
 	# The default path filter (i.e. <something:path>) does not match newlines,
 	# but we want it to do so (e.g. in case someone names a dataset with one).
@@ -286,7 +285,7 @@ def run(cfg, from_shell=False, development=False):
 	def call_u(*path, **kw):
 		url = os.path.join(cfg.urd, *map(url_quote, path))
 		if kw:
-			url = url + '?' + urlencode(kw)
+			url = f'{url}?{urlencode(kw)}'
 		return call(url, server_name='urd')
 
 	# yield chunks of a file, optionally inserting some bonus content somewhere
@@ -318,6 +317,7 @@ def run(cfg, from_shell=False, development=False):
 
 	# Based on the one in bottle but modified for our needs.
 	def static_file(filename, root, job=None):
+		# Should port to pathlib after https://github.com/bottlepy/bottle/issues/1311
 		root = os.path.abspath(root) + os.sep
 		filename = os.path.abspath(os.path.join(root, filename))
 		if not filename.startswith(root):
@@ -364,7 +364,7 @@ def run(cfg, from_shell=False, development=False):
 			if not ranges:
 				return bottle.HTTPError(416, "Requested Range Not Satisfiable")
 			offset, end = ranges[0]
-			headers['Content-Range'] = 'bytes %d-%d/%d' % (offset, end-1, clen)
+			headers['Content-Range'] = f'bytes {offset}-{end-1}/{clen}'
 			headers['Content-Length'] = str(end-offset)
 			if body:
 				body = file_parts_iter(file_parts, clen, body, offset, end)
@@ -385,14 +385,14 @@ def run(cfg, from_shell=False, development=False):
 
 	# Look for actual workdirs, so things like /workdirs/foo/foo-37/foo-1/bar
 	# resolves to ('foo-37', 'foo-1/bar') and not ('foo-1', 'bar').
-	path2wd = {v: k for k, v in cfg.workdirs.items()}
+	path2wd = {Path(v): k for k, v in cfg.workdirs.items()}
 	def job_and_file(path, default_name):
-		wd = ''
-		path = iter(path.split('/'))
+		wd = Path('')
+		path = iter(path.parts)
 		for name in path:
 			if not name:
 				continue
-			wd = wd + '/' + name
+			wd.joinpath(name)
 			if wd in path2wd:
 				break
 		else:
@@ -409,47 +409,44 @@ def run(cfg, from_shell=False, development=False):
 		res = {'files': files, 'dirs': dirs}
 		default_jobid = None
 		default_prefix = ''
-		prefix = cfg.result_directory
-		for part in path.strip('/').split('/'):
-			prefix = os.path.join(prefix, part)
+		prefix = Path(cfg.result_directory)
+		for part in Path(path).parts:
+			prefix = Path(prefix, part)
 			if not default_jobid:
 				try:
-					default_jobid, default_prefix = job_and_file(os.readlink(prefix), '')
+					default_jobid, default_prefix = job_and_file(prefix.readlink(), '')
 					if default_jobid and default_prefix:
 						default_prefix += '/'
 				except OSError:
 					pass
 			elif default_prefix:
 				default_prefix += part + '/'
-		filenames = os.listdir(prefix)
-		for fn in filenames:
-			if fn.startswith('.') or fn.endswith('_'):
+		for fn in prefix.iterdir():
+			if fn.name.startswith('.') or fn.name.endswith('_'):
 				continue
-			ffn = os.path.join(prefix, fn)
 			try:
-				lstat = os.lstat(ffn)
+				lstat = fn.lstat()
 				if S_ISLNK(lstat.st_mode):
-					link_dest = os.readlink(ffn)
-					stat = os.stat(link_dest)
-					jobid, name = job_and_file(link_dest, fn)
+					link_dest = fn.readlink()
+					stat = link_dest.stat()
+					jobid, name = job_and_file(link_dest, fn.name)
 				else:
 					stat = lstat
 					jobid = default_jobid
-					name = default_prefix + fn
+					name = default_prefix + fn.name
 			except OSError:
 				continue
 			if S_ISDIR(stat.st_mode):
-				dirs[fn] = os.path.join('/results', path, fn, '')
+				dirs[fn.name] = Path('/results', path, fn.name).as_posix()
 			else:
-				files[fn] = dict(
+				files[fn.name] = dict(
 					jobid=jobid,
 					name=name,
 					ts=lstat.st_mtime,
 					size=stat.st_size,
 				)
 		if path:
-			a, b = os.path.split(path)
-			dirs['..'] = os.path.join('/results', a, '') if a else '/'
+			dirs['..'] = Path('/results', Path(path).parent).as_posix()
 		return res
 
 	@bottle.get('/results')
@@ -457,23 +454,23 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/results/<path:path>')
 	def results(path=''):
 		path = path.strip('/')
-		if os.path.isdir(os.path.join(cfg.result_directory, path)):
+		abspath = Path(cfg.result_directory, path)
+		if abspath.is_dir():
 			accept = get_best_accept('text/html', 'application/json', 'text/json')
 			if accept == 'text/html':
-				return main_page(path=os.path.join('/results', path).rstrip('/'))
+				return main_page(path=Path('/results', path).as_posix())
 			else:
 				bottle.response.content_type = accept + '; charset=UTF-8'
 				bottle.response.set_header('Cache-Control', 'no-cache')
 				return json.dumps(results_contents(path))
 		elif path:
 			try:
-				link_dest = os.readlink(os.path.join(cfg.result_directory, path))
-				job, _ = job_and_file(link_dest, None)
+				job, _ = job_and_file(abspath.readlink(), None)
 			except OSError:
 				job = None
 			return static_file(path, root=cfg.result_directory, job=job)
 		else:
-			return {'missing': 'result directory %r missing' % (cfg.result_directory,)}
+			return {'missing': f'result directory {cfg.result_directory!r} missing'}
 
 	@bottle.get('/status')
 	@view('status')
@@ -484,7 +481,7 @@ def run(cfg, from_shell=False, development=False):
 				return 'idle'
 			else:
 				t, msg, _ = status.current
-				return '%s (%s)' % (msg, fmttime(status.report_t - t, short=True),)
+				return f'{msg} ({fmttime(status.report_t - t, short=True)})'
 		else:
 			status.tree = list(fix_stacks(status.pop('status_stacks', ()), status.report_t))
 			return status
@@ -517,7 +514,7 @@ def run(cfg, from_shell=False, development=False):
 						from pygments.lexers import PythonLexer
 						from pygments.formatters import HtmlFormatter
 						data = highlight(code, PythonLexer(), HtmlFormatter())
-						code = '<style>\n' + HtmlFormatter().get_style_defs('.highlight') + '</style>\n' + data
+						code = f'<style>\n{HtmlFormatter().get_style_defs(".highlight")}</style>\n{data}'
 						bottle.response.content_type = 'text/html; charset=UTF-8'
 					except Exception:
 						pass
@@ -526,9 +523,10 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/job/<jobid>/<name:path>')
 	def job_file(jobid, name):
 		job = name2job(cfg, jobid)
-		if os.path.isdir(job.filename(name)):
-			files = {fn for fn in os.listdir(job.filename(name))}
-			dirs = {dn for dn in files if os.path.isdir(job.filename(name + '/' + dn))}
+		fn = Path(job.filename(name))
+		if fn.is_dir():
+			files = {f.name for f in fn.iterdir()}
+			dirs = {dn for dn in files if fn.joinpath(dn).is_dir()}
 			files -= dirs
 			res = dict(dirs=sorted(dirs), files=sorted(files), dirname=name, job=job)
 			accept = get_best_accept('application/json', 'text/json', 'text/html')
@@ -556,7 +554,7 @@ def run(cfg, from_shell=False, development=False):
 		if post:
 			aborted = False
 			files = {fn for fn in job.files() if fn[0] != '/'}
-			dirs = {dn for dn in files if os.path.isdir(job.filename(dn))}
+			dirs = {dn for dn in files if Path(job.filename(dn)).is_dir()}
 			files -= dirs
 			jobs = list(post.subjobs)
 			jobs.append(job)
@@ -567,7 +565,7 @@ def run(cfg, from_shell=False, development=False):
 				try:
 					v, lr = job.load('link_result.pickle')
 					if v == 0:
-						results = '[%s]' % ', '.join(v for _, v in lr)
+						results = f'[{", ".join(v for _, v in lr)}]'
 				except FileNotFoundError:
 					pass
 		else:
@@ -579,7 +577,7 @@ def run(cfg, from_shell=False, development=False):
 			job=job,
 			aborted=aborted,
 			current=current,
-			output=os.path.exists(job.filename('OUTPUT')),
+			output=Path(job.filename('OUTPUT')).exists(),
 			datasets=job.datasets,
 			params=job.params,
 			subjobs=subjobs,
@@ -625,7 +623,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/graph/urd/<user>/<build>/<ts>')
 	@view('rendergraph', prefer_ctype='image/svg+xml')
 	def urd_graph(user, build, ts):
-		key = user + '/' + build + '/' + ts
+		key = f'{user}/{build}/{ts}'
 		d = call_u(key)
 		ret = graph.graph(d, 'urd')
 		return ret
@@ -665,7 +663,7 @@ def run(cfg, from_shell=False, development=False):
 	def method(name):
 		methods = call_s('methods')
 		if name not in methods:
-			return bottle.HTTPError(404, 'Method %s not found' % (name,))
+			return bottle.HTTPError(404, f'Method {name} not found')
 		return dict(name=name, data=methods[name], cfg=cfg)
 
 	@bottle.get('/urd')
@@ -681,7 +679,7 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/urd/<user>/<build>/')
 	@view('urdlist', 'timestamps')
 	def urdlist(user, build):
-		key = user + '/' + build
+		key = f'{user}/{build}'
 		return dict(
 			key=key,
 			timestamps=call_u(key, 'since/0', captions=1),
@@ -690,16 +688,16 @@ def run(cfg, from_shell=False, development=False):
 	@bottle.get('/urd/<user>/<build>/<ts>')
 	@view('urditem', 'entry')
 	def urditem(user, build, ts):
-		key = user + '/' + build + '/' + ts
+		key = f'{user}/{build}/{ts}'
 		d = call_u(key)
-		key = user + '/' + build + '/' + d.timestamp
+		key = f'{user}/{build}/{d.timestamp}'
 		results = None
 		if d.get('build_job'):  # non-existing on older versions
 			try:
 				bjob = name2job(cfg, d['build_job'])
 				v, lr = bjob.load('link_result.pickle')
 				if v == 0:
-					results = '[%s]' % (', '.join(v for k, v in lr if k == key),)
+					results = f'[{", ".join(v for k, v in lr if k == key)}]'
 			except (FileNotFoundError, NoSuchJobError):
 				pass
 		return dict(key=key, entry=d, results=results)
@@ -731,7 +729,7 @@ def run(cfg, from_shell=False, development=False):
 		from accelerator.colour import bold, red, green
 		print(bold("\nINFO: Install \"pygments\" to have " + red("prett") + green("ified") + " source code in board.\n"))
 
-	bottle.TEMPLATE_PATH = [os.path.join(os.path.dirname(__file__), 'board')]
+	bottle.TEMPLATE_PATH = [Path(__file__).parent.joinpath('board')]
 	kw = {}
 	if development:
 		kw['reloader'] = True

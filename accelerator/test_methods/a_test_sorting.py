@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test dataset_sort with various options on a dataset with all types.
 '''
@@ -87,7 +83,7 @@ def check_one(slices, key, source, reverse=False):
 	for sliceno in range(slices):
 		good = sorted(test_data.sort_data_for_slice(sliceno), key=keycmp, reverse=reverse)
 		check = list(ds.iterate(sliceno))
-		assert unnan(check) == unnan(good), "Slice %d sorted on %s bad (%s)" % (sliceno, key, jid,)
+		assert unnan(check) == unnan(good), f"Slice {sliceno} sorted on {key} bad ({jid})"
 
 def synthesis(params):
 	source = Dataset(subjobs.build("test_sorting_gendata"))
@@ -113,4 +109,4 @@ def synthesis(params):
 	good = sorted(all_data, key=lambda t: (noneninf(t[int64_off]), noneninf(t[int32_off]),), reverse=True)
 	ds = Dataset(jid)
 	check = list(ds.iterate(None))
-	assert unnan(check) == unnan(good), "Sorting across slices on [int64, int32] bad (%s)" % (jid,)
+	assert unnan(check) == unnan(good), f"Sorting across slices on [int64, int32] bad ({jid})"

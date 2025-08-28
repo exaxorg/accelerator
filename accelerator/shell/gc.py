@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from accelerator.error import AcceleratorError
 from accelerator.job import Job
 from accelerator.shell.parser import ArgumentParser
@@ -50,8 +48,8 @@ def main(argv, cfg):
 		print("Nothing to do.")
 		return 0
 	if args.dry_run:
-		print("Would have deleted %d jobs" % (len(to_delete),))
+		print(f"Would have deleted {len(to_delete)} jobs")
 		return 0
-	print("Deleting %d jobs" % (len(to_delete),))
+	print(f"Deleting {len(to_delete)} jobs")
 	for job in to_delete:
 		shutil.rmtree(job.path)

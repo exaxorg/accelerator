@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test copy_mode in DatasetWriter, and three ways to specify the column
 types (columns={}, add(n, Datasetcolums), .add(n, (t, none_support)).
@@ -66,6 +62,6 @@ def synthesis(job, slices, prepare_res):
 	ds = dw_nonetest_removed.finish()
 	for name, col in ds.columns.items():
 		if name == 'unicode':
-			assert col.none_support, "%s:%s should have none_support" % (ds, name,)
+			assert col.none_support, f"{ds}:{name} should have none_support"
 		else:
-			assert not col.none_support, "%s:%s shouldn't have none_support" % (ds, name,)
+			assert not col.none_support, f"{ds}:{name} shouldn't have none_support"

@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test Dataset.merge() and the dataset_merge method.
 '''
@@ -49,7 +45,7 @@ def fail_merge(a, b, **kw):
 		a.merge(b, name='failme', **kw)
 	except DatasetUsageError:
 		return
-	raise Exception("Merging %s and %s with %r didn't fail as it should have" % (a, b, kw,))
+	raise Exception(f"Merging {a} and {b} with {kw!r} didn't fail as it should have")
 
 checks = {}
 def check(ds, want):
@@ -57,7 +53,7 @@ def check(ds, want):
 		checks[ds.name] = want
 	got = list(ds.iterate_chain(None))
 	got.sort()
-	assert got == want, "%s contained %r not %r as expetected" % (ds, got, want,)
+	assert got == want, f"{ds} contained {got!r} not {want!r} as expetected"
 
 def synthesis(params):
 	a0 = mkds('a0', ['0', '1'], [(1, 2), (3, 4), (5, 6)])
@@ -147,4 +143,4 @@ def synthesis(params):
 			subjobs.build('dataset_merge', datasets=dict(source=parents), options=kw)
 		except JobError:
 			continue
-		raise Exception("dataset_merge incorrectly allowed %r with %r" % (parents, kw))
+		raise Exception(f"dataset_merge incorrectly allowed {parents!r} with {kw!r}")

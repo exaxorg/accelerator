@@ -38,7 +38,7 @@ def synthesis(job):
 				bad_value = object
 			else:
 				bad_value = 'not valid'
-			name = '%s %s none_support' % (t, 'with' if none_support else 'without',)
+			name = f"{t} {'with' if none_support else 'without'} none_support"
 			dw = job.datasetwriter(name=name, allow_missing_slices=True)
 			dw.add('data', 'parsed:' + t, none_support=none_support)
 			dw.set_slice(0)
@@ -46,11 +46,11 @@ def synthesis(job):
 				dw.write(v)
 			dw.set_slice(1)
 			for v in parse_values:
-				assert isinstance(v, str), 'oops: %r' % (v,)
+				assert isinstance(v, str), f'oops: {v!r}'
 				dw.write(v)
 			try:
 				dw.write(bad_value)
-				raise Exception("parsed:%s accepted %r as a value" % (t, bad_value,))
+				raise Exception(f"parsed:{t} accepted {bad_value!r} as a value")
 			except (ValueError, TypeError):
 				pass
 			# json will of course accept None even without none_support
@@ -59,17 +59,17 @@ def synthesis(job):
 			try:
 				dw.write(None)
 				if not apparent_none_support:
-					raise Exception('parsed:%s accepted None without none_support' % (t,))
+					raise Exception(f'parsed:{t} accepted None without none_support')
 			except (ValueError, TypeError):
 				if apparent_none_support:
-					raise Exception('parsed:%s did not accept None despite none_support' % (t,))
+					raise Exception(f'parsed:{t} did not accept None despite none_support')
 			ds = dw.finish()
 			for sliceno, desc in enumerate(("normal values", "parseable values",)):
 				got = list(ds.iterate(sliceno, 'data'))
-				assert got == values, "parsed:%s (%s) %s gave %r, wanted %r" % (t, ds.quoted, desc, got, values,)
+				assert got == values, f"parsed:{t} ({ds.quoted}) {desc} gave {got!r}, wanted {values!r}"
 			if apparent_none_support:
 				got = list(ds.iterate(2, 'data'))
-				assert got == [None], "parsed:%s (%s) gave %r, wanted [None]" % (t, ds.quoted, got,)
+				assert got == [None], f"parsed:{t} ({ds.quoted}) gave {got!r}, wanted [None]"
 			dw = job.datasetwriter(name=name + ' with default', allow_missing_slices=True)
 			default = None if none_support else 42
 			dw.add('data', 'parsed:' + t, none_support=none_support, default=default)
@@ -78,4 +78,4 @@ def synthesis(job):
 			dw.write(bad_value)
 			ds = dw.finish()
 			got = list(ds.iterate(0, 'data'))
-			assert got == [1, default], "parsed:%s with default=%s (%s) gave %r, wanted [1, %s]" % (t, default, ds.quoted, got, default)
+			assert got == [1, default], f"parsed:{t} with default={default} ({ds.quoted}) gave {got!r}, wanted [1, {default}]"

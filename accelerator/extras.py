@@ -20,9 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 import datetime
 import json
@@ -32,8 +29,8 @@ from collections import OrderedDict
 from functools import partial
 import sys
 
-from accelerator.compat import PY2, PY3, pickle, izip, iteritems, first_value
-from accelerator.compat import num_types, uni, unicode, str_types
+from accelerator.compat import pickle, izip, iteritems, first_value
+from accelerator.compat import num_types, str_types
 
 from accelerator.error import AcceleratorError
 from accelerator.job import Job, JobWithFile
@@ -43,12 +40,12 @@ def _fn(filename, jobid, sliceno):
 	if isinstance(filename, pathlib.Path):
 		filename = str(filename)
 	if filename.startswith('/'):
-		assert not jobid, "Don't specify full path (%r) and jobid (%s)." % (filename, jobid,)
-		assert not sliceno, "Don't specify full path (%r) and sliceno." % (filename,)
+		assert not jobid, f"Don't specify full path ({filename!r}) and jobid ({jobid})."
+		assert not sliceno, f"Don't specify full path ({filename!r}) and sliceno."
 	elif jobid:
 		filename = Job(jobid).filename(filename, sliceno)
 	elif sliceno is not None:
-		filename = '%s.%d' % (filename, sliceno,)
+		filename = f'{filename}.{sliceno}'
 	return filename
 
 def _type_list_or(v, t, falseval, listtype):
@@ -189,7 +186,7 @@ def job_post(jobid):
 		d.files = sorted(fn[len(prefix):] if fn.startswith(prefix) else fn for fn in d.files)
 		version = 1
 	if version != 1:
-		raise AcceleratorError("Don't know how to load post.json version %d (in %s)" % (d.version, jobid,))
+		raise AcceleratorError(f"Don't know how to load post.json version {d.version} (in {jobid})")
 	return d
 
 def _pickle_save(variable, filename, temp, _hidden):
@@ -210,12 +207,9 @@ def pickle_save(variable, filename='result.pickle', sliceno=None, temp=None, bac
 # default is 'ascii', which is pretty terrible too.)
 def pickle_load(filename='result.pickle', jobid=None, sliceno=None, encoding='bytes'):
 	filename = _fn(filename, jobid, sliceno)
-	with status('Loading ' + filename):
+	with status(f'Loading {filename}'):
 		with open(filename, 'rb') as fh:
-			if PY3:
-				return pickle.load(fh, encoding=encoding)
-			else:
-				return pickle.load(fh)
+			return pickle.load(fh, encoding=encoding)
 
 
 def json_encode(variable, sort_keys=True, as_str=False):
@@ -238,13 +232,11 @@ def json_encode(variable, sort_keys=True, as_str=False):
 			return dict_type((typefix(k), typefix(v)) for k, v in iteritems(e))
 		elif isinstance(e, (list, tuple, set,)):
 			return [typefix(v) for v in e]
-		elif PY2 and isinstance(e, bytes):
-			return uni(e)
 		else:
 			return e
 	variable = typefix(variable)
 	res = json.dumps(variable, indent=4, sort_keys=sort_keys)
-	if PY3 and not as_str:
+	if not as_str:
 		res = res.encode('ascii')
 	return res
 
@@ -262,7 +254,7 @@ def json_save(variable, filename='result.json', sliceno=None, sort_keys=True, _e
 		return _SavedFile(filename, sliceno, json_load)
 
 def _unicode_as_utf8bytes(obj):
-	if isinstance(obj, unicode):
+	if isinstance(obj, str):
 		return obj.encode('utf-8')
 	elif isinstance(obj, dict):
 		return DotDict((_unicode_as_utf8bytes(k), _unicode_as_utf8bytes(v)) for k, v in iteritems(obj))
@@ -271,30 +263,23 @@ def _unicode_as_utf8bytes(obj):
 	else:
 		return obj
 
-def json_decode(s, unicode_as_utf8bytes=PY2):
+def json_decode(s, unicode_as_utf8bytes=False):
 	if unicode_as_utf8bytes:
 		return _unicode_as_utf8bytes(json.loads(s, object_pairs_hook=DotDict))
 	else:
 		return json.loads(s, object_pairs_hook=DotDict)
 
-def json_load(filename='result.json', jobid=None, sliceno=None, unicode_as_utf8bytes=PY2):
+def json_load(filename='result.json', jobid=None, sliceno=None, unicode_as_utf8bytes=False):
 	filename = _fn(filename, jobid, sliceno)
-	if PY3:
-		with open(filename, 'r', encoding='utf-8') as fh:
-			data = fh.read()
-	else:
-		with open(filename, 'rb') as fh:
-			data = fh.read()
+	with open(filename, 'r', encoding='utf-8') as fh:
+		data = fh.read()
 	return json_decode(data, unicode_as_utf8bytes)
 
 
 def quote(s):
 	"""Quote s unless it looks fine without"""
-	s = unicode(s)
+	s = str(s)
 	r = repr(s)
-	if PY2:
-		# remove leading u
-		r = r[1:]
 	if s and len(s) + 2 == len(r) and not any(c.isspace() for c in s):
 		return s
 	else:
@@ -308,7 +293,7 @@ def debug_print_options(options, title=''):
 		print('-' * 53)
 	max_k = max(len(str(k)) for k in options)
 	for key, val in sorted(options.items()):
-		print("%s = %r" % (str(key).ljust(max_k), val))
+		print(f"{str(key).ljust(max_k)} = {val!r}")
 	print('-' * 53)
 
 
@@ -334,15 +319,14 @@ class FileWriteMove(object):
 
 	def __init__(self, filename, temp=None, _hidden=False):
 		self.filename = filename
-		self.tmp_filename = '%s.%dtmp' % (filename, os.getpid(),)
+		self.tmp_filename = f'{filename}.{os.getpid()}tmp'
 		self.temp = temp
 		self._hidden = _hidden
 
 	def __enter__(self):
-		self._status = status('Saving ' + self.filename)
+		self._status = status(f'Saving {self.filename}')
 		self._status.__enter__()
-		# stupid python3 feels that w and x are exclusive, while python2 requires both.
-		fh = getattr(self, '_open', open)(self.tmp_filename, 'xb' if PY3 else 'wbx')
+		fh = getattr(self, '_open', open)(self.tmp_filename, 'xb')
 		self.close = fh.close
 		return fh
 	def __exit__(self, e_type, e_value, e_tb):
@@ -376,7 +360,7 @@ class ResultIter(object):
 		return self
 	def _loader(self, ix, slices):
 		for sliceno in slices:
-			yield pickle_load("Analysis.%d." % (ix,), sliceno=sliceno)
+			yield pickle_load(f"Analysis.{ix}.", sliceno=sliceno)
 	def __next__(self):
 		if self._is_tupled:
 			return next(self._tupled)
@@ -452,13 +436,13 @@ class ResultIterMagic(object):
 		to_check = data
 		while hasattr(to_check, "values"):
 			if not to_check:
-				raise self._exc("Empty value at depth %d (index %d)" % (depth, ix,))
+				raise self._exc(f"Empty value at depth {depth} (index {ix})")
 			to_check = first_value(to_check)
 			depth += 1
 		if hasattr(to_check, "update"): # like a set
 			depth += 1
 		if not depth:
-			raise self._exc("Top level has no .values (index %d)" % (ix,))
+			raise self._exc(f"Top level has no .values (index {ix})")
 		def upd(aggregate, part, level):
 			if level == depth:
 				aggregate.update(part)
@@ -500,11 +484,6 @@ class DotDict(OrderedDict):
 		raise AttributeError(name)
 
 	def __setattr__(self, name, value):
-		# if using the python implementation of OrderedDict (as python2 does)
-		# this is needed. don't worry about __slots__, it won't apply in that
-		# case, and __getattr__ is not needed as it falls through automatically.
-		if name.startswith('_OrderedDict__'):
-			return OrderedDict.__setattr__(self, name, value)
 		if name[0] == "_":
 			raise AttributeError(name)
 		self[name] = value
@@ -539,12 +518,11 @@ class _ListTypePreserver(list):
 		return self.__class__(list.__add__(other, self))
 
 	def __repr__(self):
-		return '%s(%s)' % (self.__class__.__name__, list.__repr__(self))
+		return f'{self.__class__.__name__}({list.__repr__(self)})'
 
 class OptionEnumValue(str):
 
-	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_valid', '_prefixes')
+	__slots__ = ('_valid', '_prefixes')
 
 	@staticmethod
 	def _mktype(name, valid, prefixes):
@@ -595,8 +573,6 @@ class OptionEnum(object):
 		if isinstance(values, str_types):
 			values = values.replace(',', ' ').split()
 		values = list(values)
-		if PY2:
-			values = [v.encode('utf-8') if isinstance(v, unicode) else v for v in values]
 		valid = set(values)
 		prefixes = []
 		for v in values:
@@ -638,7 +614,7 @@ class _OptionString(str):
 		return _OptionString(example)
 	def __repr__(self):
 		if self:
-			return 'OptionString(%r)' % (str(self),)
+			return f'OptionString({str(self)!r})'
 		else:
 			return 'OptionString'
 OptionString = _OptionString('')

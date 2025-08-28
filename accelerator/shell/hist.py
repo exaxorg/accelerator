@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from accelerator.colourwrapper import colour
 from accelerator.compat import fmt_num, num_types, int_types
 from accelerator.error import NoSuchWhateverError
@@ -168,7 +164,7 @@ def main(argv, cfg):
 	for ds in chain:
 		for col in args.column:
 			if col not in ds.columns:
-				print("Dataset %s does not have column %s." % (ds.quoted, col,), file=sys.stderr)
+				print(f"Dataset {ds.quoted} does not have column {col}.", file=sys.stderr)
 				ok = False
 	if not ok:
 		return 1
@@ -268,12 +264,12 @@ def main(argv, cfg):
 					if a == b:
 						return fmt_num(a)
 					else:
-						return '%s - %s' % (fmt_num(a), fmt_num(b))
+						return f'{fmt_num(a)} - {fmt_num(b)}'
 			else:
 				def name(ix):
 					a = step * ix + low
 					b = step * (ix + 1) + low
-					return '%s - %s' % (fmt_num(a), fmt_num(b))
+					return f'{fmt_num(a)} - {fmt_num(b)}'
 			bin_names = [name(ix) for ix in range(args.max_count)]
 
 	def collect_hist(hist, part):
@@ -299,7 +295,7 @@ def main(argv, cfg):
 		total_found = 0 # so we don't print about it later
 		if args.max_count:
 			if NaN in hist:
-				print(colour('WARNING: Ignored %d NaN values.' % (hist[NaN],), 'hist/warning'), file=sys.stderr)
+				print(colour(f'WARNING: Ignored {hist[NaN]} NaN values.', 'hist/warning'), file=sys.stderr)
 			hist[args.max_count - 1] += hist[args.max_count] # top value should not be in a separate bin
 			hist, fmt = formatter([(name, hist[ix]) for ix, name in enumerate(bin_names)])
 		else:

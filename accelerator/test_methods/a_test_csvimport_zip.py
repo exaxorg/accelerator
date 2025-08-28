@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify the zip wrapper for csvimport.
 '''
@@ -55,7 +51,7 @@ def verify(zipname, inside_filenames, want_ds, **kw):
 	jid = subjobs.build('csvimport_zip', options=opts)
 	for dsn, want_data in want_ds.items():
 		got_data = list(Dataset(jid, dsn).iterate(None, '0'))
-		assert got_data == want_data, "%s/%s from %s didn't contain %r, instead contained %r" % (jid, dsn, zipname, want_data, got_data)
+		assert got_data == want_data, f"{jid}/{dsn} from {zipname} didn't contain {want_data!r}, instead contained {got_data!r}"
 
 def verify_order(want_order, namemap={}, **kw):
 	opts=dict(
@@ -69,13 +65,13 @@ def verify_order(want_order, namemap={}, **kw):
 	for dsn in want_order:
 		b = b'contents of ' + namemap.get(dsn, dsn).encode('ascii')
 		got_data = list(Dataset(jid, dsn).iterate(None, '0'))
-		assert got_data == [b], "%s/%s from 'many files.zip' didn't contain [%r], instead contained %r" % (jid, dsn, b, got_data)
+		assert got_data == [b], f"{jid}/{dsn} from 'many files.zip' didn't contain [{b!r}], instead contained {got_data!r}"
 	got_order = [ds.name for ds in Dataset(jid, want_order[-1]).chain()]
-	assert want_order == got_order, 'Wanted order %r, got %r in %s' % (want_order, got_order, jid,)
+	assert want_order == got_order, f'Wanted order {want_order!r}, got {got_order!r} in {jid}'
 	if len(want_order) > 1: # chaining is actually on, so a default ds is produced
 		got_order = [ds.name for ds in Dataset(jid).chain()]
 		want_order[-1] = 'default'
-		assert want_order == got_order, 'Wanted order %r, got %r in %s' % (want_order, got_order, jid,)
+		assert want_order == got_order, f'Wanted order {want_order!r}, got {got_order!r} in {jid}'
 
 def synthesis():
 	# Simple case, a single file in the zip.

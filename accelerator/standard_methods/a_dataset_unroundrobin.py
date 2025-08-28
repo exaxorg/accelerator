@@ -17,9 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''
 new_ds.iterate(None) gives the same order as old_ds.iterate('roundrobin').
 
@@ -50,7 +47,7 @@ def prepare(job):
 		copy_mode=True,
 	)
 	if options.trigger_column:
-		assert options.trigger_column in datasets.source.columns, "Trigger column %r not in %s" % (options.trigger_column, datasets.source,)
+		assert options.trigger_column in datasets.source.columns, f"Trigger column {options.trigger_column!r} not in {datasets.source}"
 		ix = sorted(datasets.source.columns).index(options.trigger_column)
 	else:
 		ix = -1

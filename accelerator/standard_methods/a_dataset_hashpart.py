@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''
 Rewrite a dataset (or chain to previous) with new hashlabel.
 '''
@@ -58,9 +55,9 @@ def prepare_one(ix, source, previous, job, chain, slices):
 		if sliceno == slices - 1 and options.chain_slices and ix == len(chain) - 1:
 			name = "default"
 		else:
-			name = '%d.%d' % (ix, sliceno,)
+			name = f'{ix}.{sliceno}'
 		dw = job.datasetwriter(
-			caption="%s (slice %d)" % (caption, sliceno),
+			caption=f"{caption} (slice {sliceno})",
 			hashlabel=options.hashlabel,
 			filename=filename,
 			previous=previous,

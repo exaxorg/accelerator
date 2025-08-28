@@ -19,10 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 CSV file to dataset.
 
@@ -92,7 +88,7 @@ def reader_status(status_fd, update):
 		pass
 	count = 0
 	while True:
-		update('{0:n} lines read'.format(count))
+		update(f'{count:n} lines read')
 		data = os.read(status_fd, 8)
 		if not data:
 			break
@@ -126,7 +122,7 @@ def char2int(name, empty_value, specials="empty"):
 	char = options.get(name)
 	if not char:
 		return empty_value
-	msg = "%s must be a single iso-8859-1 character (or %s)" % (name, specials,)
+	msg = f"{name} must be a single iso-8859-1 character (or {specials})"
 	if isinstance(char, bytes):
 		char = uni(char)
 	try:
@@ -137,7 +133,7 @@ def char2int(name, empty_value, specials="empty"):
 	return cstuff.backend.char2int(char)
 
 def import_slice(fallback_msg, fd, sliceno, slices, field_count, out_fns, gzip_mode, separator, r_num, quote_char, lf_char, allow_bad, allow_extra_empty):
-	fn = "import.success.%d" % (sliceno,)
+	fn = f"import.success.{sliceno}"
 	fh = open(fn, "wb+")
 	real_stderr = os.dup(2)
 	try:
@@ -230,7 +226,7 @@ def prepare(job, slices):
 	if options.strip_labels:
 		labels = [x.strip() for x in labels]
 	labels = [options.rename.get(x, x) for x in labels]
-	assert len(labels) == len(set(labels)), "Duplicate labels: %r" % (labels,)
+	assert len(labels) == len(set(labels)), f"Duplicate labels: {labels!r}"
 
 	dw = job.datasetwriter(
 		columns={n: 'bytes' for n in labels if n not in options.discard},
@@ -314,7 +310,7 @@ def analysis(sliceno, slices, prepare_res, update_top_status):
 	r_num = cstuff.mk_uint64(9) # [good_count, bad_count, comment_count, good_min,max, bad_min,max, comment_min,max]
 	gzip_mode = b"wb%d" % (options.compression,)
 	try:
-		import_slice("c backend failed in slice %d" % (sliceno,), fds[sliceno], sliceno, slices, len(labels), out_fns, gzip_mode, separator, r_num, quote_char, lf_char, options.allow_bad, options.allow_extra_empty)
+		import_slice(f"c backend failed in slice {sliceno}", fds[sliceno], sliceno, slices, len(labels), out_fns, gzip_mode, separator, r_num, quote_char, lf_char, options.allow_bad, options.allow_extra_empty)
 	finally:
 		os.close(fds[sliceno])
 	return list(r_num)

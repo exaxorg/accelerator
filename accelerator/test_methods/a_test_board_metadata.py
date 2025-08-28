@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test board adding metadata to files and decoding this with "ax sherlock".
 '''
@@ -29,7 +25,7 @@ options = dict(
 	command_prefix=['ax', '--config', '/some/path/here'],
 )
 
-from accelerator.compat import url_quote_more, urlopen, Request, HTTPError, unicode
+from accelerator.compat import url_quote_more, urlopen, Request, HTTPError
 
 from subprocess import Popen, check_output
 import os
@@ -77,9 +73,9 @@ def synthesis(job):
 	extra_metadata = br'{"job":"/\n/DoES/NoT.EXIST/NOPE","setup_hash":"nah","host":"cough","method":"none","time":0}'
 	def mk_meta(prefix_a, prefix_b=b'', suffix=b'', offset=0):
 		data = extra_metadata + suffix
-		if isinstance(prefix_a, unicode):
+		if isinstance(prefix_a, str):
 			return struct.pack(prefix_a, len(data) + len(prefix_b) + offset) + prefix_b + data
-		elif isinstance(prefix_b, unicode):
+		elif isinstance(prefix_b, str):
 			return prefix_a + struct.pack(prefix_b, len(data) + len(prefix_a) + offset) + data
 		else:
 			return prefix_a + prefix_b + extra_metadata + suffix
@@ -123,14 +119,14 @@ def synthesis(job):
 			fh.write(contents)
 		modified_contents = get(filename)
 		if contents == modified_contents:
-			raise Exception('%s was not modified by board' % (filename,))
+			raise Exception(f'{filename} was not modified by board')
 		filename = 'modified.' + filename
 		with open(filename, 'wb') as fh:
 			fh.write(modified_contents)
 		if not any(modified_contents.startswith(v) for v in (want_head if isinstance(want_head, set) else (want_head,))):
-			raise Exception('Expected %s to start with %r, but it did not' % (filename, want_head,))
+			raise Exception(f'Expected {filename} to start with {want_head!r}, but it did not')
 		if not any(modified_contents.endswith(v) for v in (want_tail if isinstance(want_tail, set) else (want_tail,))):
-			raise Exception('Expected %s to end with %r, but it did not' % (filename, want_tail,))
+			raise Exception(f'Expected {filename} to end with {want_tail!r}, but it did not')
 		got = check_output(options.command_prefix + ['sherlock', filename])
 		got = got.decode('utf-8').strip()
 		if has_extra_block:
@@ -138,7 +134,7 @@ def synthesis(job):
 		else:
 			want_jobs = job
 		if got != want_jobs:
-			raise Exception('Expected "ax sherlock %s" to give %r, got %r' % (filename, want_jobs, got,))
+			raise Exception(f'Expected "ax sherlock {filename}" to give {want_jobs!r}, got {got!r}')
 
 	p.terminate()
 	p.wait()

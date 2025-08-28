@@ -18,16 +18,11 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test OptionEnum construction and enforcement.
 '''
 
 from accelerator.extras import OptionEnum
-from accelerator.compat import PY2
 from accelerator import subjobs
 from accelerator import blob
 
@@ -61,7 +56,7 @@ def check(**options):
 	want_res.update(pass_options)
 	jid = subjobs.build("test_optionenum", options=pass_options)
 	res = blob.load(jobid=jid)
-	assert res == want_res, "%r != %r from %r" % (res, want_res, options,)
+	assert res == want_res, f"{res!r} != {want_res!r} from {options!r}"
 
 def check_unbuildable(**options):
 	try:
@@ -70,18 +65,14 @@ def check_unbuildable(**options):
 		if e.args[0].startswith("Submit failed"):
 			return
 		raise
-	raise Exception("Building with options = %r should have failed but didn't" % (options,))
+	raise Exception(f"Building with options = {options!r} should have failed but didn't")
 
 def synthesis():
 	if options.inner:
 		return dict(options)
 	check(abcd="a", efgh="h")
 	check(ijkl="j", efgh="e")
-	if PY2:
-		# Passing "ä" is fine on PY2 too, but we get UTF-8 byte strings back.
-		check(uni=b"\xc3\xa4")
-	else:
-		check(uni="ä")
+	check(uni="ä")
 	check(ijkl=None, dict=dict(foo="j"))
 	check(mnSTARop="p", qSTARrSTARst="qwe", ijkl="k")
 	check(mnSTARop="nah", qSTARrSTARst="really good value\n")

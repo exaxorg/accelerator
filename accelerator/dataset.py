@@ -20,10 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import os
 from keyword import kwlist
 from collections import namedtuple, Counter
@@ -34,8 +30,8 @@ from operator import itemgetter, not_
 from math import isnan
 import datetime
 
-from accelerator.compat import unicode, uni, ifilter, imap, iteritems, PY2
-from accelerator.compat import builtins, open, getarglist, izip, izip_longest
+from accelerator.compat import uni, ifilter, imap, iteritems
+from accelerator.compat import builtins, getarglist, izip, izip_longest
 from accelerator.compat import str_types, int_types, FileNotFoundError
 
 from accelerator import blob
@@ -91,7 +87,7 @@ iskeyword = frozenset(kwlist).__contains__
 def _clean_name(n, seen_n):
 	n = ''.join(c if c.isalnum() else '_' for c in n)
 	if not n or n[0].isdigit():
-		n = '_' + n
+		n = f'_{n}'
 	while n in seen_n or iskeyword(n):
 		n += '_'
 	seen_n.add(n)
@@ -104,7 +100,7 @@ def _dsid(t):
 		jid, name = t
 		if not jid:
 			return None
-		t = '%s/%s' % (jid.split('/')[0], uni(name) or 'default')
+		t = f"{jid.split('/')[0]}/{uni(name) or 'default'}"
 	elif isinstance(t, DatasetWriter):
 		t = t.ds_name
 	if '/' not in t:
@@ -138,13 +134,13 @@ class _DatasetColumn_3_0(object):
 		none_support = not backing_type.startswith('bits')
 		return _DatasetColumn_3_1(type, backing_type, name, location, min, max, offsets, none_support)
 
-class _New_dataset_marker(unicode): pass
+class _New_dataset_marker(str): pass
 _new_dataset_marker = _New_dataset_marker('new')
 _no_override = object()
 
 _ds_cache = {}
 def _ds_load(obj):
-	n = unicode(obj)
+	n = str(obj)
 	if n not in _ds_cache:
 		fn = obj.job.filename(obj._name('pickle'))
 		if not os.path.exists(fn):
@@ -152,17 +148,17 @@ def _ds_load(obj):
 			try:
 				dslist = obj.job.datasets
 				if not dslist:
-					extra = ' (%s contains no datasets)' % (obj.job,)
+					extra = f' ({obj.job} contains no datasets)'
 				elif len(dslist) == 1:
-					extra = ' (did you mean %s?)' % (dslist[0].quoted,)
+					extra = f' (did you mean {dslist[0].quoted}?)'
 				elif len(dslist) < 5:
-					extra = ' (did you mean one of [%s]?)' % (', '.join(ds.quoted for ds in dslist),)
+					extra = f" (did you mean one of [{', '.join((ds.quoted for ds in dslist))}]?)"
 				else:
-					extra = ' (job contains %d other datasets, use "ax ds -l %s" to list them)' % (len(dslist), obj.job,)
+					extra = f' (job contains {len(dslist)} other datasets, use "ax ds -l {obj.job}" to list them)'
 			except Exception:
 				# We don't want to accidentally give an unrelated exception
 				pass
-			raise NoSuchDatasetError('Dataset %s does not exist%s' % (obj.quoted, extra,))
+			raise NoSuchDatasetError(f'Dataset {obj.quoted} does not exist{extra}')
 		_ds_cache[n] = blob.load(fn)
 		_ds_cache.update(_ds_cache[n].get('cache', ()))
 	return _ds_cache[n]
@@ -173,13 +169,13 @@ def _namechk(name):
 _dummy_iter = iter(())
 
 _dir_name_blacklist = list(range(32)) + [37, 47] # unprintable and '%/'
-_dir_name_blacklist = {chr(c): '\\x%02x' % (c,) for c in _dir_name_blacklist}
+_dir_name_blacklist = {chr(c): f'\\x{c:02x}' for c in _dir_name_blacklist}
 _dir_name_blacklist['\\'] = '\\\\' # make sure names can't collide
 
 def _fs_name(name):
-	return 'DS/' + ''.join(_dir_name_blacklist.get(c, c) for c in name)
+	return f'DS/{"".join(_dir_name_blacklist.get(c, c) for c in name)}'
 
-class Dataset(unicode):
+class Dataset(str):
 	"""
 	Represents a dataset. Is also a string 'jobid/name', or just 'jobid' if
 	name is 'default' (for better backwards compatibility).
@@ -193,7 +189,7 @@ class Dataset(unicode):
 	You can also pass jobid={jid: dsname} to resolve dsname from the datasets
 	passed to jid. This gives NoDataset if that option was unset.
 
-	These decay to a (unicode) string when pickled.
+	These decay to a string when pickled.
 	"""
 
 	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache', '_job_version',)
@@ -226,10 +222,10 @@ class Dataset(unicode):
 		if name == 'default':
 			fullname = job
 		else:
-			fullname = '%s/%s' % (job, name,)
-		obj = unicode.__new__(cls, fullname)
+			fullname = f'{job}/{name}'
+		obj = str.__new__(cls, fullname)
 		obj.name = name
-		obj.quoted = quote('%s/%s' % (job, name,))
+		obj.quoted = quote(f'{job}/{name}')
 		obj._job_version = 4 # hopefully
 		obj.fs_name = _fs_name(obj.name)
 		if jobid is _new_dataset_marker:
@@ -253,14 +249,14 @@ class Dataset(unicode):
 					obj.fs_name = obj.name
 			obj._data = DotDict(_ds_load(obj))
 			if obj._data.version[0] != 3:
-				raise DatasetError("%s/%s: Unsupported dataset pickle version %r" % (jobid, name, obj._data.version,))
+				raise DatasetError(f"{jobid}/{name}: Unsupported dataset pickle version {obj._data.version!r}")
 			obj._data.columns = dict(obj._data.columns)
 		obj._cache = {}
 		return obj
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 	@property
 	def columns(self):
@@ -330,7 +326,7 @@ class Dataset(unicode):
 		You can change the filename too, or clear it by setting ''.
 		"""
 		if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
-			raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
+			raise DatasetUsageError(f'Duplicate dataset name "{name}"')
 		d = Dataset(self)
 		if rename:
 			renamed = {}
@@ -338,12 +334,12 @@ class Dataset(unicode):
 			rename_discarded = set()
 			for k, v in rename.items():
 				if k not in d._data.columns:
-					raise DatasetUsageError("Renamed column %r not in dataset" % (k,))
+					raise DatasetUsageError(f"Renamed column {k!r} not in dataset")
 				if v is None:
 					rename_discarded.add(k)
 					continue
 				if v in renamed_src:
-					raise DatasetUsageError("Both %r and %r renamed to %r" % (k, renamed_src[v], v,))
+					raise DatasetUsageError(f"Both {k!r} and {renamed_src[v]!r} renamed to {v!r}")
 				renamed[v] = d._data.columns.pop(k)
 				renamed_src[v] = k
 			d._data.columns.update(renamed)
@@ -363,7 +359,7 @@ class Dataset(unicode):
 			filtered_columns = {k: v for k, v in d._data.columns.items() if k in column_filter}
 			left_over = column_filter - set(filtered_columns)
 			if left_over:
-				raise DatasetUsageError("Columns in filter not available in dataset: %r" % (left_over,))
+				raise DatasetUsageError(f"Columns in filter not available in dataset: {left_over!r}")
 			if not filtered_columns:
 				raise DatasetUsageError("Filter produced no desired columns.")
 			d._data.columns = filtered_columns
@@ -375,7 +371,7 @@ class Dataset(unicode):
 				Dataset(override_previous)
 			d._data.previous = override_previous
 			d._update_caches()
-		d._data.parent = '%s/%s' % (d.job, d.name,)
+		d._data.parent = f'{d.job}/{d.name}'
 		if filename is not None:
 			d._data.filename = filename or None
 		d.job = job
@@ -401,9 +397,9 @@ class Dataset(unicode):
 		else:
 			previous = None
 		if self == other:
-			raise DatasetUsageError("Can't merge with myself (%s)" % (other.quoted,))
+			raise DatasetUsageError(f"Can't merge with myself ({other.quoted})")
 		if self.lines != other.lines:
-			raise DatasetUsageError("%s and %s don't have the same line counts" % (self.quoted, other.quoted,))
+			raise DatasetUsageError(f"{self.quoted} and {other.quoted} don't have the same line counts")
 		if other.hashlabel is not None:
 			new_ds._data.hashlabel = other.hashlabel
 		elif self.hashlabel in other.columns:
@@ -422,7 +418,7 @@ class Dataset(unicode):
 				return tips
 			related = parents(self, set()) & parents(other, set())
 			if not related:
-				raise DatasetUsageError("%s and %s have no common ancenstors, set allow_unrelated to allow this" % (self.quoted, other.quoted,))
+				raise DatasetUsageError(f"{self.quoted} and {other.quoted} have no common ancenstors, set allow_unrelated to allow this")
 		new_ds.job = job
 		new_ds.name = name
 		new_ds.fs_name = _fs_name(name)
@@ -442,7 +438,7 @@ class Dataset(unicode):
 		if not _type:
 			_type = dc.type
 		if _type not in _type2iter:
-			msg = 'Unsupported column type %r on %r in %s' % (_type, col, self.quoted,)
+			msg = f'Unsupported column type {_type!r} on {col!r} in {self.quoted}'
 			if _type.startswith('bits'):
 				msg += ". If you need to use this column, please install the 2022.8.4.dev1 release and use the dataset_unbits methods to convert it."
 			raise DatasetError(msg)
@@ -477,7 +473,7 @@ class Dataset(unicode):
 			else:
 				not_found.append(col)
 		if not_found:
-			raise DatasetError("Columns %r not found in %s/%s" % (not_found, self.job, self.name,))
+			raise DatasetError(f"Columns {not_found!r} not found in {self.job}/{self.name}")
 		return res
 
 	def _hashfilter(self, sliceno, hashlabel, it):
@@ -622,7 +618,7 @@ class Dataset(unicode):
 			need_types = {col: datasets[0].columns[col].type for col in columns}
 			for d in datasets:
 				for col, t in need_types.items():
-					assert d.columns[col].type == t, "%s column %s has type %s, not %s" % (d, col, d.columns[col].type, t,)
+					assert d.columns[col].type == t, f"{d} column {col} has type {d.columns[col].type}, not {t}"
 		to_iter = []
 		if range:
 			if len(range) != 1:
@@ -649,21 +645,21 @@ class Dataset(unicode):
 				total_lines = sum(sum(d.lines) for d in datasets)
 			if slice.start < 0:
 				if -slice.start > total_lines:
-					raise DatasetUsageError("Wanted last %d lines, but only %d lines available" % (-slice.start, total_lines,))
+					raise DatasetUsageError(f"Wanted last {-slice.start} lines, but only {total_lines} lines available")
 				slice = builtins.slice(total_lines + slice.start, slice.stop, slice.step)
 			if (slice.stop or 0) < 0:
 				if -slice.stop > total_lines:
-					raise DatasetUsageError("Wanted to stop %d lines before end, but only %d lines available" % (-slice.stop, total_lines,))
+					raise DatasetUsageError(f"Wanted to stop {-slice.stop} lines before end, but only {total_lines} lines available")
 				slice = builtins.slice(slice.start, total_lines + slice.stop, slice.step)
 			if slice.start > total_lines:
-				raise DatasetUsageError("Wanted to skip %d lines, but only %d lines available" % (slice.start, total_lines,))
+				raise DatasetUsageError(f"Wanted to skip {slice.start} lines, but only {total_lines} lines available")
 			if (slice.stop or 0) > total_lines:
-				raise DatasetUsageError("Wanted to stop after %d lines, but only %d lines available" % (slice.stop, total_lines,))
+				raise DatasetUsageError(f"Wanted to stop after {slice.stop} lines, but only {total_lines} lines available")
 			if slice.start == total_lines:
 				return iter(())
 			if slice.stop is not None:
 				if slice.stop < slice.start:
-					raise DatasetUsageError("Wanted %r, but start is bigger than stop" % (slice,))
+					raise DatasetUsageError(f"Wanted {slice!r}, but start is bigger than stop")
 				if slice.start == slice.stop:
 					return iter(())
 			def adj_slice(lines):
@@ -698,9 +694,9 @@ class Dataset(unicode):
 					continue
 			if hashlabel is not None and d.hashlabel != hashlabel:
 				if not rehash:
-					raise DatasetUsageError("%s has hashlabel %r, not %r" % (d, d.hashlabel, hashlabel,))
+					raise DatasetUsageError(f"{d} has hashlabel {d.hashlabel!r}, not {hashlabel!r}")
 				if hashlabel not in d.columns:
-					raise DatasetUsageError("Can't rehash %s on non-existant column %r" % (d, hashlabel,))
+					raise DatasetUsageError(f"Can't rehash {d} on non-existant column {hashlabel!r}")
 				rehash_on = hashlabel
 			else:
 				rehash_on = None
@@ -778,17 +774,17 @@ class Dataset(unicode):
 			for ix, f in filters:
 				if f is None or f is bool:
 					# use value directly
-					fs.append('t[%d]' % (ix,))
+					fs.append(f't[{ix}]')
 				else:
-					n = 'f%d' % (ix,)
+					n = f'f{ix}'
 					arg_n.append(n)
 					arg_v.append(f)
-					fs.append('%s(t[%d])' % (n, ix,))
-			f = 'lambda t: ' + ' and '.join(fs)
+					fs.append(f'{n}(t[{ix}])')
+			f = f'lambda t: {" and ".join(fs)}'
 			# Add another lambda to put all fN into local variables.
 			# (This is faster than putting them in "locals", you get
 			# LOAD_DEREF instead of LOAD_GLOBAL.)
-			f = 'lambda %s: %s' % (', '.join(arg_n), f)
+			f = f"lambda {', '.join(arg_n)}: {f}"
 			return eval(f, {}, {})(*arg_v)
 		else:
 			return filters
@@ -817,15 +813,15 @@ class Dataset(unicode):
 		def fmt_dsname(d, sliceno, rehash):
 			if rehash is not None:
 				sliceno = 'REHASH'
-			return '%s:%s' % (d.quoted, sliceno)
+			return f'{d.quoted}:{sliceno}'
 		if len(to_iter) == 1:
-			msg_head = 'Iterating ' + fmt_dsname(*to_iter[0])
+			msg_head = f'Iterating {fmt_dsname(*to_iter[0])}'
 			def update_status(ix, d, sliceno, rehash):
 				pass
 		else:
-			msg_head = 'Iterating %s to %s' % (fmt_dsname(*to_iter[0]), fmt_dsname(*to_iter[-1]),)
+			msg_head = f'Iterating {fmt_dsname(*to_iter[0])} to {fmt_dsname(*to_iter[-1])}'
 			def update_status(ix, d, sliceno, rehash):
-				update('%s, %d/%d (%s)' % (msg_head, ix, len(to_iter), fmt_dsname(d, sliceno, rehash)))
+				update(f'{msg_head}, {ix}/{len(to_iter)} ({fmt_dsname(d, sliceno, rehash)})')
 		with status(msg_head) as update:
 			update_status._line_report = getattr(update, '_line_report', None)
 			yield update_status
@@ -929,7 +925,7 @@ class Dataset(unicode):
 		if hashlabel is not None:
 			hashlabel = uni(hashlabel)
 			if hashlabel not in columns:
-				raise DatasetUsageError("Hashlabel (%r) does not exist" % (hashlabel,))
+				raise DatasetUsageError(f"Hashlabel ({hashlabel!r}) does not exist")
 		res = Dataset(_new_dataset_marker, name)
 		res._data.lines = list(Dataset._linefixup(lines))
 		res._data.hashlabel = hashlabel
@@ -952,7 +948,7 @@ class Dataset(unicode):
 		if hashlabel_override:
 			self._data.hashlabel = hashlabel
 		elif hashlabel is not None and self.hashlabel != hashlabel:
-			raise DatasetUsageError("Hashlabel mismatch %r != %r" % (self.hashlabel, hashlabel,))
+			raise DatasetUsageError(f"Hashlabel mismatch {self.hashlabel!r} != {hashlabel!r}")
 		if self._linefixup(lines) != self.lines:
 			from accelerator.g import job
 			raise DatasetUsageError("New columns don't have the same number of lines as parent columns (trying to append %s to %s, expected %r but got %r)" % (quote('%s/%s' % (job, name,)), self.quoted, self.lines, self._linefixup(lines),))
@@ -1000,7 +996,7 @@ class Dataset(unicode):
 		if set(columns) != set(compressions):
 			raise DatasetUsageError("columns and compressions don't have the same keys")
 		if self.job and (self.job != job or self.name != name):
-			self._data.parent = '%s/%s' % (self.job, self.name,)
+			self._data.parent = f'{self.job}/{self.name}'
 		self.job = job
 		self.name = name
 		self.fs_name = _fs_name(name)
@@ -1015,11 +1011,11 @@ class Dataset(unicode):
 			filtered_columns = {k: v for k, v in self._data.columns.items() if k in column_filter}
 			left_over = column_filter - set(filtered_columns)
 			if left_over:
-				raise DatasetUsageError("Columns in filter not available in dataset: %r" % (left_over,))
+				raise DatasetUsageError(f"Columns in filter not available in dataset: {left_over!r}")
 			self._data.columns = filtered_columns
 		for n, (t, none_support) in sorted(columns.items()):
 			if t not in _type2iter:
-				raise DatasetUsageError('Unknown type %s on column %s' % (t, n,))
+				raise DatasetUsageError(f'Unknown type {t} on column {n}')
 			mm = minmax.get(n, (None, None,))
 			t = uni(t)
 			self._data.columns[n] = DatasetColumn(
@@ -1048,7 +1044,7 @@ class Dataset(unicode):
 		except NoSuchDatasetError:
 			j, n = self._data['previous'].split('/', 1)
 			if self.job == j and n in _datasetwriters:
-				raise DatasetUsageError('previous dataset %r must be .finish()ed first.' % (n,))
+				raise DatasetUsageError(f'previous dataset {n!r} must be .finish()ed first.')
 			else:
 				raise
 		if d:
@@ -1056,7 +1052,7 @@ class Dataset(unicode):
 			if cache_distance == 64:
 				cache_distance = 0
 				chain = self.chain(64)
-				self._data['cache'] = tuple((unicode(d), d._data) for d in chain[:-1])
+				self._data['cache'] = tuple((str(d), d._data) for d in chain[:-1])
 			self._data['cache_distance'] = cache_distance
 
 	def _maybe_merge(self, n):
@@ -1088,7 +1084,7 @@ class Dataset(unicode):
 				if size:
 					with open(fn(sliceno), 'rb') as p_fh:
 						data = p_fh.read()
-					assert len(data) == size, "Slice %d is %d bytes, not %d?" % (sliceno, len(data), size,)
+					assert len(data) == size, f"Slice {sliceno} is {len(data)} bytes, not {size}?"
 					m_fh.write(data)
 					offsets.append(pos)
 				else:
@@ -1101,7 +1097,7 @@ class Dataset(unicode):
 		location = c.location.split('/', 1) # the jobid might have % in it, so split it off
 		self._data.columns[n] = c._replace(
 			offsets=offsets,
-			location='%s/%s' % (location[0], location[1] % ('m',)),
+			location=f"{location[0]}/{location[1] % ('m',)}",
 		)
 
 	def _maybe_merge_fully(self, columns):
@@ -1120,14 +1116,14 @@ class Dataset(unicode):
 			if z > 16 * 524288: # arbitrary guess of good size
 				return
 		m_fn = self._name('merged')
-		m_location = '%s/%s' % (self.job, m_fn,)
+		m_location = f'{self.job}/{m_fn}'
 		with open(m_fn, 'wb') as m_fh:
 			for n in columns:
 				dc = self._data.columns[n]
 				c_fn = self.column_filename(n)
 				with open(c_fn, 'rb') as c_fh:
 					data = c_fh.read()
-				assert len(data) > max(dc.offsets), '%s is too short' % (c_fn,)
+				assert len(data) > max(dc.offsets), f'{c_fn} is too short'
 				os.unlink(c_fn)
 				pos = m_fh.tell()
 				m_offsets = [False if o is False else o + pos for o in dc.offsets]
@@ -1145,7 +1141,7 @@ class Dataset(unicode):
 			assert thing == 'pickle'
 			return self.name + '/dataset.pickle'
 		else:
-			return '%s.%s' % (self.fs_name, thing[0])
+			return f'{self.fs_name}.{thing[0]}'
 
 _datasetwriters = {}
 _datasets_written = []
@@ -1242,13 +1238,13 @@ class DatasetWriter(object):
 		from accelerator.g import running, job
 		if running == 'analysis':
 			if name not in _datasetwriters:
-				raise DatasetUsageError('Dataset with name "%s" not created' % (name,))
+				raise DatasetUsageError(f'Dataset with name "{name}" not created')
 			if columns or filename or hashlabel or hashlabel_override or caption or previous or parent or meta_only or for_single_slice is not None:
 				raise DatasetUsageError("Don't specify any arguments (except optionally name) in analysis")
 			return _datasetwriters[name]
 		else:
 			if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
-				raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
+				raise DatasetUsageError(f'Duplicate dataset name "{name}"')
 			fs_name = _fs_name(name) + '.d'
 			if not os.path.exists('DS'):
 				os.mkdir('DS')
@@ -1261,7 +1257,7 @@ class DatasetWriter(object):
 			obj.caption = uni(caption)
 			obj.previous = _dsid(previous)
 			obj.name = name
-			obj.ds_name = '%s/%s' % (job, name,)
+			obj.ds_name = f'{job}/{name}'
 			obj.quoted_ds_name = quote(obj.ds_name)
 			obj.fs_name = fs_name
 			obj.columns = {}
@@ -1278,13 +1274,13 @@ class DatasetWriter(object):
 				if not hashlabel_override:
 					if obj.hashlabel is not None:
 						if obj.hashlabel != obj.parent.hashlabel:
-							raise DatasetUsageError("Hashlabel mismatch %r != %r" % (obj.hashlabel, obj.parent.hashlabel,))
+							raise DatasetUsageError(f"Hashlabel mismatch {obj.hashlabel!r} != {obj.parent.hashlabel!r}")
 					elif obj.parent.hashlabel in columns:
 						obj.hashlabel = obj.parent.hashlabel
 				parent_cols = obj.parent.columns
 				unknown_discards = discard_columns - set(parent_cols)
 				if unknown_discards:
-					raise DatasetUsageError("Can't discard non-existant columns %r" % (unknown_discards,))
+					raise DatasetUsageError(f"Can't discard non-existant columns {unknown_discards!r}")
 				obj._column_filter = set(parent_cols) - discard_columns
 			else:
 				if discard_columns:
@@ -1323,7 +1319,7 @@ class DatasetWriter(object):
 		colname = uni(colname)
 		coltype = uni(coltype)
 		if colname in self.columns:
-			raise DatasetUsageError("Column %s already exists" % (colname,))
+			raise DatasetUsageError(f"Column {colname} already exists")
 		try:
 			typed_writer(coltype) # gives error for unknown types
 		except ValueError as e:
@@ -1342,7 +1338,7 @@ class DatasetWriter(object):
 		from accelerator import g
 		if g.running == 'analysis' and self._for_single_slice != g.sliceno:
 			if self._for_single_slice is not None:
-				raise DatasetUsageError("This writer is for slice %d" % (self._for_single_slice,))
+				raise DatasetUsageError(f"This writer is for slice {self._for_single_slice}")
 			else:
 				raise DatasetUsageError("Only use set_slice in analysis together with for_single_slice")
 		self._set_slice(sliceno)
@@ -1352,7 +1348,7 @@ class DatasetWriter(object):
 		if self._started == 2:
 			raise DatasetUsageError("Don't use both set_slice and a split writer")
 		if not isinstance(sliceno, int_types) or sliceno < 0 or sliceno >= slices:
-			raise DatasetUsageError("sliceno must be int in range(%d)" % (slices,))
+			raise DatasetUsageError(f"sliceno must be int in range({slices})")
 		self.close()
 		self.sliceno = sliceno
 		writers = self._mkwriters(sliceno)
@@ -1363,7 +1359,7 @@ class DatasetWriter(object):
 	def column_filename(self, colname, sliceno=None):
 		if sliceno is None:
 			sliceno = self.sliceno
-		return '%s/%d.%s' % (self.fs_name, sliceno, self._filenames[colname],)
+		return f'{self.fs_name}/{sliceno}.{self._filenames[colname]}'
 
 	def enable_hash_discard(self):
 		"""Make the write functions silently discard data that does not
@@ -1380,7 +1376,7 @@ class DatasetWriter(object):
 		if not self.columns:
 			raise DatasetUsageError("No columns in dataset")
 		if self.hashlabel is not None and self.hashlabel not in self.columns:
-			raise DatasetUsageError("Hashed column (%r) missing" % (self.hashlabel,))
+			raise DatasetUsageError(f"Hashed column ({self.hashlabel!r}) missing")
 		self._started = 2 - filtered
 		if self.meta_only:
 			return
@@ -1389,7 +1385,7 @@ class DatasetWriter(object):
 			if self._copy_mode:
 				coltype = _copy_mode_overrides.get(coltype, coltype)
 			wt = typed_writer(coltype)
-			error_extra = ' (column %s (type %s) in %s)' % (quote(colname), coltype, self.quoted_ds_name,)
+			error_extra = f' (column {quote(colname)} (type {coltype}) in {self.quoted_ds_name})'
 			kw = {'none_support': none_support, 'error_extra': error_extra, 'compression': 'gzip'}
 			if default is not _nodefault:
 				kw['default'] = default
@@ -1431,26 +1427,26 @@ class DatasetWriter(object):
 			hix = -1
 		used_names = set()
 		names = [_clean_name(n, used_names) for n in self._order]
-		w_names = [_clean_name('w%d' % (ix,), used_names) for ix in range(len(w_l))]
+		w_names = [_clean_name(f'w{ix}', used_names) for ix in range(len(w_l))]
 		w_d = dict(zip(w_names, w_l))
 		errcls = _clean_name('DatasetUsageError', used_names)
 		w_d[errcls] = DatasetUsageError
-		f = ['def write(' + ', '.join(names) + '):']
+		f = [f'def write({", ".join(names)}):']
 		f_list = ['def write_list(values):']
 		if len(names) == 1: # only the hashlabel, no check needed
-			f.append(' %s(%s)' % (w_names[0], names[0],))
-			f_list.append(' %s(values[0])' % (w_names[0],))
+			f.append(f' {w_names[0]}({names[0]})')
+			f_list.append(f' {w_names[0]}(values[0])')
 		else:
 			if hl is not None:
-				f.append(' if %s(%s):' % (w_names[hix], names[hix],))
-				f_list.append(' if %s(values[%d]):' % (w_names[hix], hix,))
+				f.append(f' if {w_names[hix]}({names[hix]}):')
+				f_list.append(f' if {w_names[hix]}(values[{hix}]):')
 			for ix in range(len(names)):
 				if ix != hix:
-					f.append('  %s(%s)' % (w_names[ix], names[ix],))
-					f_list.append('  %s(values[%d])' % (w_names[ix], ix,))
+					f.append(f'  {w_names[ix]}({names[ix]})')
+					f_list.append(f'  {w_names[ix]}(values[{ix}])')
 			if hl is not None and not discard:
-				f.append(' else: raise %s(%r)' % (errcls, wrong_slice_msg,))
-				f_list.append(' else: raise %s(%r)' % (errcls, wrong_slice_msg,))
+				f.append(f' else: raise {errcls}({wrong_slice_msg!r})')
+				f_list.append(f' else: raise {errcls}({wrong_slice_msg!r})')
 		eval(compile('\n'.join(f), '<DatasetWriter generated write>', 'exec'), w_d)
 		self.write = w_d['write']
 		eval(compile('\n'.join(f_list), '<DatasetWriter generated write_list>', 'exec'), w_d)
@@ -1479,7 +1475,7 @@ class DatasetWriter(object):
 			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		if g.running == 'analysis' and self._for_single_slice != g.sliceno:
 			if self._for_single_slice is not None:
-				raise DatasetUsageError("This writer is for slice %d" % (self._for_single_slice,))
+				raise DatasetUsageError(f"This writer is for slice {self._for_single_slice}")
 			else:
 				raise DatasetUsageError("Only use a split writer in analysis together with for_single_slice")
 		if self._started == 1:
@@ -1494,7 +1490,7 @@ class DatasetWriter(object):
 			return self._order.index(t[0])
 		def d2l(d):
 			return [w.write for _, w in sorted(d.items(), key=key)]
-		f_____ = ['def split(' + ', '.join(names) + '):']
+		f_____ = [f'def split({", ".join(names)}):']
 		f_list = ['def split_list(v):']
 		f_dict = ['def split_dict(d):']
 		from accelerator.g import slices
@@ -1520,22 +1516,22 @@ class DatasetWriter(object):
 				w_d[name_hsh] = hashwrap
 			else:
 				w_d[name_hsh] = hashfunc
-			prefix = '%s = %s[%s(' % (name_w_l, name_writers, name_hsh,)
+			prefix = f'{name_w_l} = {name_writers}[{name_hsh}('
 			hix = self._order.index(hl)
-			f_____.append('%s%s) %% %d]' % (prefix, names[hix], slices,))
-			f_list.append('%sv[%d]) %% %d]' % (prefix, hix, slices,))
-			f_dict.append('%sd[%r]) %% %d]' % (prefix, hl, slices,))
+			f_____.append(f'{prefix}{names[hix]}) % {slices}]')
+			f_list.append(f'{prefix}v[{hix}]) % {slices}]')
+			f_dict.append(f'{prefix}d[{hl!r}]) % {slices}]')
 		else:
 			from itertools import cycle
 			w_d[name_cyc] = cycle(range(slices))
-			code = '%s = %s[%s(%s)]' % (name_w_l, name_writers, name_next, name_cyc,)
+			code = f'{name_w_l} = {name_writers}[{name_next}({name_cyc})]'
 			f_____.append(code)
 			f_list.append(code)
 			f_dict.append(code)
 		for ix in range(len(names)):
-			f_____.append('%s[%d](%s)' % (name_w_l, ix, names[ix],))
-			f_list.append('%s[%d](v[%d])' % (name_w_l, ix, ix,))
-			f_dict.append('%s[%d](d[%r])' % (name_w_l, ix, self._order[ix],))
+			f_____.append(f'{name_w_l}[{ix}]({names[ix]})')
+			f_list.append(f'{name_w_l}[{ix}](v[{ix}])')
+			f_dict.append(f'{name_w_l}[{ix}](d[{self._order[ix]!r}])')
 		eval(compile('\n '.join(f_____), '<DatasetWriter generated split_write>'     , 'exec'), w_d)
 		eval(compile('\n '.join(f_list), '<DatasetWriter generated split_write_list>', 'exec'), w_d)
 		eval(compile('\n '.join(f_dict), '<DatasetWriter generated split_write_dict>', 'exec'), w_d)
@@ -1553,7 +1549,7 @@ class DatasetWriter(object):
 			w.close()
 		len_set = set(lens.values())
 		if len(len_set) != 1:
-			raise DatasetUsageError("Not all columns have the same linecount in slice %d: %r" % (sliceno, lens))
+			raise DatasetUsageError(f"Not all columns have the same linecount in slice {sliceno}: {lens!r}")
 		self._lens[sliceno] = len_set.pop()
 		self._minmax[sliceno] = minmax
 
@@ -1576,7 +1572,7 @@ class DatasetWriter(object):
 		if self._finished:
 			raise DatasetUsageError("Don't try to use writer after .finish()ing it")
 		del _datasetwriters[self.name]
-		self._finished = 'deleted dataset ' + self.name
+		self._finished = f'deleted dataset {self.name}'
 		from shutil import rmtree
 		rmtree(self.fs_name)
 
@@ -1597,8 +1593,6 @@ class DatasetWriter(object):
 			self._compressions = dict.fromkeys(self.columns, compressions)
 		else:
 			self._compressions.update(compressions)
-		if PY2:
-			self._compressions = {uni(k): uni(v) for k, v in self._compressions.items()}
 
 	def finish(self):
 		"""Normally you don't need to call this, but if you want to
@@ -1610,18 +1604,18 @@ class DatasetWriter(object):
 		if self._finished:
 			return self._finished
 		if not (self._started or self.meta_only or self._lens):
-			raise DatasetUsageError("DatasetWriter %r was never started (.get_split_write*() or .set_slice(), or .discard() it)" % (self.name,))
+			raise DatasetUsageError(f"DatasetWriter {self.name!r} was never started (.get_split_write*() or .set_slice(), or .discard() it)")
 		self.close()
 		if set(self._compressions) != set(self.columns):
 			missing = set(self.columns) - set(self._compressions)
 			extra = set(self._compressions) - set(self.columns)
-			raise DatasetUsageError("compressions don't match columns in %s, missing %s, extra %s" % (self.name, missing or "none", extra or "none",))
+			raise DatasetUsageError(f"compressions don't match columns in {self.name}, missing {missing or 'none'}, extra {extra or 'none'}")
 		if len(self._lens) != slices:
 			if self._allow_missing_slices:
 				for sliceno in range(slices):
 					self._lens[sliceno] = self._lens.get(sliceno, 0)
 			else:
-				raise DatasetUsageError("Not all slices written, missing %r" % (set(range(slices)) - set(self._lens),))
+				raise DatasetUsageError(f"Not all slices written, missing {set(range(slices)) - set(self._lens)!r}")
 		args = dict(
 			columns={k: (v[0].split(':')[-1], v[2]) for k, v in self.columns.items()},
 			filenames=self._filenames,
@@ -1729,7 +1723,7 @@ class DatasetList(_ListTypePreserver):
 		"""Filter out only datasets where colname has values in range(start, stop)"""
 		def predicate(ds):
 			if colname not in ds.columns:
-				raise DatasetUsageError('Dataset %s does not have column %r' % (ds.quoted, colname,))
+				raise DatasetUsageError(f'Dataset {ds.quoted} does not have column {colname!r}')
 			col = ds.columns[colname]
 			if col.min is not None:
 				return (stop is None or col.min < stop) and (start is None or col.max >= start)
@@ -1761,7 +1755,7 @@ class NoDataset(Dataset):
 	__slots__ = ()
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	# functions you shouldn't call on this
 	append = iterate = iterate_chain = iterate_list = link_to_here = merge = new = None
@@ -1792,7 +1786,7 @@ def range_check_function(bottom, top, none_support=False, index=None):
 	and/or top to be None. Skips None values if none_support is true."""
 	if_l = []
 	d = {}
-	v_str = 'v' if index is None else 'v[%d]' % (index,)
+	v_str = 'v' if index is None else f'v[{index}]'
 	def add_if(op, v):
 		if if_l:
 			if_l.append(' and ')

@@ -21,10 +21,6 @@
 # This is a separate file from a_dataset_type so setup.py can import
 # it and make the _dataset_type module at install time.
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
 from collections import namedtuple
 from functools import partial
 import sys
@@ -654,8 +650,8 @@ def _test():
 	known = set(v for v in _convfuncs if ':' not in v)
 	copy_missing = known - set(copy_types)
 	copy_extra = set(copy_types) - known
-	assert not copy_missing, 'copy_types missing %r' % (copy_missing,)
-	assert not copy_extra, 'copy_types contains unexpected %r' % (copy_extra,)
+	assert not copy_missing, f'copy_types missing {copy_missing!r}'
+	assert not copy_extra, f'copy_types contains unexpected {copy_extra!r}'
 
 
 convert_template = r'''
@@ -1453,7 +1449,7 @@ for name, ct in sorted(list(convfuncs.items()) + list(hidden_convfuncs.items()))
 	protos.append(proto + ';')
 	funcs.append(code)
 
-copy_types = {typerename.get(k.split(':')[0], k.split(':')[0]): 'null_%d' % (v.size,) if v.size else 'null_blob' for k, v in convfuncs.items()}
+copy_types = {typerename.get(k.split(':')[0], k.split(':')[0]): f'null_{v.size}' if v.size else 'null_blob' for k, v in convfuncs.items()}
 copy_types['number'] = 'null_number'
 copy_types['pickle'] = 'null_blob'
 

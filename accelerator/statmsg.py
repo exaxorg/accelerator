@@ -34,9 +34,6 @@
 # Several built in functions will call this for you, notably dataset
 # iterators and pickle load/save functions.
 
-from __future__ import print_function
-from __future__ import division
-
 from contextlib import contextmanager
 from errno import ENOTCONN
 from functools import partial
@@ -129,16 +126,16 @@ def _start(msg, parent_pid, is_analysis=False):
 		analysis_cookie = str(_cookie)
 	else:
 		analysis_cookie = ''
-	_send('start', '%d\0%s\0%s\0%f' % (parent_pid, analysis_cookie, msg, monotonic(),))
+	_send('start', f'{parent_pid}\x00{analysis_cookie}\x00{msg}\x00{monotonic():f}')
 	def update(msg):
-		_send('update', '%s\0\0%s' % (msg, analysis_cookie,))
+		_send('update', f'{msg}\x00\x00{analysis_cookie}')
 	return update
 
 def _end(pid=None):
 	_send('end', '', pid=pid)
 
 def _output(pid, msg):
-	_send('output', '%f\0%s' % (monotonic(), msg,), pid=pid)
+	_send('output', f'{monotonic():f}\x00{msg}', pid=pid)
 
 def _clear_output(pid):
 	_send('output', '', pid=pid)
@@ -165,7 +162,7 @@ def status_stacks_export():
 			current = last[0].summary
 			if len(last[0].stack) > 1 and not current[1].endswith('analysis'):
 				msg, t, _ = last[0].stack[1]
-				current = (current[0], '%s %s' % (current[1], msg,), t,)
+				current = (current[0], f'{current[1]} {msg}', t,)
 	except Exception:
 		print_exc(file=sys.stderr)
 		res.append((0, 0, 'ERROR', monotonic()))
@@ -177,12 +174,12 @@ def print_status_stacks(stacks=None):
 	report_t = monotonic()
 	for pid, indent, msg, t in stacks:
 		if indent < 0:
-			print("%6d TAIL OF OUTPUT: (%.1f seconds ago)" % (pid, report_t - t,))
+			print(f"{pid:6} TAIL OF OUTPUT: ({report_t - t:.1f} seconds ago)")
 			msgs = list(filter(None, msg.split('\n')))[-3:]
 			for msg in msgs:
 				print("       " + colour.green(msg))
 		else:
-			print("%6d STATUS: %s%s (%.1f seconds)" % (pid, "    " * indent, msg, report_t - t))
+			print(f"{pid:6} STATUS: {'    ' * indent}{msg} ({report_t - t:.1f} seconds)")
 
 
 def _find(pid, cookie):
@@ -212,7 +209,7 @@ def statmsg_sink(sock):
 					if ix == len(stack) - 1:
 						stack.pop()
 					else:
-						print('POP OF WRONG STATUS: %d:%s (index %s of %d)' % (pid, msg, ix, len(stack)))
+						print(f'POP OF WRONG STATUS: {pid}:{msg} (index {ix} of {len(stack)})')
 						wrong_pops += 1
 						if wrong_pops == 3:
 							print('Getting a lot of these? Are you interleaving dataset iterators? Set status_reporting=False on all but one.')
@@ -221,7 +218,7 @@ def statmsg_sink(sock):
 					msg, _, cookie = msg.split('\0', 3)
 					stack, ix = _find(pid, cookie)
 					if ix is None:
-						print('UPDATE TO UNKNOWN STATUS %d:%s: %s' % (pid, cookie, msg))
+						print(f'UPDATE TO UNKNOWN STATUS {pid}:{cookie}: {msg}')
 					else:
 						stack[ix] = (msg, stack[ix][1], cookie)
 				elif typ == 'output':
@@ -258,9 +255,9 @@ def statmsg_sink(sock):
 						del d
 					status_tree.pop(pid, None)
 				else:
-					print('UNKNOWN MESSAGE: %r' % (data,))
+					print(f'UNKNOWN MESSAGE: {data!r}')
 		except Exception:
-			print('Failed to process %r:' % (data,), file=sys.stderr)
+			print(f'Failed to process {data!r}:', file=sys.stderr)
 			print_exc(file=sys.stderr)
 
 
@@ -281,7 +278,7 @@ def _send(typ, message, pid=None):
 	if not _send_sock:
 		fd = int(os.getenv('BD_STATUS_FD'))
 		_send_sock = socket.fromfd(fd, socket.AF_UNIX, socket.SOCK_DGRAM)
-	header = ('%s\0%d\0' % (typ, pid or os.getpid(),)).encode('utf-8')
+	header = f'{typ}\x00{pid or os.getpid()}\x00'.encode('utf-8')
 	message = message.encode('utf-8')
 	if len(message) > 1450:
 		message = message[:300] + b'\n....\n' + message[-1100:]
@@ -296,5 +293,5 @@ def _send(typ, message, pid=None):
 			if e.errno == ENOTCONN:
 				# The server is dead, no use retrying.
 				return
-			print('Failed to send statmsg (type %s, try %d): %s' % (typ, ix, e))
+			print(f'Failed to send statmsg (type {typ}, try {ix}): {e}')
 			sleep(0.1 + ix)

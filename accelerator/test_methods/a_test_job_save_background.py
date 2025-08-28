@@ -37,7 +37,6 @@ Should not take much more than 3 * sleeptime to run.
 options = {'sleeptime': 0.5}
 
 from accelerator.compat import monotonic
-from accelerator.compat import unicode
 import time
 
 # This pickles as a string, but slowly.
@@ -51,7 +50,7 @@ class SlowToPickle(object):
 
 	def __reduce__(self):
 		time.sleep(self.sleeptime)
-		return unicode, (unicode(self.text),)
+		return str, (str(self.text),)
 
 # This is a True boolean that takes a long time to evaluate.
 # It's a hack to make json encoding slow.
@@ -73,14 +72,14 @@ class SlowTrue(object):
 
 def save(job, name, sliceno):
 	before = monotonic()
-	p = job.save('contents of %s %s' % (name, sliceno,), name + '.pickle', sliceno=sliceno)
+	p = job.save(f'contents of {name} {sliceno}', name + '.pickle', sliceno=sliceno)
 	j = job.json_save({name: sliceno}, name + '.json', sliceno=sliceno)
 	name = 'background ' + name
-	bp = job.save(SlowToPickle('contents of %s %s' % (name, sliceno,), options.sleeptime), name + '.pickle', sliceno=sliceno, background=True)
+	bp = job.save(SlowToPickle(f'contents of {name} {sliceno}', options.sleeptime), name + '.pickle', sliceno=sliceno, background=True)
 	bj = job.json_save({name: sliceno}, name + '.json', sliceno=sliceno, sort_keys=SlowTrue(options.sleeptime), background=True)
 	save_time = monotonic() - before
 	max_time = options.sleeptime * 2 # two slow files
-	assert save_time < max_time, "Saving took %s seconds, should have been less than %s" % (save_time, max_time,)
+	assert save_time < max_time, f"Saving took {save_time} seconds, should have been less than {max_time}"
 	return p, j, bp, bj
 
 def check(job, name, sliceno, p, j, bp, bj, do_background=True, do_wait=False):
@@ -92,7 +91,7 @@ def check(job, name, sliceno, p, j, bp, bj, do_background=True, do_wait=False):
 			# Do explicit waiting sometimes
 			p.wait()
 			j.wait()
-		assert p.load() == 'contents of %s %s' % (name, sliceno,)
+		assert p.load() == f'contents of {name} {sliceno}'
 		assert j.load() == {name: sliceno}
 		for obj, filename in [(p, name + '.pickle'), (j, name + '.json')]:
 			path = job.filename(filename, sliceno=sliceno)
@@ -111,12 +110,12 @@ def prepare(job):
 	p = job.save(SlowToPickle('', checktime), 'test.pickle', background=True)
 	p.wait()
 	pickle_time = monotonic() - before
-	assert pickle_time > checktime, "Saving a slow pickle took %s seconds, should have taken more than %s" % (pickle_time, checktime,)
+	assert pickle_time > checktime, f"Saving a slow pickle took {pickle_time} seconds, should have taken more than {checktime}"
 	before = monotonic()
 	j = job.json_save({}, 'test.json', sort_keys=SlowTrue(checktime), background=True)
 	j.wait()
 	json_time = monotonic() - before
-	assert json_time > checktime, "Saving a slow json took %s seconds, should have taken more than %s" % (json_time, checktime,)
+	assert json_time > checktime, f"Saving a slow json took {json_time} seconds, should have taken more than {checktime}"
 
 	return res
 

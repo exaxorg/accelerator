@@ -25,7 +25,6 @@ from datetime import date, time, datetime
 from itertools import chain
 
 from accelerator import subjobs, JobError
-from accelerator.compat import PY2
 from accelerator.dsutil import _type2iter
 
 def synthesis(job):
@@ -50,12 +49,10 @@ def synthesis(job):
 	}
 	missing = set(_type2iter) - set(types.values())
 	assert not missing, missing
-	if PY2:
-		del types['n'] # no pickle type on python2
 
 	def data(ix):
 		d = {
-			'a': '%d' % (ix,),
+			'a': f'{ix}',
 			'b': bool(ix % 2),
 			'c': b'%d' % (ix,),
 			'd': complex(0, ix),
@@ -70,7 +67,7 @@ def synthesis(job):
 			'm': -1.0 / (ix + 1),
 			'n': {ix},
 			'o': time(0, ix // 60 % 60, ix % 60),
-			'p': u'%d' % (ix,),
+			'p': f'{ix}',
 			'extra': 0,
 		}
 		return {k: v for k, v in d.items() if k in types}
@@ -126,7 +123,7 @@ def synthesis(job):
 	def want_fail(why, **kw):
 		try:
 			subjobs.build('dataset_concat', **kw)
-			raise Exception('dataset_concat(%r) should have failed: %s' % (kw, why,))
+			raise Exception(f'dataset_concat({kw!r}) should have failed: {why}')
 		except JobError:
 			pass
 

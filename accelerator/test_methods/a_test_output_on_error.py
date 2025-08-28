@@ -30,7 +30,7 @@ options = dict(
 
 
 def synthesis():
-	lines = ['printing a bunch of lines, this is line %d.' % (n,) for n in range(150)]
+	lines = [f'printing a bunch of lines, this is line {n}.' for n in range(150)]
 	if options.inner:
 		for s in lines:
 			print(s)
@@ -51,6 +51,6 @@ def synthesis():
 						return
 			# not yet, wait a little (total of 30s)
 			if attempt > 1:
-				print('Output from %s has not appeared yet, waiting more (%d).' % (job, attempt,))
+				print(f'Output from {job} has not appeared yet, waiting more ({attempt}).')
 			sleep(attempt / 10.0)
-		raise Exception('Not all output from %s was saved in OUTPUT' % (job,))
+		raise Exception(f'Not all output from {job} was saved in OUTPUT')

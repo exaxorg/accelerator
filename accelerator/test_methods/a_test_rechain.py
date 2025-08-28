@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test re-using datasets (from test_selfchain) in new
 chains, and verify that the old chain still works.
@@ -38,7 +34,7 @@ def synthesis(job):
 	# build a local abf chain
 	prev = None
 	for ix, ds in enumerate(manual_abf):
-		name = "abf%d" % (ix,)
+		name = f"abf{ix}"
 		prev = ds.link_to_here(name, override_previous=prev)
 	manual_abf_data = list(Dataset.iterate_list(None, None, manual_abf))
 	local_abf_data = list(Dataset(job, "abf2").iterate_chain(None, None))
@@ -56,7 +52,7 @@ def synthesis(job):
 	while going:
 		if prev and "cache" in prev._data:
 			going = False
-		name = "longchain%d" % (ix,)
+		name = f"longchain{ix}"
 		dw = DatasetWriter(name=name, previous=prev)
 		dw.add("ix", "number")
 		dw.get_split_write()(ix)

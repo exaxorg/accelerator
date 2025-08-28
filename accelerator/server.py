@@ -19,9 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import sys
 import socket
 import traceback
@@ -36,7 +33,7 @@ from string import ascii_letters
 import random
 import atexit
 
-from accelerator.compat import unicode, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.web import ThreadedHTTPServer, ThreadedUnixHTTPServer, BaseWebHandler
 
@@ -80,12 +77,12 @@ class XtdHandler(BaseWebHandler):
 	def encode_body(self, body):
 		if isinstance(body, bytes):
 			return body
-		if isinstance(body, unicode):
+		if isinstance(body, str):
 			return body.encode('utf-8')
 		return json_encode(body)
 
 	def handle_req(self, path, args):
-		if self.DEBUG:  print("@server.py:  Handle_req, path = \"%s\", args = %s" %( path, args ), file=sys.stderr)
+		if self.DEBUG:  print(f"@server.py:  Handle_req, path = \"{path}\", args = {args}", file=sys.stderr)
 		try:
 			self._handle_req( path, args )
 		except Exception:
@@ -175,11 +172,11 @@ class XtdHandler(BaseWebHandler):
 			else:
 				start_ix = len(jobs) - 1
 			if start_ix is None:
-				res = {'error': '%s is not a %s %s job' % (start_from, typ, method,)}
+				res = {'error': f'{start_from} is not a {typ} {method} job'}
 			else:
 				num = int(args.get('offset', 0))
 				if not jobs:
-					res = {'error': 'no %s jobs with method %s available' % (typ, method,)}
+					res = {'error': f'no {typ} jobs with method {method} available'}
 				elif 0 <= start_ix + num < len(jobs):
 					res = {'id': jobs[start_ix + num]}
 				else:
@@ -189,7 +186,7 @@ class XtdHandler(BaseWebHandler):
 					else:
 						direction, kind = 'forward', 'later'
 						available = len(jobs) - start_ix - 1
-					res = {'error': 'tried to go %d jobs %s from %s, but only %d %s %s %s jobs available' % (abs(num), direction, jobs[start_ix], available, kind, typ, method,)}
+					res = {'error': f'tried to go {abs(num)} jobs {direction} from {jobs[start_ix]}, but only {available} {kind} {typ} {method} jobs available'}
 			self.do_response(200, 'text/json', res)
 
 		elif path[0] == 'job_is_current':
@@ -210,7 +207,7 @@ class XtdHandler(BaseWebHandler):
 				job = self.ctrl.workspaces[workdir].allocate_jobs(1)[0]
 				self.do_response(200, 'text/json', {'jobid': job})
 			else:
-				self.do_response(500, 'text/json', {'error': 'workdir %r does not exist' % (workdir,)})
+				self.do_response(500, 'text/json', {'error': f'workdir {workdir!r} does not exist'})
 
 		elif path==['submit']:
 			if self.ctrl.broken:
@@ -344,7 +341,7 @@ def exitfunction(*a):
 		signal.signal(signal.SIGTERM, signal.SIG_IGN)
 		signal.signal(signal.SIGINT, signal.SIG_IGN)
 	print()
-	print('The deathening! %d %s' % (os.getpid(), children,))
+	print(f'The deathening! {os.getpid()} {children}')
 	print()
 	for child in children:
 		try:
@@ -363,7 +360,7 @@ class DeadlyThread(Thread):
 		except Exception:
 			traceback.print_exc(file=sys.stderr)
 		finally:
-			print("Thread %r died. That's bad." % (self.name,))
+			print(f"Thread {self.name!r} died. That's bad.")
 			exitfunction(DeadlyThread)
 
 
@@ -386,7 +383,7 @@ def check_socket(fn):
 		except OSError:
 			pass
 		return
-	raise Exception("Socket %s already listening" % (fn,))
+	raise Exception(f"Socket {fn} already listening")
 
 def siginfo(sig, frame):
 	print_status_stacks()
@@ -489,15 +486,15 @@ def main(argv, config):
 	for n in ("project_directory", "result_directory", "input_directory",):
 		v = config.get(n)
 		n = n.replace("_", " ")
-		print("%17s: %s" % (n, v,))
+		print(f"{n:>17}: {v}")
 	for n in ("board", "urd",):
 		v = config.get(n + '_listen')
 		if v and not config.get(n + '_local', True):
 			extra = ' (remote)'
 		else:
 			extra = ''
-		print("%17s: %s%s" % (n, v, extra,))
+		print(f"{n:>17}: {v}{extra}")
 	print()
 
-	print("Serving on %s\n" % (config.listen,), file=sys.stderr)
+	print(f"Serving on {config.listen}\n", file=sys.stderr)
 	server.serve_forever()

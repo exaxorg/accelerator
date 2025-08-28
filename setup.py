@@ -20,15 +20,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from setuptools import setup, find_packages, Extension
 from importlib import import_module
 from os.path import exists
 import os
 from datetime import datetime
 from subprocess import check_output, check_call, CalledProcessError
-from io import open
 import re
 import sys
 
@@ -79,7 +76,7 @@ else:
 			assert re.match(r'20\d\d\.\d\d\.\d\d\.(?:dev|rc)\d+$', env_version)
 			version = env_version
 		else:
-			version = "%s.dev1+%s%s" % (version, commit[:10], dirty(),)
+			version = f"{version}.dev1+{commit[:10]}{dirty()}"
 	version = version.replace('.0', '.')
 	with open('accelerator/version.txt', 'w') as fh:
 		fh.write(version + '\n')
@@ -138,12 +135,8 @@ setup(
 		'bottle>=0.12.7, <0.13; python_version<"3.10"',
 		'bottle>=0.13, <0.14; python_version>="3.10"',
 		'waitress>=1.0',
-		'configparser>=3.5.0, <5.0; python_version<"3"',
-		'monotonic>=1.0; python_version<"3"',
-		'selectors2>=2.0; python_version<"3"',
-		'pathlib>=1.0; python_version<"3"',
 	],
-	python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
+	python_requires=">=3.6, <4",
 
 	ext_modules=[dsutilmodule, dataset_typemodule, csvimportmodule],
 
@@ -171,7 +164,6 @@ setup(
 		"Operating System :: POSIX",
 		"Operating System :: POSIX :: BSD :: FreeBSD",
 		"Operating System :: POSIX :: Linux",
-		"Programming Language :: Python :: 2",
 		"Programming Language :: Python :: 3",
 		"Programming Language :: Python :: Implementation :: CPython",
 		"Programming Language :: C",

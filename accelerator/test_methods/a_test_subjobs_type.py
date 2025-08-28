@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Type datasets.untyped the same as datasets.typed in a subjob, then verify
 (in another subjob) the the results are correct.

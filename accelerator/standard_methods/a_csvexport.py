@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''Dataset (or chain) to CSV file.'''
 
 from shutil import copyfileobj
@@ -32,7 +29,7 @@ from functools import partial
 from itertools import chain
 import gzip
 
-from accelerator.compat import PY3, PY2, izip, imap, long
+from accelerator.compat import izip, imap
 from accelerator import status
 
 
@@ -71,16 +68,10 @@ format = dict(
 	json=JSONEncoder(sort_keys=True, ensure_ascii=True, check_circular=False).encode,
 )
 
-if PY3:
-	enc = str
-	format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
-	format['number'] = repr
-	format['unicode'] = None
-else:
-	enc = lambda s: s.encode('utf-8')
-	format['bytes'] = None
-	format['number'] = lambda n: str(n) if isinstance(n, long) else repr(n)
-	format['unicode'] = lambda s: s.encode('utf-8')
+enc = str
+format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
+format['number'] = repr
+format['unicode'] = None
 
 def csvexport(sliceno, filename, labelsonfirstline):
 	d = datasets.source[0]
@@ -100,14 +91,11 @@ def csvexport(sliceno, filename, labelsonfirstline):
 		open_func = partial(gzip.open, compresslevel=options.compression)
 	else:
 		open_func = open
-	if PY2:
-		open_func = partial(open_func, mode='wb')
-	else:
-		open_func = partial(open_func, mode='xt', encoding='utf-8')
+	open_func = partial(open_func, mode='xt', encoding='utf-8')
 	if options.none_as:
 		if isinstance(options.none_as, dict):
 			bad_none = set(options.none_as) - set(options.labels)
-			assert not bad_none, 'Unknown labels in none_as: %r' % (bad_none,)
+			assert not bad_none, f'Unknown labels in none_as: {bad_none!r}'
 		else:
 			assert isinstance(options.none_as, str), "What did you pass as none_as?"
 	def resolve_none(label, col):
@@ -207,7 +195,7 @@ def analysis(sliceno, job):
 		if '%' in options.filename:
 			filename = options.filename % (sliceno,)
 		else:
-			filename = '%s.%d' % (options.filename, sliceno,)
+			filename = f'{options.filename}.{sliceno}'
 		csvexport(sliceno, filename, options.labelsonfirstline)
 		job.register_file(filename)
 	else:
@@ -217,7 +205,7 @@ def analysis(sliceno, job):
 def synthesis(job, slices):
 	if not options.sliced:
 		def msg(sliceno):
-			return "Assembling %s (%d/%d)" % (options.filename, sliceno + 1, slices,)
+			return f"Assembling {options.filename} ({sliceno + 1}/{slices})"
 		with status(msg(0)) as update:
 			with job.open(options.filename, "wb") as outfh:
 				for sliceno in range(slices):

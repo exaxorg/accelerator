@@ -38,9 +38,9 @@ def main(urd):
 			reference to the job that created the dataset as a reference
 			to the default dataset inside the job.  I.e.
 		''')
-		prt.command('ax ds %s' % (imp,))
+		prt.command(f'ax ds {imp}')
 		prt('is equivalent to')
-		prt.command('ax ds %s/default' % (imp,))
+		prt.command(f'ax ds {imp}/default')
 		prt('which is the formally correct way to refer to the dataset.')
 
 	prt()

@@ -17,14 +17,9 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys, os
 from functools import partial
 
-from accelerator.compat import PY2
 from accelerator.error import ColourError
 
 # all gray colours in the 256 colour palette in intensity order
@@ -99,14 +94,10 @@ class Colour:
 		self._all['DEFAULTBG'] = '49'
 		for k in self._all:
 			setattr(self, k.lower(), partial(self._single, k))
-		self._on = {k: '\x1b[%sm' % (v,) for k, v in self._all.items()}
+		self._on = {k: f'\x1b[{v}m' for k, v in self._all.items()}
 		self._on['RESET'] = '\x1b[m'
 		self._all['RESET'] = ''
-		if PY2:
-			self._on = {k.encode('ascii'): v.encode('ascii') for k, v in self._on.items()}
-			self._off = dict.fromkeys(self._on, b'')
-		else:
-			self._off = dict.fromkeys(self._on, '')
+		self._off = dict.fromkeys(self._on, '')
 		self.enable()
 		self.__all__ = [k for k in dir(self) if not k.startswith('_')]
 		self._lined = False
@@ -174,7 +165,7 @@ class Colour:
 	def pre_post(self, *attrs, **kw):
 		bad_kw = set(kw) - {'force', 'reset'}
 		if bad_kw:
-			raise TypeError('Unknown keywords %r' % (bad_kw,))
+			raise TypeError(f'Unknown keywords {bad_kw!r}')
 		if not attrs:
 			raise TypeError('specify at least one attr')
 		if (self.enabled or kw.get('force')):
@@ -187,16 +178,16 @@ class Colour:
 			a_it = self._expand_names(attrs)
 			for a_src, a in a_it:
 				if not a:
-					raise ColourError('%r expanded to nothing' % (a_src,))
+					raise ColourError(f'{a_src!r} expanded to nothing')
 				if a.startswith('>'):
-					raise ColourError('A >post needs a preceding <pre (expanded %r from %r)' % (a, a_src,))
+					raise ColourError(f'A >post needs a preceding <pre (expanded {a!r} from {a_src!r})')
 				if a.startswith('<'):
 					try:
 						a_post_src, a_post = next(a_it)
 					except StopIteration:
 						a_post_src = a_post = ''
 					if not a_post.startswith('>') or a_src != a_post_src:
-						raise ColourError('A <pre needs a following >post (expanded %r from %r)' % (a, a_src,))
+						raise ColourError(f'A <pre needs a following >post (expanded {a!r} from {a_src!r})')
 					literal_post += a_post[1:]
 					pre.append(a)
 					continue
@@ -228,12 +219,12 @@ class Colour:
 								raise ValueError()
 							part = (prefix, '5', str(idx))
 					except (ValueError, AssertionError):
-						raise ColourError('Bad colour spec %r (from %r)' % (a, a_src,))
+						raise ColourError(f'Bad colour spec {a!r} (from {a_src!r})')
 					pre.append(':'.join(part))
 					post.add(default)
 				else:
 					if want not in self._all:
-						raise ColourError('Unknown colour/attr %r (from %r)' % (a, a_src,))
+						raise ColourError(f'Unknown colour/attr {a!r} (from {a_src!r})')
 					pre.append(self._all[want])
 					post.add(self._all.get('NOT' + want, default))
 			pre = ''.join(self._literal_split(pre))
@@ -252,7 +243,7 @@ class Colour:
 		pre, post = self.pre_post(*attrs, **kw)
 		if isinstance(value, bytes):
 			return b'%s%s%s' % (pre.encode('utf-8'), value, post.encode('utf-8'),)
-		return '%s%s%s' % (pre, value, post,)
+		return f'{pre}{value}{post}'
 
 colour = Colour()
 colour.configure_from_environ()

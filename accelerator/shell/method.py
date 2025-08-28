@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from accelerator.compat import terminal_size
 from accelerator.unixhttp import call
 from accelerator.shell import printdesc
@@ -38,7 +34,7 @@ def main(argv, cfg):
 		for name in args.method:
 			if name in methods:
 				data = methods[name]
-				print('%s.%s:' % (data.package, name,))
+				print(f'{data.package}.{name}:')
 				if data.description.text:
 					for line in data.description.text.split('\n'):
 						if line:
@@ -47,11 +43,11 @@ def main(argv, cfg):
 							print()
 					print()
 				if cfg.get('interpreters'):
-					print('Runs on <%s> %s' % (data.version, data.description.interpreter,))
+					print(f'Runs on <{data.version}> {data.description.interpreter}')
 					print()
 				for k in ('datasets', 'jobs',):
 					if data.description.get(k):
-						print('%s:' % (k,))
+						print(f'{k}:')
 						klen = max(len(k) for k in data.description[k])
 						template = '  %%-%ds # %%s' % (klen,)
 						for k, v in data.description[k].items():
@@ -84,13 +80,13 @@ def main(argv, cfg):
 						else:
 							print(first)
 			else:
-				print('Method %r not found' % (name,))
+				print(f'Method {name!r} not found')
 	else:
 		by_package = defaultdict(list)
 		for name, data in sorted(methods.items()):
 			by_package[data.package].append(name)
 		by_package.pop('accelerator.test_methods', None)
 		for package, names in sorted(by_package.items()):
-			print('%s:' % (package,))
+			print(f'{package}:')
 			items = [(name, methods[name].description.text) for name in names]
 			printdesc(items, columns, 'method')

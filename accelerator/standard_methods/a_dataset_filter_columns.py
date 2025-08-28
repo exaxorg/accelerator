@@ -19,8 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import absolute_import
-
 description = r"""Make only some columns from a dataset visible."""
 
 from accelerator.extras import OptionDefault

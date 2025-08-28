@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import os
 from contextlib import contextmanager
 from multiprocessing import Process
@@ -130,7 +126,7 @@ def reader(fd2pid, names, masters, slaves, process_name, basedir, is_main, is_bu
 		outputs = dict.fromkeys(masters, b'')
 		if len(fd2pid) == 2:
 			status_blacklist = set(fd2pid.values())
-			assert len(status_blacklist) == 1, "fd2pid should only map to 1 value initially: %r" % (fd2pid,)
+			assert len(status_blacklist) == 1, f"fd2pid should only map to 1 value initially: {fd2pid!r}"
 		else:
 			status_blacklist = ()
 			assert len(fd2pid) == 1, "fd2pid should have 1 or 2 elements initially"

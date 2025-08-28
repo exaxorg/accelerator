@@ -21,8 +21,6 @@
 
 # grep in a dataset(chain)
 
-from __future__ import division, print_function
-
 import sys
 import re
 import os
@@ -36,7 +34,7 @@ import datetime
 import operator
 import signal
 
-from accelerator.compat import unicode, izip, PY2
+from accelerator.compat import izip
 from accelerator.compat import izip_longest
 from accelerator.compat import monotonic
 from accelerator.compat import num_types
@@ -69,7 +67,7 @@ def number_or_None(obj):
 			# Base 16 has to be handled separately, because using 0 will
 			# error on numbers starting with 0 (on python 3).
 			# But we have to check for 0x, so things like "a" are not accepted.
-			if (isinstance(obj, unicode) and '0x' in obj) or (isinstance(obj, bytes) and b'0x' in obj):
+			if (isinstance(obj, str) and '0x' in obj) or (isinstance(obj, bytes) and b'0x' in obj):
 				try:
 					return int(obj, 16)
 				except ValueError:
@@ -78,7 +76,7 @@ def number_or_None(obj):
 def number_or_error(obj):
 	number = number_or_None(obj)
 	if number is None:
-		raise re.error('%r is not a valid not a number' % (obj,))
+		raise re.error(f'{obj!r} is not a valid not a number')
 	return number
 
 def splitprefix(s, prefixes):
@@ -179,14 +177,14 @@ def main(argv, cfg):
 				else:
 					name = next(unnamed)
 				if name not in names:
-					raise ArgumentError(self, 'unknown field %r' % (name,))
+					raise ArgumentError(self, f'unknown field {name!r}')
 				name = names[name]
 				try:
 					value = int(value)
 				except ValueError:
-					raise ArgumentError(self, 'invalid int value for %s: %r' % (name, value,))
+					raise ArgumentError(self, f'invalid int value for {name}: {value!r}')
 				if value < min_value[name] or value > 9999:
-					raise ArgumentError(self, 'invalid value for %s: %d' % (name, value,))
+					raise ArgumentError(self, f'invalid value for {name}: {value}')
 				tab_length[name] = value
 			# -T overrides -t
 			namespace.separator = None
@@ -241,7 +239,7 @@ def main(argv, cfg):
 		     "TABLEN works like normal tabs\n" +
 		     "FIELDLEN sets a longer minimum between fields\n" +
 		     "MINLEN sets a minimum len for all separators\n" +
-		     "use \"-T/\" to just activate it (sets %d/%d/%d)" % (tab_length.tab_len, tab_length.field_len, tab_length.min_len,)
+		     f"use \"-T/\" to just activate it (sets {tab_length.tab_len}/{tab_length.field_len}/{tab_length.min_len})"
 	)
 	parser.add_argument('-B', '--before-context', type=int, default=0, metavar='NUM', help="print NUM lines of leading context", )
 	parser.add_argument('-A', '--after-context',  type=int, default=0, metavar='NUM', help="print NUM lines of trailing context", )
@@ -316,7 +314,7 @@ def main(argv, cfg):
 			else:
 				patterns.append(re.compile(pattern, re_flags))
 		except re.error as e:
-			print("Bad pattern %r:\n%s" % (pattern, e,), file=sys.stderr)
+			print(f"Bad pattern {pattern!r}:\n{e}", file=sys.stderr)
 			return 1
 
 	grep_columns = set(args.grep or ())
@@ -327,7 +325,7 @@ def main(argv, cfg):
 	if args.slice:
 		want_slices = []
 		for s in args.slice:
-			assert 0 <= s < g.slices, "Slice %d not available" % (s,)
+			assert 0 <= s < g.slices, f"Slice {s} not available"
 			if s not in want_slices:
 				want_slices.append(s)
 	else:
@@ -387,7 +385,7 @@ def main(argv, cfg):
 			for ds in datasets:
 				missing = need_cols - set(ds.columns)
 				if missing:
-					print('ERROR: %s does not have columns %r' % (ds, missing,), file=sys.stderr)
+					print(f'ERROR: {ds} does not have columns {missing!r}', file=sys.stderr)
 					bad = True
 			if bad:
 				return 1
@@ -512,7 +510,7 @@ def main(argv, cfg):
 				return item.replace('\\', '\\\\').replace('\n', '\\n')
 		else:
 			escape_item = None
-		errors = 'replace' if PY2 else 'surrogateescape'
+		errors = 'surrogateescape'
 
 	if args.unique:
 		# A --unique without a value means all, and deletes any previously specified columns.
@@ -589,27 +587,27 @@ def main(argv, cfg):
 					if ds_ix == len(datasets):
 						msg = 'DONE'
 					else:
-						msg = '{0:d}% of {1:n} lines'.format(round(p * 100), total_lines_per_slice_at_ds[-1][sliceno])
+						msg = f'{round(p * 100):d}% of {total_lines_per_slice_at_ds[-1][sliceno]:n} lines'
 						if show_ds:
-							msg = '%s (in %s)' % (msg, datasets[ds_ix].quoted,)
-					msg = '%9d: %s' % (sliceno, msg,)
+							msg = f'{msg} (in {datasets[ds_ix].quoted})'
+					msg = f'{sliceno:9}: {msg}'
 					if p < bad_cutoff:
 						msg = colour(msg, 'grep/infohighlight')
 					else:
 						msg = colour(msg, 'grep/info')
 					write(2, msg.encode('utf-8') + b'\n')
-			msg = '{0:d}% of {1:n} lines'.format(round(progress_total * 100), total_lines)
+			msg = f'{round(progress_total * 100):d}% of {total_lines:n} lines'
 			if len(datasets) > 1:
 				min_ds = min(ds_ixes)
 				max_ds = max(ds_ixes)
 				if min_ds < len(datasets):
 					ds_name = datasets[min_ds].quoted
 					extra = '' if min_ds == max_ds else ' ++'
-					msg = '%s (in %s%s)' % (msg, ds_name, extra,)
+					msg = f'{msg} (in {ds_name}{extra})'
 			worst = min(progress_fraction)
 			if worst < bad_cutoff:
-				msg = '%s, worst %d%%' % (msg, round(worst * 100),)
-			msg = colour('  SUMMARY: %s' % (msg,), 'grep/info')
+				msg = f'{msg}, worst {round(worst * 100)}%'
+			msg = colour(f'  SUMMARY: {msg}', 'grep/info')
 			write(2, msg.encode('utf-8') + b'\n')
 		for signame in ('SIGINFO', 'SIGUSR1'):
 			if hasattr(signal, signame):
@@ -1039,9 +1037,9 @@ def main(argv, cfg):
 				if args.show_sliceno and args.roundrobin:
 					(prefix['sliceno'], lineno), items = items
 				if only_matching == 'part':
-					items = [filter_item(unicode(item)) for item in items]
+					items = [filter_item(str(item)) for item in items]
 				if only_matching == 'columns':
-					d = {k: v for k, v in zip(used_columns, items) if filter_item(unicode(v))}
+					d = {k: v for k, v in zip(used_columns, items) if filter_item(str(v))}
 				else:
 					d = dict(zip(used_columns, items))
 				if args.show_lineno:
@@ -1063,10 +1061,10 @@ def main(argv, cfg):
 				data = list(prefix)
 				if args.show_sliceno and args.roundrobin:
 					(sliceno, lineno), items = items
-					data[-1] = unicode(sliceno)
+					data[-1] = str(sliceno)
 				if args.show_lineno:
-					data.append(unicode(lineno))
-				show_items = map(unicode, items)
+					data.append(str(lineno))
+				show_items = map(str, items)
 				if only_matching:
 					if only_matching == 'columns':
 						show_items = (item if filter_item(item) else '' for item in show_items)
@@ -1129,7 +1127,7 @@ def main(argv, cfg):
 			else:
 				it = ds._column_iterator(sliceno, col, **kw)
 			if ds.columns[col].type == 'bytes':
-				errors = 'replace' if PY2 else 'surrogateescape'
+				errors = 'surrogateescape'
 				if ds.columns[col].none_support:
 					it = (None if v is None else v.decode('utf-8', errors) for v in it)
 				else:
@@ -1183,7 +1181,7 @@ def main(argv, cfg):
 		if args.numeric:
 			fmtfix = number_or_None
 		else:
-			fmtfix = unicode
+			fmtfix = str
 		if args.unique:
 			if args.unique is True: # all columns
 				care_mask = [True] * len(used_columns)
@@ -1331,7 +1329,7 @@ def main(argv, cfg):
 			unique_columns = tuple(col for col in columns_for_ds(ds) if unique_filter(col))
 			if check_unique_columns_existance and len(unique_columns) != len(args.unique):
 				missing = args.unique - set(unique_columns)
-				print('ERROR: %s does not have columns %r' % (ds.quoted, missing,), file=sys.stderr)
+				print(f'ERROR: {ds.quoted} does not have columns {missing!r}', file=sys.stderr)
 				bad = True
 			if unique_columns not in unique_columns2ix:
 				unique_columns2ix[unique_columns] = unique_columns_ix
@@ -1364,7 +1362,7 @@ def main(argv, cfg):
 		p = mp.SimplifiedProcess(
 			target=one_slice,
 			args=(sliceno, q_in, q_out, q_to_close,),
-			name='slice-%d' % (sliceno,),
+			name=f'slice-{sliceno}',
 			ignore_EPIPE=bool(liner),
 		)
 		children.append(p)

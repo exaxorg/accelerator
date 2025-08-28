@@ -22,8 +22,6 @@
 
 # Verify general operation and a few corner cases.
 
-from __future__ import division, print_function, unicode_literals
-
 from datetime import datetime, date, time
 from sys import version_info
 from itertools import compress
@@ -92,7 +90,7 @@ for name, data, bad_cnt, res_data in (
 				if typ is w_typ:
 					# File is not created until written.
 					fh.flush()
-			raise Exception("%r does not give IOError for DOES/NOT/EXIST" % (typ,))
+			raise Exception(f"{typ!r} does not give IOError for DOES/NOT/EXIST")
 		except IOError:
 			pass
 		try:
@@ -101,7 +99,7 @@ for name, data, bad_cnt, res_data in (
 		except TypeError:
 			pass
 		except Exception:
-			raise Exception("%r does not give TypeError for bad keyword argument" % (typ,))
+			raise Exception(f"{typ!r} does not give TypeError for bad keyword argument")
 	# test that the right data fails to write
 	for test_none_support in (False, True):
 		with w_mk(TMP_FN, none_support=test_none_support) as fh:
@@ -116,12 +114,12 @@ for name, data, bad_cnt, res_data in (
 						raise Exception("Allowed None without none_support")
 				except (ValueError, TypeError, OverflowError):
 					assert ix < bad_cnt or (value is None and not test_none_support), repr(value)
-			assert fh.count == count, "%s: %d lines written, claims %d" % (name, count, fh.count,)
+			assert fh.count == count, f"{name}: {count} lines written, claims {fh.count}"
 			if can_minmax(name):
 				want_min = min(filter(lambda x: x is not None, res_data))
 				want_max = max(filter(lambda x: x is not None, res_data))
-				assert fh.min == want_min, "%s: claims min %r, not %r" % (name, fh.min, want_min,)
-				assert fh.max == want_max, "%s: claims max %r, not %r" % (name, fh.max, want_max,)
+				assert fh.min == want_min, f"{name}: claims min {fh.min!r}, not {want_min!r}"
+				assert fh.max == want_max, f"{name}: claims max {fh.max!r}, not {want_max!r}"
 	# Okay, errors look good
 	with r_mk(TMP_FN) as fh:
 		res = list(fh)
@@ -151,8 +149,8 @@ for name, data, bad_cnt, res_data in (
 						fh.write(value)
 						count += 1
 					except (ValueError, TypeError, OverflowError):
-						assert 0, "No default: %r" % (value,)
-				assert fh.count == count, "%s: %d lines written, claims %d" % (name, count, fh.count,)
+						assert 0, f"No default: {value!r}"
+				assert fh.count == count, f"{name}: {count} lines written, claims {fh.count}"
 			# No errors when there is a default
 			with r_mk(TMP_FN) as fh:
 				res = list(fh)
@@ -175,17 +173,17 @@ for name, data, bad_cnt, res_data in (
 						assert hc == wrote, "Hashcheck disagrees with write"
 					except (ValueError, TypeError, OverflowError):
 						assert ix < bad_cnt, repr(value)
-				assert fh.count == count, "%s (%d, %d): %d lines written, claims %d" % (name, sliceno, slices, count, fh.count,)
+				assert fh.count == count, f"{name} ({sliceno}, {slices}): {count} lines written, claims {fh.count}"
 				if not forstrings(name):
 					got_min, got_max = fh.min, fh.max
 				fh.flush() # we overwrite the same file, so make sure we write.
 			total_count += count
 			with r_mk(TMP_FN) as fh:
 				tmp = list(fh)
-			assert len(tmp) == count, "%s (%d, %d): %d lines written, claims %d" % (name, sliceno, slices, len(tmp), count,)
+			assert len(tmp) == count, f"{name} ({sliceno}, {slices}): {len(tmp)} lines written, claims {count}"
 			for v in tmp:
-				assert (spread_None and v is None) or w_typ.hash(v) % slices == sliceno, "Bad hash for %r" % (v,)
-				assert w_typ.hash(v) == _dsutil.hash(v), "Inconsistent hash for %r" % (v,)
+				assert (spread_None and v is None) or w_typ.hash(v) % slices == sliceno, f"Bad hash for {v!r}"
+				assert w_typ.hash(v) == _dsutil.hash(v), f"Inconsistent hash for {v!r}"
 			res.extend(tmp)
 			sliced_res.append(tmp)
 			if can_minmax(name):
@@ -193,13 +191,13 @@ for name, data, bad_cnt, res_data in (
 				if tmp:
 					want_min = min(tmp)
 					want_max = max(tmp)
-					assert got_min == want_min, "%s (%d, %d): claims min %r, not %r" % (name, sliceno, slices, got_min, want_min,)
-					assert got_max == want_max, "%s (%d, %d): claims max %r, not %r" % (name, sliceno, slices, got_max, want_max,)
+					assert got_min == want_min, f"{name} ({sliceno}, {slices}): claims min {got_min!r}, not {want_min!r}"
+					assert got_max == want_max, f"{name} ({sliceno}, {slices}): claims max {got_max!r}, not {want_max!r}"
 				else:
 					assert got_min is None and got_max is None
-		assert len(res) == total_count, "%s (%d): %d lines written, claims %d" % (name, slices, len(res), total_count,)
-		assert len(res) == len(res_data), "%s (%d): %d lines written, should be %d" % (name, slices, len(res), len(res_data),)
-		assert set(res) == set(res_data), "%s (%d): Wrong data: %r != %r" % (name, slices, res, res_data,)
+		assert len(res) == total_count, f"{name} ({slices}): {len(res)} lines written, claims {total_count}"
+		assert len(res) == len(res_data), f"{name} ({slices}): {len(res)} lines written, should be {len(res_data)}"
+		assert set(res) == set(res_data), f"{name} ({slices}): Wrong data: {res!r} != {res_data!r}"
 		# verify reading back with hashfilter gives the same as writing with it
 		with w_mk(TMP_FN, none_support=True) as fh:
 			for value in data[bad_cnt:]:
@@ -207,7 +205,7 @@ for name, data, bad_cnt, res_data in (
 		for sliceno in range(slices):
 			with r_mk(TMP_FN, hashfilter=(sliceno, slices, spread_None)) as fh:
 				slice_values = list(compress(res_data, fh))
-			assert slice_values == sliced_res[sliceno], "Bad reader hashfilter: slice %d of %d gave %r instead of %r" % (sliceno, slices, slice_values, sliced_res[sliceno],)
+			assert slice_values == sliced_res[sliceno], f"Bad reader hashfilter: slice {sliceno} of {slices} gave {slice_values!r} instead of {sliced_res[sliceno]!r}"
 	for slices in range(1, 24):
 		slice_test(slices, False)
 		slice_test(slices, True)
@@ -222,7 +220,7 @@ for name, data, bad_cnt, res_data in (
 					fh.write(value)
 			with r_mk(TMP_FN) as fh:
 				tmp = list(fh)
-				assert tmp == [None, None, None], "Bad spread_None %sfor %d slices" % ("from default " if "default" in kw else "", slices,)
+				assert tmp == [None, None, None], f"Bad spread_None {'from default ' if 'default' in kw else ''}for {slices} slices"
 			kw["default"] = None
 			value = object
 
@@ -243,7 +241,7 @@ for name, value in (
 
 print("Hash testing, false things")
 for v in (None, "", b"", 0, 0.0, False,):
-	assert _dsutil.hash(v) == 0, "%r doesn't hash to 0" % (v,)
+	assert _dsutil.hash(v) == 0, f"{v!r} doesn't hash to 0"
 print("Hash testing, strings")
 for v in ("", "a", "0", "foo", "a slightly longer string", "\0", "a\0b",):
 	l_u = _dsutil.WriteUnicode.hash(v)
@@ -252,7 +250,7 @@ for v in ("", "a", "0", "foo", "a slightly longer string", "\0", "a\0b",):
 	u = _dsutil.WriteUnicode.hash(v)
 	a = _dsutil.WriteAscii.hash(v)
 	b = _dsutil.WriteBytes.hash(v.encode("utf-8"))
-	assert u == l_u == a == l_a == b == l_b, "%r doesn't hash the same" % (v,)
+	assert u == l_u == a == l_a == b == l_b, f"{v!r} doesn't hash the same"
 assert _dsutil.hash(b"\xe4") != _dsutil.hash("\xe4"), "Unicode hash fail"
 assert _dsutil.WriteBytes.hash(b"\xe4") != _dsutil.WriteUnicode.hash("\xe4"), "Unicode hash fail"
 try:
@@ -262,8 +260,8 @@ except ValueError:
 	pass
 print("Hash testing, numbers")
 for v in (0, 1, 2, 9007199254740991, -42):
-	assert _dsutil.WriteInt64.hash(v) == _dsutil.WriteFloat64.hash(float(v)), "%d doesn't hash the same" % (v,)
-	assert _dsutil.WriteInt64.hash(v) == _dsutil.WriteNumber.hash(v), "%d doesn't hash the same" % (v,)
+	assert _dsutil.WriteInt64.hash(v) == _dsutil.WriteFloat64.hash(float(v)), f"{v} doesn't hash the same"
+	assert _dsutil.WriteInt64.hash(v) == _dsutil.WriteNumber.hash(v), f"{v} doesn't hash the same"
 
 print("Number boundary test")
 Z = 128 * 1024 # the internal buffer size in _dsutil

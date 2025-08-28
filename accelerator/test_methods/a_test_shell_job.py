@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test the "ax job" shell command. Primarily tests the job spec parser.
 '''
@@ -56,4 +52,4 @@ def synthesis(job):
 	for spec, jobid in options.want.items():
 		res = ax_job(spec)
 		got_jobid = res[0].split('/')[-1]
-		assert got_jobid.startswith(jobid), 'Spec %r should have given %r but gave %r' % (spec, jobid, got_jobid,)
+		assert got_jobid.startswith(jobid), f'Spec {spec!r} should have given {jobid!r} but gave {got_jobid!r}'

@@ -22,8 +22,6 @@
 # parsing of "job specs", including as part of a dataset name.
 # handles jobids, paths and method names.
 
-from __future__ import division, print_function
-
 import argparse
 import sys
 from os.path import join, exists, realpath, split
@@ -35,7 +33,7 @@ from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote, urlencode, PY3
+from accelerator.compat import url_quote, urlencode
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -73,7 +71,7 @@ def split_tildes(n, allow_empty=False, extended=False):
 	return n, lst
 
 def method2job(cfg, method, **kw):
-	url ='%s/method2job/%s?%s' % (cfg.url, url_quote(method), urlencode(kw))
+	url =f'{cfg.url}/method2job/{url_quote(method)}?{urlencode(kw)}'
 	found = call(url)
 	if 'error' in found:
 		raise JobNotFound(found.error)
@@ -89,7 +87,7 @@ def job_up(job, count):
 			if prev:
 				prev = prev.job
 		if not prev:
-			raise JobNotFound('Tried to go %d up from %s, but only %d previous jobs available' % (count, err_job, ix,))
+			raise JobNotFound(f'Tried to go {count} up from {err_job}, but only {ix} previous jobs available')
 		job = prev
 	return job
 
@@ -146,30 +144,30 @@ def name2job(cfg, n, _want_ds=False):
 			if n in ('jobs', 'datasets'):
 				k = n
 				if current or tildes:
-					raise JobNotFound("Don't use !~+<>^ on .%s, put after .%s.foo(HERE)." % (k, k))
+					raise JobNotFound(f"Don't use !~+<>^ on .{k}, put after .{k}.foo(HERE).")
 				try:
 					n = next(dotted)
 				except StopIteration:
-					raise JobNotFound("%s.%s.what?" % (job, k,))
+					raise JobNotFound(f"{job}.{k}.what?")
 				n, current, tildes = split(n, k)
 			elif n in p.jobs and n in p.datasets:
-				raise JobNotFound("Job %s (%s) has %s in both .jobs and .datasets, please specify." % (job, job.method, n,))
+				raise JobNotFound(f"Job {job} ({job.method}) has {n} in both .jobs and .datasets, please specify.")
 			if k:
 				if n not in p[k]:
-					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, k + '.' + n,))
+					raise JobNotFound(f"Job {job} ({job.method}) does not have a {k + '.' + n!r}.")
 			else:
 				if n in p.jobs:
 					k = 'jobs'
 				elif n in p.datasets:
 					k = 'datasets'
 				else:
-					raise JobNotFound("Job %s (%s) does not have a %r." % (job, job.method, n,))
+					raise JobNotFound(f"Job {job} ({job.method}) does not have a {n!r}.")
 			if not p[k][n]:
-				raise JobNotFound("%s.%s.%s is None" % (job, k, n,))
+				raise JobNotFound(f"{job}.{k}.{n} is None")
 			job = p[k][n]
 			if isinstance(job, list):
 				if len(job) != 1:
-					raise JobNotFound("Job %s (%s) has %d %s in %r." % (job, job.method, len(job), k, n,))
+					raise JobNotFound(f"Job {job} ({job.method}) has {len(job)} {k} in {n!r}.")
 				job = job[0]
 			if isinstance(job, Dataset):
 				ds = job
@@ -193,14 +191,14 @@ def _name2job_do_tildes(cfg, job, current, tildes):
 			job = job_up(job, count)
 		elif char == '<':
 			if count > job.number:
-				raise JobNotFound('Tried to go %d jobs back from %s.' % (count, job,))
+				raise JobNotFound(f'Tried to go {count} jobs back from {job}.')
 			job = Job._create(job.workdir, job.number - count)
 		elif char == '>':
 			job = Job._create(job.workdir, job.number + count)
 		else:
-			raise Exception("BUG: split_tildes should not give %r as a char" % (char,))
+			raise Exception(f"BUG: split_tildes should not give {char!r} as a char")
 	if not exists(job.filename('setup.json')):
-		raise JobNotFound('Job resolved to %r but that job does not exist' % (job,))
+		raise JobNotFound(f'Job resolved to {job!r} but that job does not exist')
 	return job
 
 def _name2job(cfg, n, current):
@@ -228,12 +226,12 @@ def _name2job(cfg, n, current):
 			print(e, file=sys.stderr)
 			urdres = None
 		if not urdres:
-			raise JobNotFound('urd list %r not found' % (a[0],))
+			raise JobNotFound(f'urd list {a[0]!r} not found')
 		from accelerator.build import JobList
 		joblist = JobList(Job(e[1], e[0]) for e in urdres.joblist)
 		res = joblist.get(entry)
 		if not res:
-			raise JobNotFound('%r not found in %s' % (entry, path,))
+			raise JobNotFound(f'{entry!r} not found in {path}')
 		return res
 	if re.match(r'[^/]+-\d+$', n):
 		# Looks like a jobid
@@ -243,12 +241,12 @@ def _name2job(cfg, n, current):
 		# Looks like workdir-LATEST
 		wd = m.group(1)
 		if wd not in WORKDIRS:
-			raise NoSuchWorkdirError('Not a valid workdir: "%s"' % (wd,))
+			raise NoSuchWorkdirError(f'Not a valid workdir: "{wd}"')
 		path = join(WORKDIRS[wd], n)
 		try:
 			n = readlink(path)
 		except OSError as e:
-			raise JobNotFound('Failed to read %s: %s' % (path, e,))
+			raise JobNotFound(f'Failed to read {path}: {e}')
 		return Job(n)
 	if n not in ('.', '..') and '/' not in n:
 		# Must be a method then
@@ -258,10 +256,10 @@ def _name2job(cfg, n, current):
 		path, jid = split(realpath(n))
 		job = Job(jid)
 		if WORKDIRS.get(job.workdir, path) != path:
-			print("### Overriding workdir %s to %s" % (job.workdir, path,))
+			print(f"### Overriding workdir {job.workdir} to {path}")
 		WORKDIRS[job.workdir] = path
 		return job
-	raise JobNotFound("Don't know what to do with %r." % (n,))
+	raise JobNotFound(f"Don't know what to do with {n!r}.")
 
 def split_ds_dir(n):
 	"""try to split a path at the jid/ds boundary"""
@@ -278,7 +276,7 @@ def split_ds_dir(n):
 		n, bit = n.rsplit('/', 1)
 		name_bits.append(bit)
 	if not n:
-		raise JobNotFound('No setup.json found in %r' % (orig_n,))
+		raise JobNotFound(f'No setup.json found in {orig_n!r}')
 	if not name_bits:
 		name_bits = ['default']
 	return n, '/'.join(reversed(name_bits))
@@ -309,7 +307,7 @@ def name2ds(cfg, n):
 			res = ds
 			for done in range(count):
 				if not getattr(res, key):
-					raise DatasetNotFound('Tried to go %d %s from %s, but only %d available (stopped on %s)' % (count, motion, ds, done, res,))
+					raise DatasetNotFound(f'Tried to go {count} {motion} from {ds}, but only {done} available (stopped on {res})')
 				res = getattr(res, key)
 			return res
 		for char, count in tildes:
@@ -320,7 +318,7 @@ def name2ds(cfg, n):
 	slices = ds.job.params.slices
 	from accelerator import g
 	if hasattr(g, 'slices'):
-		assert g.slices == slices, "Dataset %s needs %d slices, by we are already using %d slices" % (ds, slices, g.slices)
+		assert g.slices == slices, f"Dataset {ds} needs {slices} slices, by we are already using {g.slices} slices"
 	else:
 		g.slices = slices
 	return ds
@@ -330,10 +328,9 @@ class ArgumentParser(argparse.ArgumentParser):
 	def __init__(self, *a, **kw):
 		kw = dict(kw)
 		kw['prefix_chars'] = '-+'
-		if PY3:
-			# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
-			# it also regrettably disables -abc for -a -b -c until 3.8.
-			kw['allow_abbrev'] = False
+		# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
+		# it also regrettably disables -abc for -a -b -c until 3.8.
+		kw['allow_abbrev'] = False
 		return argparse.ArgumentParser.__init__(self, *a, **kw)
 
 	def add_argument(self, *a, **kw):

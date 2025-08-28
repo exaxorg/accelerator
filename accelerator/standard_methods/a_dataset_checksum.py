@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 description = r'''
 Take a dataset and make a checksum of one or more columns.
 
@@ -43,7 +39,6 @@ from json import JSONEncoder
 from heapq import merge
 
 from accelerator.extras import DotDict
-from accelerator.compat import PY2
 
 options = dict(
 	columns      = set(),
@@ -52,11 +47,8 @@ options = dict(
 
 datasets = ('source',)
 
-if PY2:
-	bytesrepr = repr
-else:
-	def bytesrepr(v):
-		return repr(v).encode('utf-8')
+def bytesrepr(v):
+	return repr(v).encode('utf-8')
 
 def bytesstr(v):
 	return v.encode('utf-8')
@@ -86,7 +78,7 @@ def prepare():
 	# Same with pickle, but worse (many picklable values will break this).
 	for n in columns:
 		col = datasets.source.columns[n]
-		if col.type == 'bytes' or (col.type == 'ascii' and PY2):
+		if col.type == 'bytes':
 			# doesn't need any encoding, but might need None-handling.
 			if col.none_support:
 				translators[n] = self_none
@@ -99,7 +91,7 @@ def prepare():
 			translators[n] = sortdicts
 		elif col.type == 'pickle':
 			translators[n] = sortdicts
-			print('WARNING: Column %s is pickle, may not work' % (n,))
+			print(f'WARNING: Column {n} is pickle, may not work')
 		else:
 			translators[n] = bytesrepr
 	return columns, translators
@@ -124,5 +116,5 @@ def synthesis(prepare_res, analysis_res):
 	else:
 		all = chain.from_iterable(analysis_res)
 	res = md5(b''.join(all)).hexdigest()
-	print("%s: %s" % (datasets.source, res,))
+	print(f"{datasets.source}: {res}")
 	return DotDict(sum=int(res, 16), sort=options.sort, columns=prepare_res[0], source=datasets.source)

@@ -19,21 +19,13 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
-from accelerator.compat import PY3
 from accelerator.compat import urlopen, Request, URLError, HTTPError
 from accelerator.extras import json_encode, json_decode
 from accelerator.error import ServerError, UrdError, UrdPermissionError, UrdConflictError
 from accelerator import g, __version__ as ax_version
 
-if PY3:
-	from urllib.request import install_opener, build_opener, AbstractHTTPHandler
-	from http.client import HTTPConnection
-else:
-	from urllib2 import install_opener, build_opener, AbstractHTTPHandler
-	from httplib import HTTPConnection
+from urllib.request import install_opener, build_opener, AbstractHTTPHandler
+from http.client import HTTPConnection
 
 import sys
 import time
@@ -92,10 +84,9 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 					s_version = r.headers['Accelerator-Version'] or '<unknown (old)>'
 					if s_version != ax_version:
 						# Nothing is supposed to catch this, so just print and die.
-						print('Server is running version %s but we are running version %s' % (s_version, ax_version,), file=sys.stderr)
+						print(f'Server is running version {s_version} but we are running version {ax_version}', file=sys.stderr)
 						exit(1)
-				if PY3:
-					resp = resp.decode('utf-8')
+				resp = resp.decode('utf-8')
 				# It is inconsistent if we get HTTPError or not.
 				# It seems we do when using TCP sockets, but not when using unix sockets.
 				if r.getcode() >= 400:
@@ -108,10 +99,8 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 					pass
 		except HTTPError as e:
 			if resp is None and e.fp:
-				resp = e.fp.read()
-				if PY3:
-					resp = resp.decode('utf-8')
-			msg = '%s says %d: %s' % (server_name, e.code, resp,)
+				resp = e.fp.read().decode('utf-8')
+			msg = f'{server_name} says {e.code}: {resp}'
 			if server_name == 'urd' and 400 <= e.code < 500:
 				if e.code == 401:
 					err = UrdPermissionError()
@@ -126,15 +115,15 @@ def call(url, data=None, fmt=json_decode, headers={}, server_name='server', retr
 			if attempt < retries - 1:
 				msg = None
 			else:
-				msg = 'error contacting %s: %s' % (server_name, e.reason)
+				msg = f'error contacting {server_name}: {e.reason}'
 		except ValueError as e:
-			msg = 'Bad data from %s, %s: %s' % (server_name, type(e).__name__, e,)
+			msg = f'Bad data from {server_name}, {type(e).__name__}: {e}'
 		if msg and not quiet:
 			print(msg, file=sys.stderr)
 		if attempt < retries + 1:
 			time.sleep(attempt / 15)
 			if msg and not quiet:
-				print('Retrying (%d/%d).' % (attempt, retries,), file=sys.stderr)
+				print(f'Retrying ({attempt}/{retries}).', file=sys.stderr)
 	else:
 		if not quiet:
 			print('Giving up.', file=sys.stderr)

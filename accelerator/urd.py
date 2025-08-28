@@ -19,10 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-
 from glob import glob
 from collections import defaultdict
 from bottle import route, request, auth_basic, abort
@@ -38,8 +34,7 @@ import sys
 import os
 import signal
 
-from accelerator.compat import iteritems, itervalues, unicode
-from accelerator.compat import PY3
+from accelerator.compat import iteritems, itervalues
 from accelerator.colourwrapper import colour
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
@@ -61,7 +56,7 @@ def joblistlike(jl):
 		assert isinstance(v, (list, tuple)), v
 		assert len(v) == 2, v
 		for s in v:
-			assert isinstance(s, unicode), s
+			assert isinstance(s, str), s
 	return True
 
 
@@ -73,26 +68,25 @@ class TimeStamp(str):
 	When both are specified they are separated by a +
 	"""
 
-	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_ts', '_integer')
+	__slots__ = ('_ts', '_integer')
 
 	def __new__(cls, ts):
 		if isinstance(ts, TimeStamp):
 			return ts
 		try:
 			integer = int(ts, 10)
-			assert integer >= 0, 'Invalid timestamp %d' % (ts,)
+			assert integer >= 0, f'Invalid timestamp {ts}'
 			ts = None
 		except ValueError:
 			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)(\+\d+)?$', ts)
-			assert m, 'Invalid timestamp %s' % (ts,)
+			assert m, f'Invalid timestamp {ts}'
 			ts, integer = m.groups()
 			ts = ts.replace(' ', 'T')
 			integer = int(integer[1:], 10) if integer else None
-		assert ts is not None or integer is not None, 'Invalid timestamp %s' % (ts,)
+		assert ts is not None or integer is not None, f'Invalid timestamp {ts}'
 		if ts:
 			if integer is not None:
-				strval = '%s+%d' % (ts, integer,)
+				strval = f'{ts}+{integer}'
 			else:
 				strval = ts
 		else:
@@ -199,10 +193,10 @@ class DB:
 			if verbose:
 				print("urd-list                          lines     ghosts     active")
 				for key, val in sorted(stat.items()):
-					print("%-30s  %7d    %7d    %7d" % (key, val, len(self.ghost_db[key]), len(self.db[key]),))
+					print(f"{key:30}  {val:7}    {len(self.ghost_db[key]):7}    {len(self.db[key]):7}")
 				print()
 		else:
-			print("Creating directory \"%s\"." % (path,))
+			print(f"Creating directory \"{path}\".")
 			os.makedirs(path)
 		self._lasttime = None
 		self._initialised = True
@@ -257,9 +251,9 @@ class DB:
 	def _validate_data(self, data, with_deps=True):
 		if with_deps:
 			assert set(data) == {'timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'flags', 'build_job',}
-			assert isinstance(data.user, unicode)
-			assert isinstance(data.build, unicode)
-			assert isinstance(data.build_job, unicode)
+			assert isinstance(data.user, str)
+			assert isinstance(data.build, str)
+			assert isinstance(data.build_job, str)
 			assert isinstance(data.deps, dict)
 			for v in itervalues(data.deps):
 				assert isinstance(v, dict)
@@ -268,7 +262,7 @@ class DB:
 			assert set(data) == {'timestamp', 'joblist', 'caption',}
 		assert joblistlike(data.joblist), data.joblist
 		assert data.joblist
-		assert isinstance(data.caption, unicode)
+		assert isinstance(data.caption, str)
 		data.timestamp = TimeStamp(data.timestamp)
 
 	def _serialise(self, action, data):
@@ -278,7 +272,7 @@ class DB:
 			json_joblist = json.dumps(data.joblist)
 			json_caption = json.dumps(data.caption)
 			json_build_job = json.dumps(data.build_job)
-			key = '%s/%s' % (data.user, data.build,)
+			key = f'{data.user}/{data.build}'
 			flags = ','.join(data.flags)
 			for s in key, json_deps, json_joblist, json_caption, data.user, data.build, data.timestamp, flags:
 				assert '\t' not in s, s
@@ -310,9 +304,9 @@ class DB:
 
 	@locked
 	def add(self, data):
-		key = '%s/%s' % (data.user, data.build)
+		key = f'{data.user}/{data.build}'
 		flags = data.pop('flags', [])
-		assert flags in ([], ['update']), 'Unknown flags: %r' % (flags,)
+		assert flags in ([], ['update']), f'Unknown flags: {flags!r}'
 		new = False
 		changed = False
 		ghosted = 0
@@ -334,7 +328,7 @@ class DB:
 			else:
 				new = True
 		if changed and 'update' not in flags:
-			assert self._initialised, 'Log updates without update flag: %r' % (data,)
+			assert self._initialised, f'Log updates without update flag: {data!r}'
 			bottle.response.status = 409
 			return {'error': 'would update'}
 		if new or changed:
@@ -423,7 +417,7 @@ class DB:
 							extra = "  Also failed to remove partially written data."
 							stars = colour.red('****')
 							extra2 = "  " + stars + " YOUR URD DB IS PROBABLY BROKEN NOW! " + stars
-						msg = "  Failed to write %s: %s" % (fn, e)
+						msg = f"  Failed to write {fn}: {e}"
 						brk = "#" * (max(len(msg), len(extra)) + 2)
 						print("", file=sys.stderr)
 						print(brk, file=sys.stderr)
@@ -533,9 +527,7 @@ def single(user, build, timestamp):
 @route('/add', method='POST')
 @auth_basic(auth)
 def add():
-	body = request.body
-	if PY3:
-		body = TextIOWrapper(body, encoding='utf-8')
+	body = TextIOWrapper(request.body, encoding='utf-8')
 	data = Entry(json.load(body))
 	if data.user != request.auth[0]:
 		abort(401, "Error:  user does not match authentication!")
@@ -629,7 +621,7 @@ def main(argv, cfg):
 	authdict = readauth(auth_fn)
 	allow_passwordless = args.allow_passwordless
 	if not authdict and not args.allow_passwordless:
-		raise Exception('No users in %r and --allow-passwordless not specified.' % (auth_fn,))
+		raise Exception(f'No users in {auth_fn!r} and --allow-passwordless not specified.')
 	db = DB(args.path, not args.quiet)
 
 	bottle.install(jsonify)
