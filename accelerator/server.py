@@ -159,7 +159,11 @@ class XtdHandler(BaseWebHandler):
 					os.killpg(child, signal.SIGINT)
 				except Exception:
 					pass
-			time.sleep(0.2) # give any inner cleanup a chance to happen
+			# give any inner cleanup a chance to happen
+			for ix in range(50):
+				if not children:
+					break
+				time.sleep(0.02)
 			for child in list(children):
 				try:
 					os.killpg(child, signal.SIGKILL)
@@ -360,7 +364,11 @@ def exitfunction(*a):
 			os.killpg(child, signal.SIGINT)
 		except Exception:
 			pass
-	time.sleep(0.2) # give any inner cleanup a chance to happen
+	# give any inner cleanup a chance to happen
+	for ix in range(50):
+		if not children:
+			break
+		time.sleep(0.02)
 	for child in list(children):
 		try:
 			os.killpg(child, signal.SIGKILL)
