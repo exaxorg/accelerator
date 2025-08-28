@@ -237,8 +237,12 @@ class Automata:
 	def methods_info(self):
 		return self._url_json('methods')
 
-	def update_methods(self):
-		resp = self._url_json('update_methods')
+	def update_methods(self, _override_py_exe=None):
+		if _override_py_exe:
+			args = urlencode({'_override_py_exe': _override_py_exe})
+		else:
+			args = ''
+		resp = self._url_json('update_methods?' + args)
 		self.update_method_info()
 		return resp
 
@@ -468,6 +472,9 @@ class Urd(object):
 		self._current = None
 		self.workdir = None
 		self._warnings = []
+
+	def _override_py_exe(self, exe_path):
+		self._a.update_methods(_override_py_exe=exe_path)
 
 	@property
 	def joblist_all(self):

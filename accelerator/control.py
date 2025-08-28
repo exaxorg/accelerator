@@ -26,7 +26,7 @@ from threading import Thread
 import multiprocessing
 import signal
 from os import unlink
-from os.path import join
+from os.path import join, exists
 import time
 
 from accelerator import dependency
@@ -73,14 +73,24 @@ class Main:
 		print('\x1b[A\x1b[24Cdone.')
 		self.broken = False
 
-	def _update_methods(self):
+	def _update_methods(self, _override_py_exe=None):
 		print('Update methods')
+		if _override_py_exe:
+			assert exists(_override_py_exe), 'Executable %r does not exist.' % (_override_py_exe,)
+			config = DotDict(self.config)
+			# Doesn't override the automatic version.number names.
+			config.interpreters = {
+				k: _override_py_exe
+				for k in list(config.interpreters) + ['DEFAULT']
+			}
+		else:
+			config = self.config
 		# initialise methods class looking in method_directories from config file
-		self.Methods = methods.Methods(self.config)
+		self.Methods = methods.Methods(config)
 
-	def update_methods(self):
+	def update_methods(self, _override_py_exe=None):
 		try:
-			self._update_methods()
+			self._update_methods(_override_py_exe)
 			self.update_database()
 			self.broken = False
 		except methods.MethodLoadException as e:

@@ -138,7 +138,7 @@ class XtdHandler(BaseWebHandler):
 			self.do_response(200, "text/json", self.ctrl.config)
 
 		elif path==['update_methods']:
-			self.do_response(200, "text/json", self.ctrl.update_methods())
+			self.do_response(200, "text/json", self.ctrl.update_methods(args.get('_override_py_exe')))
 
 		elif path==['methods']:
 			""" return a json with everything the Method object knows about the methods """
