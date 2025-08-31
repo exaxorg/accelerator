@@ -14,7 +14,7 @@ test -d /accelerator/.git || exit 1
 test -d /accelerator/accelerator || exit 1
 
 VERSION=5
-ZLIB_VERSION=860e4cff7917d93f54f5d7f0bc1d0e8b1a3cb988 # 2.2.4
+ZLIB_VERSION=425439062b114a0f6cf625022c41d929c7e879f9 # 2.2.5
 
 ENDIANNESS="$(/opt/python/cp39-cp39/bin/python3 -c 'import sys; print(sys.byteorder)')"
 
