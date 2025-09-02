@@ -68,38 +68,37 @@ def joblistlike(jl):
 class TimeStamp(str):
 	"""Can be a string like 2019-12-09T12:19:04.123456 (day and time are
 	optional, partial time ok) and/or an int >= 0.
-	Integers without datetimes sort before all datetimes.
-	Datetimes without integers sort before the same datetime with an integer.
-	When both are specified they are separated by a +
+	Separate parts with +, use as many as you need.
+	Numbers sort before datetimes.
+	Extra parts sort after.
 	"""
 
 	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_ts', '_integer')
+		__slots__ = ('_parts')
 
 	def __new__(cls, ts):
 		if isinstance(ts, TimeStamp):
 			return ts
-		try:
-			integer = int(ts, 10)
-			assert integer >= 0, 'Invalid timestamp %d' % (ts,)
-			ts = None
-		except ValueError:
-			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)(\+\d+)?$', ts)
-			assert m, 'Invalid timestamp %s' % (ts,)
-			ts, integer = m.groups()
-			ts = ts.replace(' ', 'T')
-			integer = int(integer[1:], 10) if integer else None
-		assert ts is not None or integer is not None, 'Invalid timestamp %s' % (ts,)
-		if ts:
-			if integer is not None:
-				strval = '%s+%d' % (ts, integer,)
-			else:
-				strval = ts
-		else:
-			strval = str(integer)
+		assert ts, 'Invalid timestamp %s' % (ts,)
+		parts = []
+		str_parts = []
+		for part in ts.split('+'):
+			try:
+				integer = int(part, 10)
+				assert integer >= 0, 'Invalid timestamp %d' % (part,)
+				parts.append((0, integer,))
+				str_parts.append(str(integer))
+				continue
+			except ValueError:
+				pass
+			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)$', part)
+			assert m, 'Invalid timestamp %s' % (part,)
+			part = part.replace(' ', 'T')
+			parts.append((1, part,))
+			str_parts.append(part)
+		strval = '+'.join(str_parts)
 		obj = str.__new__(cls, strval)
-		obj._ts = ts
-		obj._integer = integer
+		obj._parts = tuple(parts)
 		return obj
 
 	__hash__ = str.__hash__
@@ -107,37 +106,17 @@ class TimeStamp(str):
 	def __eq__(self, other):
 		if not isinstance(other, TimeStamp):
 			other = TimeStamp(other)
-		return self._ts == other._ts and self._integer == other._integer
+		return self._parts == other._parts
 
 	def __lt__(self, other):
 		if not isinstance(other, TimeStamp):
 			other = TimeStamp(other)
-		if self._ts is not None:
-			if other._ts is not None:
-				if self._integer is not None:
-					if self._ts == other._ts:
-						if other._integer is not None:
-							return self._integer < other._integer
-						else:
-							return False
-					else:
-						return self._ts < other._ts
-				else:
-					if other._integer is not None:
-						return self._ts <= other._ts
-					else:
-						return self._ts < other._ts
-			else:
-				return False
-		elif other._ts is not None:
-			return True
-		else:
-			return self._integer < other._integer
+		return self._parts < other._parts
 
 	def __le__(self, other):
 		if not isinstance(other, TimeStamp):
 			other = TimeStamp(other)
-		return self < other or self == other
+		return self._parts < other._parts or self._parts == other._parts
 
 	def __ge__(self, other):
 		return not self < other
