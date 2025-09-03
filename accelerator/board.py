@@ -163,6 +163,14 @@ def js_quote(obj):
 	return json.dumps(obj).replace('<', '\\074')
 
 
+def urd_ts_html(ts):
+	ts = [bottle.html_escape(part) for part in ts.split('/')]
+	if len(ts) != 2: # Full path or just ts, but not when "user/list"
+		ts[-1] = ts[-1].replace('+', '<span class="urd-ts-sep">+</span>')
+		ts[-1] = ts[-1].replace('T', '<span class="urd-ts-sep">T</span>')
+	return '<span class="urd-ts-sep">/</span>'.join(ts)
+
+
 def template(tpl_name, **kw):
 	return bottle.template(
 		tpl_name,
@@ -173,6 +181,7 @@ def template(tpl_name, **kw):
 		name2hashed=name2hashed,
 		template=template,
 		url_quote=url_quote,
+		urd_ts_html=urd_ts_html,
 		**kw
 	)
 

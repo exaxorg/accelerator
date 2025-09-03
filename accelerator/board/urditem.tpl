@@ -1,9 +1,10 @@
 {{ ! template('head', title=key) }}
 
-	<h1>{{ key }}</h1>
+	<h1>{{ ! urd_ts_html(key) }}</h1>
 	<table class="urd-table">
 		% saved_caption = entry.caption
-		% for thing in ('timestamp', 'user', 'build', 'caption',):
+		<tr><td>timestamp</td><td id="urd-timestamp">{{ ! urd_ts_html(entry.pop('timestamp')) }}</td></tr>
+		% for thing in ('user', 'build', 'caption',):
 			<tr><td>{{ thing }}</td><td id="urd-{{ thing }}">{{ entry.pop(thing) }}</td></tr>
 		% end
 		% if entry.build_job:
@@ -21,8 +22,8 @@
 	<table class="urd-table">
 		<tr><td>deps</td><td>
 			% for dep, depentry in sorted(entry.deps.items()):
-				<a href="/urd/{{ url_quote(dep) }}/{{ depentry.timestamp }}">
-					{{ dep }}/{{ depentry.timestamp }}
+				<a href="/urd/{{ url_quote(dep) }}/{{ ! urd_ts_html(depentry.timestamp) }}">
+					{{ dep }}/{{ ! urd_ts_html(depentry.timestamp) }}
 				</a>
 				<ol>
 					% for method, job in depentry.joblist:

@@ -485,6 +485,11 @@ ul.urdlist > li > a:first-child {
 	margin-right: 1em;
 }
 
+.urd-ts-sep {
+	opacity: 0.6;
+	padding: 0 0.05em;
+}
+
 table.job-table {
 	border-spacing: 0 2px;
 	clear: both;
