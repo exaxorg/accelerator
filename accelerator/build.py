@@ -428,22 +428,33 @@ def _urd_typeify(d):
 def _tsfix(ts):
 	if ts is None:
 		return None
-	errmsg = 'Specify timestamps as strings, ints, datetimes or (timestamp, integer), not %r' % (ts,)
-	if isinstance(ts, (tuple, list,)):
-		assert len(ts) == 2, errmsg
-		ts, integer = ts
-		assert isinstance(integer, int), errmsg
+	from accelerator.urd import TimeStamp
+	errmsg = 'Specify timestamps as strings, ints, datetimes or a list of those, not %r' % (ts,)
+	assert ts or ts == 0, errmsg
+	if isinstance(ts, str_types) and ts[0] in '<>':
+		if ts.startswith('<=') or ts.startswith('>='):
+			cmp = ts[:2]
+			ts = ts[2:]
+		else:
+			cmp = ts[:1]
+			ts = ts[1:]
 	else:
-		integer = None
-	if isinstance(ts, (int, date,)):
-		ts = str(ts)
-	assert isinstance(ts, str_types), errmsg
-	assert ts, errmsg
-	ts = ts.replace(' ', 'T', 1)
-	if integer is None:
-		return ts
-	else:
-		return '%s+%d' % (ts, integer,)
+		cmp = ''
+	if ts in ('latest', 'first'):
+		return cmp + ts
+	if not isinstance(ts, (tuple, list,)):
+		ts = (ts,)
+	elif ts[0] in ('<', '<=', '>', '>='):
+		cmp = ts[0]
+		ts = ts[1:]
+	parts = []
+	for part in ts:
+		if isinstance(part, (int, date,)):
+			part = str(part)
+		assert isinstance(part, str_types), errmsg
+		parts.append(part)
+	parts = [TimeStamp(part) for part in parts]
+	return cmp + '+'.join(parts)
 
 class Urd(object):
 	def __init__(self, a, info, user, password, horizon=None, default_workdir=None):
