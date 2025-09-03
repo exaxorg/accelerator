@@ -519,8 +519,8 @@ def run(cfg, from_shell=False, development=False):
 				accept = get_best_accept('text/plain', 'text/html')
 				if accept == 'text/html':
 					try:
-						data = highlight(code, PythonLexer(), HtmlFormatter())
-						code = '<style>\n' + HtmlFormatter().get_style_defs('.highlight') + '</style>\n' + data
+						fmter = HtmlFormatter(full=True, encoding='utf-8', linenos='table', title='%s from %s' % (info.name, job,))
+						code = highlight(code, PythonLexer(), fmter)
 						bottle.response.content_type = 'text/html; charset=UTF-8'
 					except Exception:
 						pass
