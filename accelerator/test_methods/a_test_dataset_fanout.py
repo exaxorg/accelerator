@@ -67,7 +67,7 @@ def synthesis(job):
 	j_a_C = subjobs.build('dataset_fanout', source=a, column='C')
 	chk(j_a_C, 'AB', ('unicode', 'ascii'), {'1': [('a', 'a')], '2': [('b', 'b')], '3': [('a', 'c')]}, hashlabel='A')
 
-	b = mk('b', ('ascii', 'unicode', 'int32', 'int32'), [('a', 'aa', 11, 111), ('b', 'bb', 12, 112), ('a', 'cc', 13, 113), ('d', 'dd', 14, 114)], previous=a)
+	b = mk('b', ('ascii', 'unicode', 'int32', 'int32'), [('a', 'aa', 11, 111), ('b', 'bb', 12, 112), ('a', 'cc', 13, 113), ('d', 'dd', 14, 114)], hashlabel=a.hashlabel, previous=a)
 	# with previous
 	j_b_A = subjobs.build('dataset_fanout', source=b, column='A', previous=j_a_A)
 	chk(
