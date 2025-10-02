@@ -42,4 +42,4 @@ def analysis(sliceno):
 	return set(imap(unicode, chain.iterate(sliceno, options.column)))
 
 def synthesis(analysis_res):
-	return analysis_res.merge_auto()
+	return analysis_res.merge_auto(allow_overwrite=True)
