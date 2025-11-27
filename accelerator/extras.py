@@ -481,7 +481,8 @@ class ResultIterMagic(object):
 				if not allow_overwrite:
 					for k in part:
 						if k in aggregate:
-							raise self._exc("Duplicate key %r (index %d)" % (k, ix,))
+							raise self._exc("Duplicate key %r (index %d): was '%s': is '%s'" %
+											(k, ix, aggregate[k], part[k]))
 				aggregate.update(part)
 			else:
 				for k, v in iteritems(part):
