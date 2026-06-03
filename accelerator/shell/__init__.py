@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2024 Carl Drougge                                     #
+# Copyright (c) 2019-2026 Carl Drougge                                     #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -39,54 +39,49 @@ user_cfg = None
 
 def find_cfgs(basedir='.', wildcard=False):
 	"""Find all accelerator.conf (or accelerator*.conf if wildcard=True)
-	starting at basedir and continuing all the way to /, yielding them
-	from the deepest directory first, starting with accelerator.conf (if
-	present) and then the rest in sorted order."""
+	starting at basedir and continuing all the way to one level under /,
+	yielding them from the deepest directory first, starting with
+	accelerator.conf (in all directories) and then the rest in sorted order."""
 
-	cfgname = 'accelerator.conf'
 	if wildcard:
-		pattern = 'accelerator*.conf'
+		patterns = ['accelerator.conf', 'accelerator?*.conf']
 	else:
-		pattern = cfgname
+		patterns = ['accelerator.conf']
 	orgdir = os.getcwd()
 	basedir = realpath(basedir)
-	while basedir != '/':
-		try:
-			os.chdir(basedir)
-			fns = sorted(glob(pattern))
-		finally:
-			os.chdir(orgdir)
-		if cfgname in fns:
-			fns.remove(cfgname)
-			fns.insert(0, cfgname)
-		for fn in fns:
-			yield join(basedir, fn)
-		basedir = dirname(basedir)
+	for pattern in patterns:
+		dn = basedir
+		while dn != '/':
+			try:
+				os.chdir(dn)
+				fns = sorted(glob(pattern))
+			finally:
+				os.chdir(orgdir)
+			for fn in fns:
+				yield join(dn, fn)
+			dn = dirname(dn)
 
 def load_some_cfg(basedir='.', all=False):
-	global cfg
-
 	basedir = realpath(basedir)
 	cfgs = find_cfgs(basedir, wildcard=all)
+	try:
+		nearest_fn = next(cfgs)
+		if not nearest_fn.endswith('/accelerator.conf'):
+			raise StopIteration
+	except StopIteration:
+		raise UserError(f"Could not find 'accelerator.conf' in {basedir !r} or any of its parents.")
+	loaded_several = False
 	if all:
-		found_any = False
-		# Start at the root, so closer cfgs override those further away.
+		# Start with suffixed configs, at the root, so closer cfgs override those further away.
 		for fn in reversed(list(cfgs)):
 			try:
 				load_cfg(fn)
-				found_any = True
+				loaded_several = True
 			except Exception:
-				# As long as we find at least one we're happy.
-				pass
-		if not found_any:
-			raise UserError("Could not find 'accelerator*.conf' in %r or any of its parents." % (basedir,))
+				print(f"WARNING: {fn} is not a valid configuration", file=sys.stderr)
+	load_cfg(nearest_fn)
+	if loaded_several:
 		cfg.config_filename = None
-	else:
-		try:
-			fn = next(cfgs)
-		except StopIteration:
-			raise UserError("Could not find 'accelerator.conf' in %r or any of its parents." % (basedir,))
-		load_cfg(fn)
 
 def load_cfg(fn):
 	global cfg
