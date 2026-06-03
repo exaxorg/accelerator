@@ -30,11 +30,13 @@ from accelerator.types import DotDict
 
 
 _re_var = re.compile(r'(?<!\\)\$\{([^\}=]*)(?:=([^\}]*))?\}')
-def interpolate(s):
+def interpolate(s, overrides={}):
 	"""Replace ${FOO=BAR} with os.environ.get('FOO', 'BAR')
 	(just ${FOO} is of course also supported, but not $FOO)"""
 	def getenv(m):
-		v = os.environ.get(m.group(1), m.group(2))
+		v = overrides.get(m.group(1), os.environ.get(m.group(1), m.group(2)))
+		if v is None: # removed by override
+			return ''
 		return v.replace('\n', ' ')
 	return _re_var.sub(getenv, s)
 
@@ -73,10 +75,11 @@ def load_config(filename):
 	required = {'slices', 'workdirs', 'method packages'}
 	known = {
 		'target workdir', 'listen', 'urd', 'board listen', 'result directory',
-		'input directory', 'project directory', 'include',
+		'input directory', 'project directory', 'include', 'setenv',
 		SKIP_KEY
 	} | required | multivalued
-	cfg = {key: [] for key in multivalued}
+	cfg = DotDict({key: [] for key in multivalued})
+	cfg.setenv = {}
 
 	def fixpath(fn, realpath=True):
 		# convert relative path to absolute wrt location of config file
@@ -184,7 +187,7 @@ def load_config(filename):
 				val = line
 			val = shlex.split(val, posix=True, comments=True)
 			if val:
-				val = list(map(interpolate, val))
+				val = [interpolate(v, cfg.setenv) for v in val]
 				if key == 'include':
 					if depth > 5:
 						raise _E('Too high include depth')
@@ -196,6 +199,13 @@ def load_config(filename):
 						except FileNotFoundError:
 							raise _E(f'{fn} does not exist.')
 						error_pos = (n, filename,)
+				elif key == 'setenv':
+					if len(val) != 1:
+						raise _E("Only set one variable per line (maybe you meant to quote it?)")
+					name, *value = val[0].split('=', 1)
+					if not name:
+						raise _E("Can't set empty variable name")
+					cfg.setenv[name] = value[0] if value else None
 				elif key != SKIP_KEY:
 					handle(key, val)
 	def just_project_directory(key, val):
@@ -238,6 +248,8 @@ def load_config(filename):
 		parse(filename, just_project_directory)
 		error_pos = (None,)
 		project_directory = os.path.realpath(cfg.pop('project directory', os.path.dirname(filename)))
+		# Reset setenv so the expected values are interpolated (as if there was only one pass).
+		cfg.setenv = {}
 		parse(filename, everything)
 		error_pos = (None,)
 
@@ -291,4 +303,9 @@ def load_config(filename):
 		raise UserError(prefix + e.args[0])
 
 	res.config_filename = os.path.realpath(filename)
+	for k, v in res.setenv.items():
+		if v is None:
+			os.environ.pop(k, None)
+		else:
+			os.environ[k] = v
 	return res
