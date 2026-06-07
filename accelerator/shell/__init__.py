@@ -160,6 +160,7 @@ def add_command(name, help, is_debug=False, modname=None):
 	_COMMANDS[name] = Command(name, help, is_debug, modname)
 
 add_command('board-server', '''runs a webserver for displaying results''',      modname='accelerator.board')
+add_command('config',       '''display the configuration''')
 add_command('ds',           '''display information about datasets''',           is_debug=True)
 add_command('gc',           '''delete stale and unused jobs''')
 add_command('grep',         '''search for a pattern in one or more datasets''', is_debug=True)
