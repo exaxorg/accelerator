@@ -179,8 +179,9 @@ def load_config(filename):
 				if not key:
 					raise _E('First line indented')
 				val = line
-			val = shlex.split(interpolate(val), posix=True, comments=True)
+			val = shlex.split(val, posix=True, comments=True)
 			if val:
+				val = list(map(interpolate, val))
 				if key == 'include':
 					if depth > 5:
 						raise _E('Too high include depth')
