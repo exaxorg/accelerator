@@ -33,7 +33,10 @@ _re_var = re.compile(r'(?<!\\)\$\{([^\}=]*)(?:=([^\}]*))?\}')
 def interpolate(s):
 	"""Replace ${FOO=BAR} with os.environ.get('FOO', 'BAR')
 	(just ${FOO} is of course also supported, but not $FOO)"""
-	return _re_var.subn(lambda m: os.environ.get(m.group(1), m.group(2)), s)[0]
+	def getenv(m):
+		v = os.environ.get(m.group(1), m.group(2))
+		return v.replace('\n', ' ')
+	return _re_var.sub(getenv, s)
 
 
 class HostPortTuple(tuple):
