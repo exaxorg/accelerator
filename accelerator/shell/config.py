@@ -23,7 +23,12 @@ from accelerator.compat import shell_quote
 
 def main(argv, cfg):
 	parser = ArgumentParser(prog=argv.pop(0), description='''display the configuration''')
+	parser.add_argument('--server', action='store_true', negation='not', help="show running configuration, not from file.")
 	args = parser.parse_intermixed_args(argv)
+
+	if args.server:
+		from accelerator.unixhttp import call
+		cfg = call(cfg.url + '/config')
 
 	def show(key, fmt=shell_quote, *, spacing=False):
 		value = fmt(d.pop(key.replace(' ', '_')))
@@ -42,7 +47,7 @@ def main(argv, cfg):
 		return [f'{shell_quote(k)} {shell_quote(v)}' for k, v in d.items()]
 
 	def fmt_listen(v):
-		if isinstance(v, tuple):
+		if isinstance(v, (tuple, list)):
 			return f'{shell_quote(v[0])}:{v[1]}'
 		else:
 			return shell_quote(v)
@@ -66,11 +71,15 @@ def main(argv, cfg):
 	# Get rid of some that aren't really in the config as such.
 	d = dict(cfg)
 	d.pop('config_filename')
+	d.pop('debuggable', None)
 	d.pop('urd')
 	d.pop('url')
 	d.pop('user_cwd')
 
-	print(f'# Configuration parsed from {cfg.config_filename}')
+	if args.server:
+		print('# Configuration fetched from server')
+	else:
+		print(f'# Configuration parsed from {cfg.config_filename}')
 	print()
 
 	show('slices', str)

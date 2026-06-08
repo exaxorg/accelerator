@@ -74,6 +74,7 @@ def synthesis(job):
 	chk(['alias', 'cat'], want_in_help=['shows all aliases'], want_in_call=["grep -e ''"])
 	chk(['board-server'], want_in_help=['localhost:8520'])
 	chk(['config'], want_in_help=['display the configuration'], want_in_call=['\nworkdirs:\n\t'])
+	chk(['config', '--server'], want_in_call=['fetched from server', '\nworkdirs:\n\t'])
 	chk(['ds', '--', ds], want_in_help=['--list'], want_in_call=['Columns:', 'this is a column'])
 	chk(['gc'], want_in_help=['--dry-run'])
 	chk(['grep', '--', '', ds], want_in_help=['--tab-length'], want_in_call=['this is a value'])
