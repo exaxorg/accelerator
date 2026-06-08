@@ -75,9 +75,12 @@ def load_config(filename):
 	required = {'slices', 'workdirs', 'method packages'}
 	known = {
 		'target workdir', 'listen', 'urd', 'board listen', 'result directory',
-		'input directory', 'project directory', 'include', 'setenv',
-		SKIP_KEY
+		'input directory', 'project directory',
 	} | required | multivalued
+	known = known | \
+		{k + '!' for k in known} | \
+		{k + '?' for k in known} | \
+		{'include', 'setenv', SKIP_KEY}
 	cfg = DotDict({key: [] for key in multivalued})
 	cfg.setenv = {}
 
@@ -169,6 +172,8 @@ def load_config(filename):
 				if ':' not in line:
 					raise _E('Expected a ":"')
 				key, val = line.split(':', 1)
+				if key not in known:
+					raise _E('Unknown key %r' % (key,))
 				if key.endswith('!'):
 					key = key[:-1]
 					if key in multivalued:
@@ -179,8 +184,6 @@ def load_config(filename):
 					key = key[:-1]
 					if cfg.get(key):
 						key = SKIP_KEY
-				if key not in known:
-					raise _E('Unknown key %r' % (key,))
 			else:
 				if not key:
 					raise _E('First line indented')
