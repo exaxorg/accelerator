@@ -785,7 +785,7 @@ class Urd(object):
 		assert self._latest_joblist is not None, "Can't build_chained without a dependency to chain from"
 		kw = dict(kw)
 		kw['previous'] = self._latest_joblist.get(name)
-		return self.build(method, options, datasets, jobs, name, caption, why_build, force_build, workdir, **kw)
+		return self.build(method, options=options, datasets=datasets, jobs=jobs, name=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, **kw)
 
 	def warn(self, line=''):
 		"""Add a warning message to be displayed at the end of the build"""
