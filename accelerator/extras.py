@@ -285,3 +285,21 @@ def ascii_int(s, *, whitespace_ok=False):
 		return int(s, 10)
 	else:
 		raise ValueError('invalid literal for int() with base 10: {s!r}')
+
+
+def fmttime(t, short=False):
+	if t is None:
+		return None
+	if short:
+		fmts = ['%.0fs', '%.1fm', '%.2fh', '%.2fd']
+	else:
+		fmts = ['%.1f seconds', '%.1f minutes', '%.2f hours', '%.2f days']
+	sizes = [60, 60, 24, 1]
+	for fmt, size in zip(fmts, sizes):
+		if t < size * 2:
+			break
+		t /= size
+	res = fmt % (t,)
+	if res == '1.0 seconds':
+		return '1 second'
+	return res

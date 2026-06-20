@@ -46,6 +46,7 @@ from accelerator import iowrapper
 from accelerator import setupfile
 from accelerator.blob import json_encode, json_save
 from accelerator.colourwrapper import colour
+from accelerator.extras import fmttime
 from accelerator.job import Job, CurrentJob
 from accelerator.launch import _FinishJob
 from accelerator.shell.parser import ArgumentParser
@@ -289,24 +290,6 @@ class Automata:
 			if d.link not in self._all_record:
 				self._all_record[d.link] = bool(d.make)
 		return jid
-
-
-def fmttime(t, short=False):
-	if t is None:
-		return None
-	if short:
-		fmts = ['%.0fs', '%.1fm', '%.2fh', '%.2fd']
-	else:
-		fmts = ['%.1f seconds', '%.1f minutes', '%.2f hours', '%.2f days']
-	sizes = [60, 60, 24, 1]
-	for fmt, size in zip(fmts, sizes):
-		if t < size * 2:
-			break
-		t /= size
-	res = fmt % (t,)
-	if res == '1.0 seconds':
-		return '1 second'
-	return res
 
 
 class JobList(_ListTypePreserver):

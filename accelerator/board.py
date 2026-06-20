@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2024 Carl Drougge                                     #
+# Copyright (c) 2020-2026 Carl Drougge                                     #
 # Modifications copyright (c) 2024 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -33,7 +33,7 @@ from stat import S_ISDIR, S_ISLNK
 from accelerator.job import Job, JobWithFile
 from accelerator.dataset import Dataset
 from accelerator.unixhttp import call, WaitressServer
-from accelerator.build import fmttime
+from accelerator.extras import fmttime
 from accelerator.configfile import resolve_listen
 from accelerator.error import NoSuchWhateverError, NoSuchJobError
 from accelerator.metadata import insert_metadata

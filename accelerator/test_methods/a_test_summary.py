@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2024 Carl Drougge                                     #
+# Copyright (c) 2020-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -22,7 +22,7 @@ Produce a summary that build_tests can put in the result directory.
 '''
 
 from accelerator.job import Job
-from accelerator.build import fmttime
+from accelerator.extras import fmttime
 from accelerator.compat import url_quote
 
 options = {'joblist': []}

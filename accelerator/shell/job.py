@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2024 Carl Drougge                                     #
+# Copyright (c) 2020-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -25,9 +25,9 @@ from argparse import RawTextHelpFormatter
 import os
 import sys
 
-from accelerator.build import fmttime
 from accelerator.colourwrapper import colour
 from accelerator.error import NoSuchJobError
+from accelerator.extras import fmttime
 from accelerator.setupfile import encode_setup
 from accelerator.compat import FileNotFoundError, url_quote, urlencode
 from accelerator.unixhttp import call
