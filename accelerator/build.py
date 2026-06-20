@@ -107,7 +107,7 @@ class Automata:
 	def config(self):
 		return self._url_json('config')
 
-	def _submit(self, method, *, options, datasets, jobs, caption=None, wait=True, why_build=False, force_build=False, workdir=None, concurrency=None):
+	def _submit(self, method, *, options, datasets, jobs, caption=None, wait=True, why_build=False, force_build=False, workdir=None, concurrency=None, job_timeout=None):
 		"""
 		Submit job to server and conditionaly wait for completion.
 		"""
@@ -128,6 +128,9 @@ class Automata:
 			data.concurrency = concurrency
 		if self.concurrency_map:
 			data.concurrency_map = self.concurrency_map
+		if job_timeout is not None:
+			assert isinstance(job_timeout, int) and job_timeout > 0, 'job_timeout must be a positive integer or None'
+			data.job_timeout = job_timeout
 		self.job_retur = self._server_submit(data)
 		self._last_setup = data
 		#
@@ -253,7 +256,7 @@ class Automata:
 	def list_workdirs(self):
 		return self._url_json('list_workdirs')
 
-	def call_method(self, method, *, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
+	def call_method(self, method, *, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, job_timeout=None, **kw):
 		if method not in self._method_info:
 			raise BuildError('Unknown method %s' % (method,))
 		info = self._method_info[method]
@@ -268,7 +271,7 @@ class Automata:
 			if len(argmap[k]) != 1:
 				raise BuildError('Keyword %s has several targets on method %s: %r' % (k, method, argmap[k],))
 			params[argmap[k][0]][k] = v
-		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, **params)
+		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, job_timeout=job_timeout, **params)
 		if why_build: # specified by caller
 			return res.why_build
 		if 'why_build' in res: # done by server anyway (because --flags why_build)
@@ -759,16 +762,16 @@ class Urd(object):
 		"""Build jobs in this workdir, None to restore default"""
 		self.workdir = workdir
 
-	def build(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, concurrency=None, **kw):
-		return self._a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir or self.workdir or self.default_workdir, concurrency=concurrency, **kw)
+	def build(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, concurrency=None, job_timeout=None, **kw):
+		return self._a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir or self.workdir or self.default_workdir, concurrency=concurrency, job_timeout=job_timeout, **kw)
 
-	def build_chained(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, **kw):
+	def build_chained(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, job_timeout=None, **kw):
 		assert 'previous' not in set(datasets) | set(jobs) | set(kw), "Don't specify previous to build_chained"
 		assert name, "build_chained must have 'name'"
 		assert self._latest_joblist is not None, "Can't build_chained without a dependency to chain from"
 		kw = dict(kw)
 		kw['previous'] = self._latest_joblist.get(name)
-		return self.build(method, options=options, datasets=datasets, jobs=jobs, name=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, **kw)
+		return self.build(method, options=options, datasets=datasets, jobs=jobs, name=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, job_timeout=job_timeout, **kw)
 
 	def warn(self, line=''):
 		"""Add a warning message to be displayed at the end of the build"""

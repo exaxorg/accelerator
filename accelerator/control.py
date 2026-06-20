@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2020-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -184,7 +184,7 @@ class Main:
 		)
 
 
-	def run_job(self, jobid, subjob_cookie=None, parent_pid=0, concurrency=None):
+	def run_job(self, jobid, subjob_cookie=None, parent_pid=0, concurrency=None, job_timeout=None):
 		W = self.workspaces[Job(jobid).workdir]
 		#
 		active_workdirs = {name: ws.path for name, ws in self.workspaces.items()}
@@ -193,7 +193,7 @@ class Main:
 		t0 = time.time()
 		setup = update_setup(jobid, starttime=t0)
 		prof = setup.get('exectime', DotDict())
-		new_prof, files, subjobs = dispatch.launch(W.path, setup, self.config, self.Methods, active_workdirs, slices, concurrency, self.server_url, subjob_cookie, parent_pid)
+		new_prof, files, subjobs = dispatch.launch(W.path, setup, self.config, self.Methods, active_workdirs, slices, concurrency, self.server_url, subjob_cookie, parent_pid, job_timeout)
 		files = finish_job_files(jobid, files, self.keep_temp_files)
 		prof.update(new_prof)
 		prof.total = 0

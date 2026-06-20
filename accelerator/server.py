@@ -3,7 +3,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -276,7 +276,10 @@ class XtdHandler(BaseWebHandler):
 												if explicit_concurrency:
 													raise JobError(jobid, 'csvimport', {'server': 'csvimport can not run with reduced concurrency'})
 												concurrency = None
-										self.ctrl.run_job(jobid, subjob_cookie=passed_cookie, parent_pid=setup.get('parent_pid', 0), concurrency=concurrency)
+										job_timeout = setup.get('job_timeout')
+										if job_timeout is not None:
+											assert isinstance(job_timeout, int) and job_timeout > 0, 'job_timeout must be a positive integer or None'
+										self.ctrl.run_job(jobid, subjob_cookie=passed_cookie, parent_pid=setup.get('parent_pid', 0), concurrency=concurrency, job_timeout=job_timeout)
 										# update database since a new jobid was just created
 										job = self.ctrl.add_single_jobid(jobid)
 										with tlock:

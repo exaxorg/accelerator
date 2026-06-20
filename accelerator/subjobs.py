@@ -31,7 +31,7 @@ _bad_kws = set()
 
 jobs = JobList()
 
-def build(method, options={}, datasets={}, jobs={}, name=None, caption=None, **kw):
+def build(method, options={}, datasets={}, jobs={}, name=None, caption=None, job_timeout=None, **kw):
 	"""Just like urd.build, but for making subjobs"""
 
 	global _a, _bad_kws
@@ -46,7 +46,7 @@ def build(method, options={}, datasets={}, jobs={}, name=None, caption=None, **k
 	if bad_kws:
 		raise Exception('subjobs.build does not accept these keywords: %r' % (bad_kws,))
 	def run():
-		return _a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, **kw)
+		return _a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, job_timeout=job_timeout, **kw)
 	try:
 		if name or caption:
 			msg = 'Building subjob %s' % (name or method,)

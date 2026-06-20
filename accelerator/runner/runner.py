@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -40,8 +40,10 @@ import tarfile
 import resource
 import gc
 import re
+from time import monotonic
 from threading import Thread, Lock as TLock
 from multiprocessing import Lock as MPLock
+from accelerator.extras import fmttime
 from accelerator.mp import SimplifiedProcess
 
 archives = {}
@@ -352,11 +354,21 @@ def respond(cookie, data):
 	with sock_lock:
 		sock.sendall(header + res)
 
+class WatchDogTimeout(Exception):
+	pass
+
+def watchdog_timeout(*a):
+	raise WatchDogTimeout()
+
 def launch_finish(cookie, data):
+	t0 = monotonic()
 	status = {'launcher': '[invalid data] (probably killed)'}
 	result = None
+	child, prof_r, workdir, jobid, method, job_timeout = data
 	try:
-		child, prof_r, workdir, jobid, method = data
+		if job_timeout:
+			signal.signal(signal.SIGALRM, watchdog_timeout)
+			signal.alarm(job_timeout)
 		arc_name = os.path.join(workdir, jobid, 'method.tar.gz')
 		with open(arc_name, 'wb') as fh:
 			fh.write(archives[method])
@@ -371,6 +383,9 @@ def launch_finish(cookie, data):
 			status, result = json.loads(b''.join(prof).decode('utf-8'))
 		except Exception:
 			pass
+	except WatchDogTimeout:
+		status = {'watchdog': f'timeout after {fmttime(monotonic() - t0)}'}
+		result = None
 	finally:
 		os.close(prof_r)
 		respond(cookie, (status, result))
@@ -471,8 +486,8 @@ class Runner(object):
 	def launch_start(self, data):
 		return self._do(b's', data)
 
-	def launch_finish(self, child, prof_r, workdir, jobid, method):
-		return self._do(b'f', (child, prof_r, workdir, jobid, method))
+	def launch_finish(self, child, prof_r, workdir, jobid, method, job_timeout):
+		return self._do(b'f', (child, prof_r, workdir, jobid, method, job_timeout))
 
 	def launch_waitpid(self, child):
 		return self._do(b'w', child)
