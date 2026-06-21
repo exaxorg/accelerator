@@ -19,8 +19,8 @@
 ############################################################################
 
 from accelerator.dataset import Dataset
-from accelerator.build import JobError
 from accelerator.compat import monotonic
+from accelerator.error import JobError, JobTimeoutError
 
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
@@ -483,6 +483,21 @@ def main(urd):
 	assert second_bar.params.datasets.previous == first_bar.dataset()
 	assert first_bar == baz
 	urd.truncate("tests.urd", 0)
+
+	print()
+	print("Test job timeouts")
+	time_before = monotonic()
+	try:
+		urd.build('test_job_timeout', job_timeout=2, force_build=True)
+		raise Exception("test_job_timeout didn't time out.")
+	except JobTimeoutError as e:
+		output = e.job.output('synthesis')
+		assert 'timed out as expected' in output
+		assert 'second run' in output
+		assert 'second run finished' not in output
+		print('timed out as expected')
+	time_for_timeout = monotonic() - time_before
+	assert time_for_timeout < 9, f"test_job_timeout took {time_for_timeout :.1f} seconds, should have been around 2 seconds."
 
 	print()
 	print("Test board")
