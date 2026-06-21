@@ -465,6 +465,26 @@ def main(urd):
 	urd.truncate("tests.urd", 0)
 
 	print()
+	print("Testing build_chained")
+	urd.begin("tests.urd", "1")
+	assert not urd.latest("tests.urd")
+	first_foo = urd.build_chained("csvimport", filename=csv.filename(csvname), separator="\t", name="foo")
+	first_bar = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="bar")
+	urd.finish("tests.urd")
+	urd.begin("tests.urd", "2")
+	assert urd.latest("tests.urd")
+	# Use them in opposite order, just in case there's some order issues.
+	second_bar = urd.build_chained("csvimport", filename=csv.filename(csvname), separator="\t", name="bar")
+	second_foo = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="foo")
+	# This one doesn't exist in the dependency, despite the dependency not being empty.
+	baz = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="baz")
+	urd.finish("tests.urd")
+	assert second_foo.params.datasets.previous == first_foo.dataset()
+	assert second_bar.params.datasets.previous == first_bar.dataset()
+	assert first_bar == baz
+	urd.truncate("tests.urd", 0)
+
+	print()
 	print("Test board")
 	urd.build('test_board_metadata', command_prefix=command_prefix)
 
