@@ -374,11 +374,19 @@ def launch_finish(cookie, data):
 			fh.write(archives[method])
 		# We have closed prof_w. When child exits we get eof.
 		prof = []
-		while True:
-			data = os.read(prof_r, 4096)
+		need_bytes = None
+		while need_bytes is None or need_bytes > 0:
+			data = os.read(prof_r, need_bytes or 4096)
 			if not data:
 				break
 			prof.append(data)
+			if need_bytes is None:
+				data = b''.join(prof)
+				if len(data) >= 4:
+					need_bytes = struct.unpack('=I', data[:4])[0] - len(data) + 4
+					prof = [data[4:]]
+			else:
+				need_bytes -= len(data)
 		try:
 			status, result = json.loads(b''.join(prof).decode('utf-8'))
 		except Exception:

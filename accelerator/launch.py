@@ -29,6 +29,7 @@ from traceback import format_tb, format_exception_only
 from time import sleep
 import json
 import ctypes
+import struct
 
 from accelerator.job import CurrentJob, WORKDIRS
 from accelerator.compat import pickle, iteritems, itervalues, setproctitle, QueueEmpty
@@ -69,6 +70,12 @@ def c_fflush():
 def writeall(fd, data):
 	while data:
 		data = data[os.write(fd, data):]
+
+
+def write_prof(data):
+	data = json.dumps(data).encode('utf-8')
+	hdr = struct.pack('=I', len(data))
+	writeall(_prof_fd, hdr + data)
 
 
 def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, parent_pid, output_fds, **kw):
@@ -236,7 +243,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 			s_tb = 'not all slices agreed about job.finish_early() in analysis'
 		if s_tb:
 			data = [{'analysis(%d)' % (s_no,): s_tb}, None]
-			writeall(_prof_fd, json.dumps(data).encode('utf-8'))
+			write_prof(data)
 			exitfunction()
 		if delayed_start_todo:
 			# Another analysis is allowed to run now
@@ -425,10 +432,10 @@ def run(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_u
 		msg = fmt_tb(2)
 		print(msg)
 		data = [{g.running: msg}, None]
-		writeall(prof_fd, json.dumps(data).encode('utf-8'))
+		write_prof(data)
 	finally:
 		exitfunction()
-	writeall(prof_fd, json.dumps(data).encode('utf-8'))
+	write_prof(data)
 
 
 def exitfunction():
