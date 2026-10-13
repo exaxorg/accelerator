@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2024 Carl Drougge                                     #
+# Copyright (c) 2021-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -17,29 +17,25 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test dataset_fanout with varying types, hashlabel and chain truncation.
 '''
 
 from accelerator import subjobs
-from accelerator.compat import unicode
 
 from itertools import cycle
 
 def synthesis(job):
-	def mk(name, types, lines, hashlabel=None, previous=None):
+	def mk(name, types, lines, hashlabel=None, previous=None, caption_A='This is A'):
 		columns = {chr(ix): typ for ix, typ in enumerate(types, 65)}
+		columns['A'] = (types[0], False, caption_A)
 		dw = job.datasetwriter(name=name, columns=columns, hashlabel=hashlabel, previous=previous)
 		w = dw.get_split_write_list()
 		for line in lines:
 			w(line)
 		return dw.finish()
 
-	def chk(job, colnames, types, ds2lines, previous={}, hashlabel=None):
+	def chk(job, colnames, types, ds2lines, previous={}, hashlabel=None, caption_A='This is A'):
 		have_ds = set(ds.name for ds in job.datasets)
 		want_ds = set(ds2lines)
 		assert have_ds == want_ds, 'Job %r should have had datasets %r but had %r' % (job, want_ds, have_ds,)
@@ -52,6 +48,10 @@ def synthesis(job):
 			assert ds_colnames == colnames, 'Dataset %s should have had columns %r but had %r' % (ds.quoted, colnames, ds_colnames,)
 			ds_types = tuple(col.type for _, col in sorted(ds.columns.items()))
 			assert ds_types == types, 'Dataset %s should have had columns with types %r but had %r' % (ds.quoted, types, ds_types,)
+			for colname in colnames:
+				want = caption_A if colname == 'A' else None
+				got = ds.columns[colname].caption
+				assert want == got, f"Dataset {ds.quoted} should have had caption {want !r} on column {colname}, but had {got !r}"
 			have_lines = sorted(ds.iterate(None))
 			want_lines = sorted(lines)
 			assert have_lines == want_lines, 'Dataset %s should have contained %r but contained %r' % (ds.quoted, want_lines, have_lines,)
@@ -184,7 +184,7 @@ def synthesis(job):
 		cycle(['int64', 'int32']),
 		cycle(['unicode', 'ascii']),
 	)):
-		data = [('data',) + (ix + 1000,) * 4 + (unicode(ix),)]
+		data = [('data',) + (ix + 1000,) * 4 + (str(ix),)]
 		want_data.append(data[0][1:])
 		all_types.append(
 			mk('all types %d' % (ix,), types, data, previous=previous)
@@ -207,3 +207,8 @@ def synthesis(job):
 		('number', 'complex64', 'float64', 'int64', 'unicode'),
 		{'data': want_data[:-1]},
 	)
+
+	# Test different captions in the chain, the last dataset decides.
+	cap = mk('different caption', ('unicode', 'ascii'), [('x', 'a'), ('y', 'c')], previous=a, caption_A='different!')
+	j_cap_B = subjobs.build('dataset_fanout', source=cap, column='B')
+	chk(j_cap_B, 'A', ('unicode',), {'a': [('a',), ('x',)], 'b': [('b',)], 'c': [('a',), ('y',)]}, caption_A='different!')

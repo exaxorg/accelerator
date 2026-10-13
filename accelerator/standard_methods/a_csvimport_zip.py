@@ -18,11 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
-
 description = r'''
 Call csvimport on one or more files in a zip file.
 

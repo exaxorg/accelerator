@@ -19,10 +19,6 @@
 
 # Test data for use in dataset testing
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from datetime import date, time, datetime
 from sys import version_info
 
@@ -68,7 +64,7 @@ value_cnt = {len(v) for v in data.values()}
 assert len(value_cnt) == 1, "All tuples in data must have the same length."
 value_cnt = first_value(value_cnt)
 
-columns = {t: (t, True) for t in data}
+columns = {t: (t, True, 'caption for ' + t) for t in data}
 
 def sort_data_for_slice(sliceno):
 	# numeric types use only (modified) v[0], other types cycle through their values.

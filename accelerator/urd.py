@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -19,10 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-from __future__ import print_function
-from __future__ import division
-
 from glob import glob
 from collections import defaultdict
 from bottle import route, request, auth_basic, abort
@@ -38,13 +34,13 @@ import sys
 import os
 import signal
 
-from accelerator.compat import iteritems, itervalues, unicode
-from accelerator.compat import PY3
+from accelerator.compat import iteritems, itervalues
 from accelerator.colourwrapper import colour
+from accelerator.extras import ascii_int
 from accelerator.shell.parser import ArgumentParser
 from accelerator.unixhttp import WaitressServer
 
-LOGFILEVERSION = '4'
+LOGFILEVERSION = '5'
 
 lock = Lock()
 
@@ -61,7 +57,7 @@ def joblistlike(jl):
 		assert isinstance(v, (list, tuple)), v
 		assert len(v) == 2, v
 		for s in v:
-			assert isinstance(s, unicode), s
+			assert isinstance(s, str), s
 	return True
 
 
@@ -73,8 +69,7 @@ class TimeStamp(str):
 	Extra parts sort after.
 	"""
 
-	if PY3: # python2 doesn't support slots on str subclasses
-		__slots__ = ('_parts')
+	__slots__ = ('_parts')
 
 	def __new__(cls, ts):
 		if isinstance(ts, TimeStamp):
@@ -84,14 +79,14 @@ class TimeStamp(str):
 		str_parts = []
 		for part in ts.split('+'):
 			try:
-				integer = int(part, 10)
-				assert integer >= 0, 'Invalid timestamp %d' % (part,)
+				integer = ascii_int(part)
+				assert integer >= 0, f'Invalid timestamp {integer}'
 				parts.append((0, integer,))
 				str_parts.append(str(integer))
 				continue
 			except ValueError:
 				pass
-			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)$', part)
+			m = re.match(r'(\d{4}-\d{2}(?:-\d{2}(?:[T ]\d{2}(?::\d{2}(?::\d{2}(?:\.\d{1,6})?)?)?)?)?)$', part, re.A)
 			assert m, 'Invalid timestamp %s' % (part,)
 			part = part.replace(' ', 'T')
 			parts.append((1, part,))
@@ -197,8 +192,14 @@ class DB:
 		if logfileversion == '3':
 			if line[2] == 'add':
 				line[-1] = json.dumps(line[-1]) # caption is json encoded in v4
-		else:
-			assert logfileversion == '4', logfileversion
+			logfileversion = '4'
+		if logfileversion == '4':
+			if line[2] == 'add':
+				# Deps to list of (single) dep.
+				deps = json.loads(line[5])
+				line[5] = json.dumps({k: [v] for k, v in deps.items()})
+			logfileversion = '5'
+		assert logfileversion == '5', logfileversion
 		if line[2] == 'add' and len(line) < 10:
 			line.append('null')
 		self._parsed[writets] = line[2:]
@@ -236,18 +237,20 @@ class DB:
 	def _validate_data(self, data, with_deps=True):
 		if with_deps:
 			assert set(data) == {'timestamp', 'joblist', 'caption', 'user', 'build', 'deps', 'flags', 'build_job',}
-			assert isinstance(data.user, unicode)
-			assert isinstance(data.build, unicode)
-			assert isinstance(data.build_job, unicode)
+			assert isinstance(data.user, str)
+			assert isinstance(data.build, str)
+			assert isinstance(data.build_job, str)
 			assert isinstance(data.deps, dict)
-			for v in itervalues(data.deps):
-				assert isinstance(v, dict)
-				self._validate_data(Entry(v), False)
+			for vs in data.deps.values():
+				assert isinstance(vs, list)
+				for v in vs:
+					assert isinstance(v, dict)
+					self._validate_data(Entry(v), False)
 		else:
 			assert set(data) == {'timestamp', 'joblist', 'caption',}
 		assert joblistlike(data.joblist), data.joblist
 		assert data.joblist
-		assert isinstance(data.caption, unicode)
+		assert isinstance(data.caption, str)
 		data.timestamp = TimeStamp(data.timestamp)
 
 	def _serialise(self, action, data):
@@ -277,14 +280,15 @@ class DB:
 		return s
 
 	def _is_ghost(self, data):
-		for key, data in iteritems(data.deps):
+		for key, value in data.deps.items():
 			db = self.db[key]
-			ts = data['timestamp']
-			if ts not in db:
-				return True
-			for k, v in iteritems(data):
-				if db[ts].get(k) != v:
+			for data in value:
+				ts = data['timestamp']
+				if ts not in db:
 					return True
+				for k, v in data.items():
+					if db[ts].get(k) != v:
+						return True
 		return False
 
 	@locked
@@ -297,6 +301,11 @@ class DB:
 		ghosted = 0
 		data.timestamp = TimeStamp(data.timestamp)
 		assert data.timestamp != '0', "Timestamp 0 is special, you can't add it."
+		def ts_sort_dep(lst):
+			for d in lst:
+				d['timestamp'] = TimeStamp(d['timestamp'])
+			return sorted(lst, key=operator.itemgetter('timestamp'))
+		data.deps = {k: ts_sort_dep(v) for k, v in data.deps.items()}
 		is_ghost = self._is_ghost(data)
 		if is_ghost:
 			db = self.ghost_db[key]
@@ -512,9 +521,7 @@ def single(user, build, timestamp):
 @route('/add', method='POST')
 @auth_basic(auth)
 def add():
-	body = request.body
-	if PY3:
-		body = TextIOWrapper(body, encoding='utf-8')
+	body = TextIOWrapper(request.body, encoding='utf-8')
 	data = Entry(json.load(body))
 	if data.user != request.auth[0]:
 		abort(401, "Error:  user does not match authentication!")

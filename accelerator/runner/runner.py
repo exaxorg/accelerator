@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -25,9 +25,6 @@
 # Also contains the function that starts these (new_runners) and the dict
 # of running ones {version: Runner}
 
-from __future__ import print_function
-from __future__ import division
-
 from importlib import import_module
 from types import ModuleType
 from traceback import print_exc
@@ -43,18 +40,17 @@ import tarfile
 import resource
 import gc
 import re
+from time import monotonic
 from threading import Thread, Lock as TLock
 from multiprocessing import Lock as MPLock
+from accelerator.extras import fmttime
 from accelerator.mp import SimplifiedProcess
 
 archives = {}
 
 def mod2filename(mod):
 	if isinstance(mod, ModuleType):
-		filename = getattr(mod, '__file__', None)
-		if filename and filename[-4:] in ('.pyc', '.pyo',):
-			filename = filename[:-1]
-		return filename
+		return getattr(mod, '__file__', None)
 	else:
 		return mod
 
@@ -76,7 +72,7 @@ class MsgException(Exception):
 def check_picklable(desc, value):
 	from accelerator.compat import pickle
 	try:
-		pickle.dumps(value, 2)
+		pickle.dumps(value, 4)
 		return
 	except Exception as e:
 		msg = str(e)
@@ -84,8 +80,8 @@ def check_picklable(desc, value):
 
 def load_methods(all_packages, data):
 	from accelerator.compat import str_types, iteritems
-	from accelerator.extras import DotDict, OptionEnum, OptionEnumValue
-	from accelerator.extras import RequiredOption, OptionDefault
+	from accelerator.types import DotDict, OptionEnum, OptionEnumValue
+	from accelerator.types import RequiredOption, OptionDefault
 	from accelerator import __version__ as ax_version
 	res_warnings = []
 	res_failed = []
@@ -316,10 +312,7 @@ def load_methods(all_packages, data):
 
 def launch_start(data):
 	from accelerator.launch import run
-	from accelerator.compat import PY2
 	from accelerator.dispatch import close_fds
-	if PY2:
-		data = {k: v.encode('utf-8') if isinstance(v, unicode) else v for k, v in data.items()}
 	prof_r, prof_w = os.pipe()
 	# Disable the GC here, leaving it disabled in the child (the method).
 	# The idea is that most methods do not actually benefit from the GC, but
@@ -356,30 +349,51 @@ def launch_start(data):
 
 def respond(cookie, data):
 	from accelerator.compat import pickle
-	res = pickle.dumps((cookie, data), 2)
+	res = pickle.dumps((cookie, data), 4)
 	header = struct.pack('<cI', op, len(res))
 	with sock_lock:
 		sock.sendall(header + res)
 
+class WatchDogTimeout(Exception):
+	pass
+
+def watchdog_timeout(*a):
+	raise WatchDogTimeout()
+
 def launch_finish(cookie, data):
+	t0 = monotonic()
 	status = {'launcher': '[invalid data] (probably killed)'}
 	result = None
+	child, prof_r, workdir, jobid, method, job_timeout = data
 	try:
-		child, prof_r, workdir, jobid, method = data
+		if job_timeout:
+			signal.signal(signal.SIGALRM, watchdog_timeout)
+			signal.alarm(job_timeout)
 		arc_name = os.path.join(workdir, jobid, 'method.tar.gz')
 		with open(arc_name, 'wb') as fh:
 			fh.write(archives[method])
 		# We have closed prof_w. When child exits we get eof.
 		prof = []
-		while True:
-			data = os.read(prof_r, 4096)
+		need_bytes = None
+		while need_bytes is None or need_bytes > 0:
+			data = os.read(prof_r, need_bytes or 4096)
 			if not data:
 				break
 			prof.append(data)
+			if need_bytes is None:
+				data = b''.join(prof)
+				if len(data) >= 4:
+					need_bytes = struct.unpack('=I', data[:4])[0] - len(data) + 4
+					prof = [data[4:]]
+			else:
+				need_bytes -= len(data)
 		try:
 			status, result = json.loads(b''.join(prof).decode('utf-8'))
 		except Exception:
 			pass
+	except WatchDogTimeout:
+		status = {'watchdog': f'timeout after {fmttime(monotonic() - t0)}'}
+		result = None
 	finally:
 		os.close(prof_r)
 		respond(cookie, (status, result))
@@ -464,7 +478,7 @@ class Runner(object):
 			self.cookie += 1
 			# have to register waiter before we send packet (to avoid a race)
 			waiter = self._waiter(cookie)
-			data = pickle.dumps((cookie, data), 2)
+			data = pickle.dumps((cookie, data), 4)
 			header = struct.pack('<cI', op, len(data))
 			self.sock.sendall(header + data)
 		# must wait without the lock, otherwise all this threading gets us nothing.
@@ -480,8 +494,8 @@ class Runner(object):
 	def launch_start(self, data):
 		return self._do(b's', data)
 
-	def launch_finish(self, child, prof_r, workdir, jobid, method):
-		return self._do(b'f', (child, prof_r, workdir, jobid, method))
+	def launch_finish(self, child, prof_r, workdir, jobid, method, job_timeout):
+		return self._do(b'f', (child, prof_r, workdir, jobid, method, job_timeout))
 
 	def launch_waitpid(self, child):
 		return self._do(b'w', child)
@@ -511,9 +525,6 @@ def new_runners(config, used_versions):
 		else:
 			sock_p, sock_c = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
 			runner_fn = __file__
-			if runner_fn[-4:] in ('.pyc', '.pyo',):
-				# workaround for python 2 server running python 3 methods
-				runner_fn = runner_fn[:-1]
 			cmd = [py_exe, runner_fn, str(sock_c.fileno()), sys.path[0]]
 			pid = run(cmd, [sock_p.fileno()], [sock_c.fileno()], no_stdin=not config.debuggable)
 			sock_c.close()

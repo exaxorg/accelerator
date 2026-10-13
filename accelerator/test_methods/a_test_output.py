@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Verify that the output from methods is captured correctly for all valid
 combinations of prepare/analysis/synthesis, both in OUTPUT dir and in

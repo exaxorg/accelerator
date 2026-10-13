@@ -17,8 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import unicode_literals
-
 description = r'''
 Test the +None types in dataset_type.
 

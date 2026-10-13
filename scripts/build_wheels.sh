@@ -76,8 +76,6 @@ BUILT=()
 
 /tmp/accelerator/scripts/build_prepare.sh
 
-/tmp/accelerator/scripts/check_encoding.py
-
 MANYLINUX_VERSION="${AUDITWHEEL_PLAT/%_*}"
 WHEEL_WILDCARD="${MANYLINUX_VERSION/%20*}*_$AUDITWHEEL_ARCH"
 
@@ -94,7 +92,7 @@ mkdir -p "$WHEELHOUSE"
 
 if [ "$MANYLINUX_VERSION" = "manylinux2010" ]; then
 	BUILD_STEP="old"
-	VERSIONS=(/opt/python/cp[23][5-7]-*)
+	VERSIONS=(/opt/python/cp3[6-7]-*)
 	if [ ! -e "$WHEELHOUSE/$NAME-cp310-cp310-"$WHEEL_WILDCARD.whl ]; then
 		echo "First build in a manylinux2014 container"
 		exit 1
@@ -106,7 +104,7 @@ else
 	if [ "$X86glibc" = "true" ]; then
 		VERSIONS=(/opt/python/cp3[89]-* /opt/python/cp31[0-9]-*[0-9])
 	else
-		VERSIONS=(/opt/python/cp3[5-9]-* /opt/python/cp31[0-9]-*[0-9])
+		VERSIONS=(/opt/python/cp3[6-9]-* /opt/python/cp31[0-9]-*[0-9])
 	fi
 fi
 
@@ -218,8 +216,8 @@ test_one() {
 
 for V in "${Vs[@]}"; do
 	rm -f "/tmp/ax.$V.OK"
-	if [ "$V" = "cp27-cp27m" -o "$V" = "cp38-cp38" ]; then
-		# run one test per major python version with extra slices and TCP
+	if [ "$V" = "cp38-cp38" ]; then
+		# run one test with extra slices and TCP
 		# (must specify localhost IP for some docker reason)
 		SLICES=7
 		EXTRA="--tcp 127.0.0.1"
@@ -259,17 +257,14 @@ done
 
 
 if [ "$BUILD_STEP" = "old" ]; then
-	# Test running 2.7 and 3.5 under a 3.7 server
+	# This build step now only build 3.6 and 3.7, so test those both ways.
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
 		/opt/python/cp37-cp37m/bin \
-		/opt/python/cp27-cp27mu/bin \
-		/opt/python/cp35-cp35m/bin
+		/opt/python/cp36-cp36m/bin
 
-	# Test running 3.6 and 3.5 under a 2.7 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \
-		/opt/python/cp27-cp27m/bin \
 		/opt/python/cp36-cp36m/bin \
-		/opt/python/cp35-cp35m/bin
+		/opt/python/cp37-cp37m/bin
 else
 	# Test running 3.12 and 3.8 under a 3.10 server
 	/tmp/accelerator/scripts/multiple_interpreters_test.sh \

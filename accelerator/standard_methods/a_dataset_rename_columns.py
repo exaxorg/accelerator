@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2022-2024 Carl Drougge                                     #
+# Copyright (c) 2022-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -19,13 +19,15 @@
 
 description = r'''
 Rename columns in a dataset.
+Can also set column captions.
 '''
 
 options = dict(
+	captions={}, # {'colname': 'caption'}
 	rename={}, # {'old name': 'new name', 'to discard': None}
 )
 
 datasets = ('source',)
 
 def synthesis():
-	datasets.source.link_to_here(rename=options.rename)
+	datasets.source.link_to_here(rename=options.rename, captions=options.captions)

@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Tests creating several chained datasets in one job.
 Exercises DatasetWriter.finish and the chaining logic
@@ -28,7 +24,7 @@ including callbacks with SkipDataset.
 '''
 
 from accelerator.dataset import DatasetWriter, SkipDataset
-from accelerator.extras import DotDict
+from accelerator import DotDict
 
 datasets = ('previous',)
 

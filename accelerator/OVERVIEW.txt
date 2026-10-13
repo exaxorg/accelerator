@@ -131,6 +131,8 @@ Other
 		sending and recieving of status-tree messages (the ^T stuff)
 	subjobs.py
 		running jobs from within other jobs
+	types.py
+		basic types used across the whole accelerator
 	iowrapper.py
 		all (print) output goes through pipes to this
 

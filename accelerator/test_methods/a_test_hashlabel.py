@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test that hashlabel does what it says in both split_write and hashcheck.
 Then test that rehashing gives the expected result, and that using the
@@ -28,7 +24,7 @@ wrong hashlabel without rehashing is not allowed.
 '''
 
 from accelerator.dataset import DatasetWriter
-from accelerator.extras import DotDict
+from accelerator import DotDict
 from accelerator.dsutil import typed_writer
 from accelerator.error import DatasetUsageError
 from accelerator.compat import unicode

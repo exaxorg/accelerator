@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2024 Carl Drougge                                     #
+# Copyright (c) 2019-2026 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -17,10 +17,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 class AcceleratorError(Exception):
 	"""Base class for all accelerator exception types"""
@@ -72,6 +68,11 @@ class BuildError(AcceleratorError):
 	__slots__ = ()
 
 class JobError(BuildError):
+	def __new__(cls, job, method, status):
+		if cls is JobError and list(status) == ['watchdog']:
+			cls = JobTimeoutError
+		return BuildError.__new__(cls)
+
 	def __init__(self, job, method, status):
 		AcceleratorError.__init__(self, "Failed to build %s (%s)" % (job, method,))
 		self.job = job
@@ -84,6 +85,9 @@ class JobError(BuildError):
 			res.append("  %s:" % (component,))
 			res.append("    %s" % (msg.replace("\n", "\n    "),))
 		return "\n".join(res)
+
+class JobTimeoutError(JobError):
+	pass
 
 class ColourError(AcceleratorError):
 	"""Raised when colourwrapper can not parse an attribute spec"""

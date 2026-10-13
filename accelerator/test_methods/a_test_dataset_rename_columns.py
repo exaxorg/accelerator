@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2022-2024 Carl Drougge                                     #
+# Copyright (c) 2022-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -42,12 +42,13 @@ def synthesis(job):
 	dw.get_split_write()(1, 2, 3)
 	b = dw.finish()
 	names = ('link%d' % (ix,) for ix in range(1000)) # more than enough
-	def chk(ds, want_hashlabel, want_previous, want_coltypes, rename):
-		got_job = subjobs.build('dataset_rename_columns', rename=rename, source=ds)
-		chk_inner(got_job.dataset(), want_hashlabel, want_previous, want_coltypes)
-		got_ds = ds.link_to_here(name=next(names), rename=rename)
-		chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes)
-	def chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes):
+	def chk(ds, want_hashlabel, want_previous, want_coltypes, rename={}, captions={}, want_captions={}):
+		got_job = subjobs.build('dataset_rename_columns', rename=rename, captions=captions, source=ds)
+		chk_inner(got_job.dataset(), want_hashlabel, want_previous, want_coltypes, want_captions)
+		got_ds = ds.link_to_here(name=next(names), rename=rename, captions=captions)
+		chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes, want_captions)
+		return got_ds
+	def chk_inner(got_ds, want_hashlabel, want_previous, want_coltypes, want_captions={}):
 		assert got_ds.hashlabel == want_hashlabel
 		assert got_ds.previous == want_previous
 		got_cols = set(got_ds.columns)
@@ -59,6 +60,10 @@ def synthesis(job):
 		for colname, want_type in want_coltypes.items():
 			assert got_ds.columns[colname].type == want_type
 			assert list(got_ds.iterate(None, colname)) == [type2value[want_type]]
+		for colname, want_caption in want_captions.items():
+			assert got_ds.columns[colname].caption == want_caption
+		for colname in want_cols - set(want_captions):
+			assert got_ds.columns[colname].caption is None
 	# just a simple rename
 	chk(a, 'a', None, dict(a='int32', b='int64', d='number'), dict(c='d'))
 	# rename the hashlabel
@@ -77,6 +82,19 @@ def synthesis(job):
 	chk(b, None, a, dict(b='int32', c='number'), dict(b=None, a='b'))
 	# discard a column, but also rename hashlabel to that name
 	chk(b, 'a', a, dict(a='int64', c='number'), dict(a=None, b='a'))
+
+	# caption tests
+	ds = chk(a, 'a', None, columns, captions={'a': 'aaaa!'}, want_captions={'a': 'aaaa!'})
+	# add a caption
+	ds = chk(ds, 'a', None, columns, captions={'b': 'buh?'}, want_captions={'a': 'aaaa!', 'b': 'buh?'})
+	# remove a caption
+	ds = chk(ds, 'a', None, columns, captions={'a': None}, want_captions={'b': 'buh?'})
+	# rename a captioned column
+	ds = chk(ds, 'a', None, {'a': 'int32', 'c': 'int64'}, rename={'b': 'c'}, want_captions={'c': 'buh?'})
+	# rename over a captioned column (losing the caption)
+	ds = chk(ds, 'c', None, {'c': 'int32'}, rename={'a': 'c'})
+	# caption a column after it was renamed
+	ds = chk(ds, 'd', None, {'d': 'int32'}, rename={'c': 'd'}, captions={'d': 'dah'}, want_captions={'d': 'dah'})
 
 	# try a few with column_filter too
 	# rename hashlabel, only keep that
@@ -103,3 +121,4 @@ def synthesis(job):
 	failme(a, 'renamed non-existant column', rename=dict(d='e'))
 	failme(a, 'renamed two columns to the same name', rename=dict(a='c', b='c'))
 	failme(a, 'got to keep non-existant column', column_filter='abcd')
+	failme(a, 'set caption on non-existant column', captions={'nope': 'nah'})

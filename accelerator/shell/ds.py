@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2024 Carl Drougge                       #
+# Modifications copyright (c) 2019-2026 Carl Drougge                       #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -18,8 +18,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-from __future__ import division, print_function
 
 import sys
 import locale
@@ -106,6 +104,7 @@ def main(argv, cfg):
 	parser.add_argument('-L', '--chainedlist',      action='store_true', negation='no',   help='list all datasets in a job with number of chained rows')
 	parser.add_argument('-m', '--suppress-minmax',  action='store_true', negation='dont', help='do not print min/max column values')
 	parser.add_argument('-n', '--suppress-columns', action='store_true', negation='dont', help='do not print columns')
+	parser.add_argument('-p', '--suppress-captions', action='store_true', negation='dont', help='do not print column captions')
 	parser.add_argument('-q', '--suppress-errors',  action='store_true', negation='dont', help='silently ignores bad input datasets/jobids')
 	parser.add_argument('-s', '--slices',           action='store_true', negation='no',   help='list relative number of lines per slice in sorted order')
 	parser.add_argument('-S', '--chainedslices',    action='store_true', negation='no',   help='same as -s but for full chain')
@@ -183,10 +182,12 @@ def main(argv, cfg):
 				locations = {n: original_location(ds, n) for n in ds.columns}
 				len_l = max(len(format_location(locations[n])) for n in ds.columns)
 				len_c = max(len(c.compression) for c in ds.columns.values())
-				template = '        {2} {0:%d}  {1:%d}  {4:%d}  {5:%d}  {3}' % (len_n, len_t, len_l, len_c,)
+				template = '        {2} {0:%d}  {1:%d}  {4:%d}  {5:%d}  {3}  {6}' % (len_n, len_t, len_l, len_c,)
 			else:
-				template = '        {2} {0:%d}  {1:%d}  {3}' % (len_n, len_t,)
+				template = '        {2} {0:%d}  {1:%d}  {3}  {6}' % (len_n, len_t,)
 				locations = {}
+			if args.suppress_captions:
+				template = template[:-5]
 			chain = ds.chain(-1 if args.chainedslices or args.chain else 1)
 
 			def fmt_minmax(val):
@@ -205,7 +206,7 @@ def main(argv, cfg):
 
 			for n, c in sorted(ds.columns.items()):
 				hashdot = colour("*", "ds/highlight") if n == ds.hashlabel else " "
-				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(n), format_location(locations.get(n)), c.compression).rstrip())
+				print(template.format(quote(n), name2typ[n], hashdot, prettyminmax(n), format_location(locations.get(n)), c.compression, c.caption or '').rstrip())
 				if args.location:
 					try:
 						tf = typed_from(ds, locations[n])

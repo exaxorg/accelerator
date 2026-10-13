@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2023-2024 Carl Drougge                                     #
+# Copyright (c) 2023-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -39,8 +39,8 @@ def prepare(job):
 		if hashlabel != ds.hashlabel:
 			raise Exception('Dataset %s has hashlabel %r, expected %r' % (ds.quoted, ds.hashlabel, hashlabel,))
 	dw = job.datasetwriter(hashlabel=hashlabel, previous=datasets.previous, copy_mode=True)
-	for name, t in sorted(columns.items()):
-		dw.add(name, t, none_support=chain.none_support(name))
+	for name, dc in sorted(datasets.source.columns.items()):
+		dw.add(name, dc.replace(none_support=chain.none_support(name)))
 	return dw, chain
 
 def analysis(sliceno, job, prepare_res):

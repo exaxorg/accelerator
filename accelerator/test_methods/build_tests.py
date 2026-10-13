@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2024 Carl Drougge                                     #
+# Copyright (c) 2019-2026 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -18,13 +18,9 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from accelerator.dataset import Dataset
-from accelerator.build import JobError
 from accelerator.compat import monotonic
+from accelerator.error import JobError, JobTimeoutError
 
 from collections import OrderedDict
 from datetime import date, datetime, timedelta
@@ -92,6 +88,12 @@ def main(urd):
 	dep0 = list(u.deps.values())[0]
 	assert dep0.caption == "first", dep0.caption
 	assert dep0.joblist == jl, '%r != %r' % (dep0.joblist, jl,)
+	assert dep0.caption is dep0['caption']
+	assert dep0.joblist is dep0['joblist']
+	assert dep0.timestamp is dep0['timestamp']
+	assert list(dep0) == [dep0.timestamp], dep0
+	# Single depency "lists" just contain themselves.
+	assert dep0 is dep0[dep0.timestamp] is dep0[0], dep0
 	assert urd.since("tests.urd", 0) == ['1', '2']
 	urd.truncate("tests.urd", 2)
 	assert urd.since("tests.urd", 0) == ['1']
@@ -189,6 +191,12 @@ def main(urd):
 	print()
 
 	print()
+	print("Testing the splitters")
+	urd.build("test_splitters_deterministic")
+	urd.build("test_splitters_firstcome")
+	urd.build("test_splitters_hashsplitter")
+
+	print()
 	print("Testing dataset creation, export, import")
 	source = urd.build("test_datasetwriter")
 	urd.build("test_datasetwriter_verify", source=source)
@@ -234,6 +242,7 @@ def main(urd):
 	urd.build('test_dataset_overwrite')
 	urd.build('test_dataset_rename_columns')
 	urd.build('test_dataset_concat')
+	urd.build('test_dataset_join_columns')
 
 	print()
 	print("Testing order preservation in dicts in options")
@@ -377,9 +386,17 @@ def main(urd):
 	urd.begin("tests.urd", "2021-09-27T03:14")
 	d = urd.build('test_shell_data', datasets={'previous': c, 'parent': a + '/j'}, jobs={'previous': b, 'extra': c})
 	urd.finish("tests.urd")
-	urd.begin("tests.urd", "2021-09-27T03:14+1")
+	urd.begin("tests.urd", "2021-09-27T03:14:15.926+5+3+5")
 	e = urd.build('test_shell_data', jobs={'previous': d, 'extra': a})
 	urd.finish("tests.urd")
+	urd.begin("tests.urd", "9999+1", caption="Test depending on two entries from the same list")
+	u = urd.get("tests.urd", "2021-09-27T03:14")
+	u2 = urd.get("tests.urd", "2021-09-27T03:14:15.926+5+3+5")
+	# Getting the same one again is ok, and should not record it again.
+	# You should in fact get the same object again.
+	assert u is urd.get("tests.urd", "2021-09-27T03:14")
+	# Same with getting "latest" (or "first")
+	assert u2 is urd.get("tests.urd", "latest")
 	urd.build('test_shell_commands', command_prefix=command_prefix)
 	# ~ finds earlier jobs with that method, ^ follows jobs.previous falling back to datasets.previous.
 	want = {
@@ -394,22 +411,22 @@ def main(urd):
 		':tests.urd/1:1': b, # 1 is the second entry
 		':tests.urd/1:-3': a, # third entry from the end
 		':tests.urd:^': d,
-		':tests.urd/2021-09-27T03:14+1^^:0': a, # ^ in :: goes to earlier entries
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5^^:0': a, # ^ in :: goes to earlier entries
 		':tests.urd/1~:': d, # ~ in :: goes to later entries
 		':tests.urd/2021-09-27T03:14:.extra': c,
-		':tests.urd/2021-09-27T03:14+1:.extra': a,
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous': d,
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous.extra': c,
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous.jobs.extra.datasets.previous': a,
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous.parent': a, # will be different as a ds
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous~.datasets.previous': a,
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.extra': a,
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous': d,
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous.extra': c,
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous.jobs.extra.datasets.previous': a,
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous.parent': a, # will be different as a ds
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous~.datasets.previous': a,
 	}
 	urd.build('test_shell_job', command_prefix=command_prefix, want=want)
 	# most of the old specs give the same results
 	want = {spec: job + '/default' for spec, job in want.items()}
 	want.update({
 		d + '.parent': a + '/j', # this changes as a ds
-		':tests.urd/2021-09-27T03:14+1:.jobs.previous.parent': a + '/j', # and this too
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:.jobs.previous.parent': a + '/j', # and this too
 		# below here are new things, not overrides.
 		d + '/j^': a + '/j', # .parent
 		d + '/j~': b + '/j', # .previous
@@ -421,12 +438,66 @@ def main(urd):
 		':tests.urd:^/j': d + '/j',
 		':tests.urd/2021-09-27T03:14:/j': d + '/j',
 		# finally one with : in the list and / in the ds name
-		':tests.urd/2021-09-27T03:14+1:0/name/with/slash': e + '/name/with/slash',
+		':tests.urd/2021-09-27T03:14:15.926+5+3+5:0/name/with/slash': e + '/name/with/slash',
 	})
 	urd.build('test_shell_ds', command_prefix=command_prefix, want=want)
-	urd.truncate("tests.urd", 0)
+	urd.finish("tests.urd")
+	urd.begin("tests.urd", "9999+2", caption="Multiple entries not in sort order")
+	urd.get("tests.urd", "2021-09-27T03:14")
+	u = urd.get("tests.urd", "9999+1")
+	urd.get("tests.urd", "2021-09-27T03:14:15.926+5+3+5")
+	# u.deps has only a single key ($USER/tests.urd), but we can still access it using just "tests.urd".
+	assert len(u.deps) == 1, u.deps
+	assert list(u.deps)[0].endswith("/tests.urd")
+	deps = u.deps["tests.urd"]
+	assert list(deps) == ["2021-09-27T03:14", "2021-09-27T03:14:15.926+5+3+5"], deps
+	assert deps["2021-09-27T03:14"] is deps[0] is deps[0][0], deps
+	assert deps["2021-09-27T03:14:15.926+5+3+5"] is deps[1] is deps[1][0], deps
 	urd.build('test_shell_grep', command_prefix=command_prefix)
 	urd.build('test_shell_config', command_prefix=command_prefix)
+	urd.finish("tests.urd")
+	u = urd.peek("tests.urd", "9999+2")
+	deps = u.deps["tests.urd"]
+	assert list(deps) == ["9999+1", "2021-09-27T03:14", "2021-09-27T03:14:15.926+5+3+5"], deps
+	assert list(deps.values()) == [deps["9999+1"], deps["2021-09-27T03:14"], deps["2021-09-27T03:14:15.926+5+3+5"]], deps
+	assert deps[1] is deps["2021-09-27T03:14"], deps
+	assert list(reversed(deps)) == [deps[2].timestamp, deps[1].timestamp, deps[0].timestamp], deps
+	urd.truncate("tests.urd", 0)
+
+	print()
+	print("Testing build_chained")
+	urd.begin("tests.urd", "1")
+	assert not urd.latest("tests.urd")
+	first_foo = urd.build_chained("csvimport", filename=csv.filename(csvname), separator="\t", name="foo")
+	first_bar = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="bar")
+	urd.finish("tests.urd")
+	urd.begin("tests.urd", "2")
+	assert urd.latest("tests.urd")
+	# Use them in opposite order, just in case there's some order issues.
+	second_bar = urd.build_chained("csvimport", filename=csv.filename(csvname), separator="\t", name="bar")
+	second_foo = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="foo")
+	# This one doesn't exist in the dependency, despite the dependency not being empty.
+	baz = urd.build_chained("csvimport", filename=csv_quoted.filename(csvname), quotes=True, name="baz")
+	urd.finish("tests.urd")
+	assert second_foo.params.datasets.previous == first_foo.dataset()
+	assert second_bar.params.datasets.previous == first_bar.dataset()
+	assert first_bar == baz
+	urd.truncate("tests.urd", 0)
+
+	print()
+	print("Test job timeouts")
+	time_before = monotonic()
+	try:
+		urd.build('test_job_timeout', job_timeout=2, force_build=True)
+		raise Exception("test_job_timeout didn't time out.")
+	except JobTimeoutError as e:
+		output = e.job.output('synthesis')
+		assert 'timed out as expected' in output
+		assert 'second run' in output
+		assert 'second run finished' not in output
+		print('timed out as expected')
+	time_for_timeout = monotonic() - time_before
+	assert time_for_timeout < 9, f"test_job_timeout took {time_for_timeout :.1f} seconds, should have been around 2 seconds."
 
 	print()
 	print("Test board")

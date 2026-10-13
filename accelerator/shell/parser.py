@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2024 Carl Drougge                       #
+# Modifications copyright (c) 2019-2026 Carl Drougge                       #
 # Modifications copyright (c) 2019 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -22,8 +22,6 @@
 # parsing of "job specs", including as part of a dataset name.
 # handles jobids, paths and method names.
 
-from __future__ import division, print_function
-
 import argparse
 import sys
 from os.path import join, exists, realpath, split
@@ -31,11 +29,12 @@ from os import readlink, environ
 import re
 
 from accelerator.dataset import Dataset
+from accelerator.extras import ascii_int
 from accelerator.job import WORKDIRS
 from accelerator.job import Job
 from accelerator.error import NoSuchJobError, NoSuchDatasetError, NoSuchWorkdirError, UrdError
 from accelerator.unixhttp import call
-from accelerator.compat import url_quote, urlencode, PY3
+from accelerator.compat import url_quote, urlencode
 
 class JobNotFound(NoSuchJobError):
 	pass
@@ -45,7 +44,7 @@ class DatasetNotFound(NoSuchDatasetError):
 
 def _groups(tildes):
 	def char_and_count(buf):
-		char, count = re.match(r'([~+<>^]+)(\d*)$', ''.join(buf)).groups()
+		char, count = re.match(r'([~+<>^]+)(\d*)$', ''.join(buf), re.A).groups()
 		count = int(count or 1) - 1
 		return char[0], len(char) + count
 	i = iter(tildes)
@@ -61,9 +60,9 @@ def _groups(tildes):
 # "foo~~^3" -> "foo", [("~", 2), ("^", 3)]
 def split_tildes(n, allow_empty=False, extended=False):
 	if extended:
-		m = re.match(r'(.*?)([~+<>^][~+<>^\d]*)$', n)
+		m = re.match(r'(.*?)([~+<>^][~+<>^\d]*)$', n, re.A)
 	else:
-		m = re.match(r'(.*?)([~^][~^\d]*)$', n)
+		m = re.match(r'(.*?)([~^][~^\d]*)$', n, re.A)
 	if m:
 		n, tildes = m.groups()
 		lst = list(_groups(tildes))
@@ -112,7 +111,7 @@ def name2job(cfg, n, _want_ds=False):
 	dotted = None
 	if '.' in n:
 		if n.startswith(':') and ':' in n[1:]: # :urd:-list
-			prefix_len = n.index(':', 1) + 1
+			prefix_len = n.rindex(':') + 1
 		else:
 			prefix_len = 0
 		# If workdir names have '.' in them we don't want to split there.
@@ -212,7 +211,7 @@ def _name2job(cfg, n, current):
 			raise JobNotFound('looks like a partial :urdlist:[entry] spec')
 		entry = a[1] or '-1'
 		try:
-			entry = int(entry, 10)
+			entry = ascii_int(entry)
 		except ValueError:
 			pass
 		path, tildes = split_tildes(a[0])
@@ -230,12 +229,12 @@ def _name2job(cfg, n, current):
 		if not urdres:
 			raise JobNotFound('urd list %r not found' % (a[0],))
 		from accelerator.build import JobList
-		joblist = JobList(Job(e[1], e[0]) for e in urdres.joblist)
+		joblist = JobList(urdres.joblist)
 		res = joblist.get(entry)
 		if not res:
 			raise JobNotFound('%r not found in %s' % (entry, path,))
 		return res
-	if re.match(r'[^/]+-\d+$', n):
+	if re.match(r'[^/]+-\d+$', n, re.A):
 		# Looks like a jobid
 		return Job(n)
 	m = re.match(r'([^/]+)-LATEST$', n)
@@ -267,7 +266,7 @@ def split_ds_dir(n):
 	"""try to split a path at the jid/ds boundary"""
 	orig_n = n
 	jid_cand, name = n.split('/', 1)
-	if re.match(r'.+-\d+(?:[~^][~^\d]*)?$', jid_cand):
+	if re.match(r'.+-\d+(?:[~^][~^\d]*)?$', jid_cand, re.A):
 		# looks like a JID, so assume it is. start with ./ to avoid this.
 		return jid_cand, name
 	name_bits = []
@@ -330,10 +329,9 @@ class ArgumentParser(argparse.ArgumentParser):
 	def __init__(self, *a, **kw):
 		kw = dict(kw)
 		kw['prefix_chars'] = '-+'
-		if PY3:
-			# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
-			# it also regrettably disables -abc for -a -b -c until 3.8.
-			kw['allow_abbrev'] = False
+		# allow_abbrev is 3.5+. it's not even available in the pypi backport of argparse.
+		# it also regrettably disables -abc for -a -b -c until 3.8.
+		kw['allow_abbrev'] = False
 		return argparse.ArgumentParser.__init__(self, *a, **kw)
 
 	def add_argument(self, *a, **kw):

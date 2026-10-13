@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2019-2024 Carl Drougge                       #
+# Modifications copyright (c) 2019-2026 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -19,13 +19,10 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 from signal import SIGTERM, SIGKILL
 
-from accelerator.compat import PY3, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.statmsg import children, statmsg_endwait
 from accelerator.build import JobError
@@ -70,14 +67,13 @@ def run(cmd, close_in_child, keep_in_child, no_stdin=True):
 		devnull = os.open('/dev/null', os.O_RDONLY)
 		os.dup2(devnull, 0)
 		os.close(devnull)
-	if PY3:
-		keep_in_child.update([1, 2])
-		for fd in keep_in_child:
-			os.set_inheritable(fd, True)
+	keep_in_child.update([1, 2])
+	for fd in keep_in_child:
+		os.set_inheritable(fd, True)
 	os.execv(cmd[0], cmd)
 	os._exit()
 
-def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency, server_url, subjob_cookie, parent_pid):
+def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency, server_url, subjob_cookie, parent_pid, job_timeout):
 	starttime = monotonic()
 	jobid = setup.jobid
 	method = setup.method
@@ -104,7 +100,7 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 	# (the launched job could continue running)
 	try:
 		children.add(child)
-		status, data = runner.launch_finish(child, prof_r, workdir, jobid, method)
+		status, data = runner.launch_finish(child, prof_r, workdir, jobid, method, job_timeout)
 		if status:
 			try:
 				os.killpg(child, SIGTERM) # give it a chance to exit gracefully
@@ -113,7 +109,9 @@ def launch(workdir, setup, config, Methods, active_workdirs, slices, concurrency
 				pass
 			# The dying process won't have sent an end message, so it has
 			# the endwait time until we SIGKILL it.
-			print('%s| %s [%s]  failed!    (%5.1fs) |' % (print_prefix, jobid, method, monotonic() - starttime))
+			t = monotonic() - starttime
+			e = 'timed out' if list(status) == ['watchdog'] else 'failed'
+			print(f'{print_prefix}| {jobid} [{method}]  {e}!    ({t:5.1f}s) |')
 		# There is a race where stuff on the status socket has not arrived when
 		# the sending process exits. This is basically benign, but let's give
 		# it a chance to arrive to cut down on confusing warnings.

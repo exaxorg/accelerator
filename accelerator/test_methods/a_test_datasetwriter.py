@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2024 Carl Drougge                                     #
+# Copyright (c) 2019-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -16,10 +16,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 description = r'''
 Test DatasetWriter, exercising the different ways to create,
@@ -37,7 +33,7 @@ def prepare(job, slices):
 	assert slices >= test_data.value_cnt
 	dw_default = DatasetWriter()
 	dw_default.add("a", "number")
-	dw_default.add("b", "ascii")
+	dw_default.add("b", "ascii", caption="the caption")
 	DatasetWriter(name="named", columns={"c": "bool", "d": "date"})
 	dw_passed = job.datasetwriter(name="passed", columns=test_data.columns)
 	return dw_passed, 42

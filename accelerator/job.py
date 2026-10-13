@@ -27,7 +27,7 @@ from collections import namedtuple, OrderedDict
 from functools import wraps
 from pathlib import Path
 
-from accelerator.compat import unicode, PY2, PY3, open, iteritems, FileNotFoundError
+from accelerator.compat import iteritems, FileNotFoundError
 from accelerator.error import NoSuchJobError, NoSuchWorkdirError, NoSuchDatasetError, AcceleratorError
 
 
@@ -61,7 +61,7 @@ def _cachedprop(meth):
 _cache = {}
 _nodefault = object()
 
-class Job(unicode):
+class Job(str):
 	"""
 	A string that is a jobid, but also has some extra properties:
 	.method The job method (can be the "name" when from build or urd).
@@ -82,7 +82,7 @@ class Job(unicode):
 	.link_result to put a link in result_directory that points to a file in this job.
 	.link_to_here to expose a subjob result in its parent.
 
-	Decays to a (unicode) string when pickled.
+	Decays to a string when pickled.
 	"""
 
 	__slots__ = ('workdir', 'number', '_cache')
@@ -91,7 +91,7 @@ class Job(unicode):
 		k = (jobid, method)
 		if k in _cache:
 			return _cache[k]
-		obj = unicode.__new__(cls, jobid)
+		obj = str.__new__(cls, jobid)
 		try:
 			obj.workdir, tmp = jobid.rsplit('-', 1)
 			obj.number = int(tmp)
@@ -144,7 +144,7 @@ class Job(unicode):
 			filename = '%s.%d' % (filename, sliceno,)
 		return os.path.join(self.path, filename)
 
-	def open(self, filename, mode='r', sliceno=None, encoding=None, errors=None):
+	def open(self, filename, mode='r', sliceno=None, *, encoding=None, errors=None):
 		assert 'r' in mode, "Don't write to other jobs"
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
@@ -186,9 +186,9 @@ class Job(unicode):
 		from accelerator.extras import job_post
 		return job_post(self)
 
-	def load(self, filename='result.pickle', sliceno=None, encoding='bytes', default=_nodefault):
-		"""blob.load from this job"""
-		from accelerator.extras import pickle_load
+	def load(self, filename='result.pickle', sliceno=None, *, encoding='bytes', default=_nodefault):
+		"""blob.pickle_load from this job"""
+		from accelerator.blob import pickle_load
 		try:
 			return pickle_load(self.filename(filename, sliceno), encoding=encoding)
 		except FileNotFoundError:
@@ -196,10 +196,10 @@ class Job(unicode):
 				raise
 			return default
 
-	def json_load(self, filename='result.json', sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
-		from accelerator.extras import json_load
+	def json_load(self, filename='result.json', sliceno=None, *, default=_nodefault):
+		from accelerator.blob import json_load
 		try:
-			return json_load(self.filename(filename, sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+			return json_load(self.filename(filename, sliceno))
 		except FileNotFoundError:
 			if default is _nodefault:
 				raise
@@ -241,7 +241,7 @@ class Job(unicode):
 		else:
 			return ''.join(res.values())
 
-	def link_result(self, filename='result.pickle', linkname=None, header=None, description=None):
+	def link_result(self, filename='result.pickle', linkname=None, *, header=None, description=None):
 		"""Put a symlink to filename in result_directory
 		Only use this in a build script."""
 		from accelerator.g import running, urd
@@ -300,7 +300,7 @@ class Job(unicode):
 		os.symlink(src, dst)
 		job.register_file(dst)
 
-	def chain(self, length=-1, reverse=False, stop_job=None):
+	def chain(self, length=-1, *, reverse=False, stop_job=None):
 		"""Like Dataset.chain but for jobs."""
 		if isinstance(stop_job, dict):
 			assert len(stop_job) == 1, "Only pass a single stop_job={job: name}"
@@ -318,7 +318,7 @@ class Job(unicode):
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 
 class CurrentJob(Job):
@@ -338,34 +338,34 @@ class CurrentJob(Job):
 		from accelerator.launch import _FinishJob
 		raise _FinishJob(result)
 
-	def save(self, obj, filename='result.pickle', sliceno=None, temp=None, background=False):
-		from accelerator.extras import pickle_save
+	def save(self, obj, filename='result.pickle', sliceno=None, *, temp=None, background=False):
+		from accelerator.blob import pickle_save
 		return pickle_save(obj, filename, sliceno, temp=temp, background=background)
 
-	def json_save(self, obj, filename='result.json', sliceno=None, sort_keys=True, temp=None, background=False):
-		from accelerator.extras import json_save
+	def json_save(self, obj, filename='result.json', sliceno=None, *, sort_keys=True, temp=None, background=False):
+		from accelerator.blob import json_save
 		return json_save(obj, filename, sliceno, sort_keys=sort_keys, temp=temp, background=background)
 
-	def datasetwriter(self, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
+	def datasetwriter(self, *, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
 		from accelerator.dataset import DatasetWriter
 		return DatasetWriter(columns=columns, filename=filename, hashlabel=hashlabel, hashlabel_override=hashlabel_override, caption=caption, previous=previous, name=name, parent=parent, meta_only=meta_only, for_single_slice=for_single_slice, copy_mode=copy_mode, allow_missing_slices=allow_missing_slices)
 
-	def open(self, filename, mode='r', sliceno=None, encoding=None, errors=None, temp=None):
+	def open(self, filename, mode='r', sliceno=None, *, encoding=None, errors=None, temp=None):
 		"""Mostly like standard open with sliceno and temp,
 		but you must use it as context manager
 		with job.open(...) as fh:
 		and the file will have a temp name until the with block ends.
 		"""
 		if 'r' in mode:
-			return Job.open(self, filename, mode, sliceno, encoding, errors)
+			return Job.open(self, filename, mode, sliceno, encoding=encoding, errors=errors)
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
-		if PY3 and 'x' not in mode:
+		if 'x' not in mode:
 			mode = mode.replace('w', 'x')
 		def _open(fn, _mode):
 			# ignore the passed mode, use the one we have
 			return open(fn, mode, encoding=encoding, errors=errors)
-		from accelerator.extras import FileWriteMove
+		from accelerator.blob import FileWriteMove
 		fwm = FileWriteMove(self.filename(filename, sliceno), temp=temp)
 		fwm._open = _open
 		return fwm
@@ -377,28 +377,24 @@ class CurrentJob(Job):
 		to register it."""
 		filename = self.filename(filename)
 		assert os.path.exists(filename)
-		from accelerator.extras import saved_files
+		from accelerator.blob import saved_files
 		saved_files[filename] = 0
 
-	def register_files(self, pattern='**/*' if PY3 else '*'):
+	def register_files(self, pattern='**/*'):
 		"""Bulk register files matching a pattern.
 		Tries to exclude internal files automatically.
 		Does not register temp-files.
-		The default pattern registers everything (recursively, unless python 2).
+		The default pattern registers everything, recursively.
 		Returns which files were registered.
 		"""
-		from accelerator.extras import saved_files
+		from accelerator.blob import saved_files
 		from glob import iglob
 		pattern = os.path.normpath(pattern)
 		assert not pattern.startswith('/')
 		assert not pattern.startswith('../')
 		forbidden = ('setup.json', 'post.json', 'method.tar.gz', 'link_result.pickle')
 		res = set()
-		if PY3:
-			files = iglob(pattern, recursive=True)
-		else:
-			# No recursive support on python 2.
-			files = iglob(pattern)
+		files = iglob(pattern, recursive=True)
 		for fn in files:
 			if (
 				fn in forbidden or
@@ -418,7 +414,7 @@ class CurrentJob(Job):
 	def input_filename(self, *parts):
 		return os.path.join(self.input_directory, *parts)
 
-	def open_input(self, filename, mode='r', encoding=None, errors=None):
+	def open_input(self, filename, mode='r', *, encoding=None, errors=None):
 		assert 'r' in mode, "Don't write to input files"
 		if 'b' not in mode and encoding is None:
 			encoding = 'utf-8'
@@ -444,7 +440,7 @@ class NoJob(Job):
 	number = version = -1
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	def dataset(self, name='default'):
 		raise NoSuchDatasetError('NoJob has no datasets')
@@ -457,14 +453,14 @@ class NoJob(Job):
 	def files(self, pattern='*'):
 		return set()
 
-	def load(self, filename=None, sliceno=None, encoding='bytes', default=_nodefault):
+	def load(self, filename=None, sliceno=None, *, encoding='bytes', default=_nodefault):
 		if default is not _nodefault:
 			return default
 		if filename is not None or sliceno is not None:
 			raise NoSuchJobError('Can not load named / sliced file on <NoJob>')
 		return None
 
-	def json_load(self, filename=None, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
+	def json_load(self, filename=None, sliceno=None, *, default=_nodefault):
 		return self.load(filename, sliceno, default=default)
 
 	@property # so it can return the same instance as all other NoJob things
@@ -472,7 +468,7 @@ class NoJob(Job):
 		return NoJob
 
 NoJob = NoJob()
-
+_cache[(None, None)] = _cache[('', None)] = NoJob
 
 class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 	__slots__ = ()
@@ -490,9 +486,9 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 			assert self.sliced, "An unsliced file can not have a sliceno"
 		return self.job.filename(self.name, sliceno)
 
-	def load(self, sliceno=None, encoding='bytes', default=_nodefault):
-		"""blob.load this file"""
-		from accelerator.extras import pickle_load
+	def load(self, sliceno=None, *, encoding='bytes', default=_nodefault):
+		"""blob.pickle_load this file"""
+		from accelerator.blob import pickle_load
 		try:
 			return pickle_load(self.filename(sliceno), encoding=encoding)
 		except FileNotFoundError:
@@ -500,14 +496,14 @@ class JobWithFile(namedtuple('JobWithFile', 'job name sliced extra')):
 				raise
 			return default
 
-	def json_load(self, sliceno=None, unicode_as_utf8bytes=PY2, default=_nodefault):
-		from accelerator.extras import json_load
+	def json_load(self, sliceno=None, *, default=_nodefault):
+		from accelerator.blob import json_load
 		try:
-			return json_load(self.filename(sliceno), unicode_as_utf8bytes=unicode_as_utf8bytes)
+			return json_load(self.filename(sliceno))
 		except FileNotFoundError:
 			if default is _nodefault:
 				raise
 			return default
 
-	def open(self, mode='r', sliceno=None, encoding=None, errors=None):
-		return self.job.open(self.name, mode, sliceno, encoding, errors)
+	def open(self, mode='r', sliceno=None, *, encoding=None, errors=None):
+		return self.job.open(self.name, mode, sliceno, encoding=encoding, errors=errors)

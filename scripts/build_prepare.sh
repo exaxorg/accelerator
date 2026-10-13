@@ -19,15 +19,8 @@ ZLIB_VERSION=425439062b114a0f6cf625022c41d929c7e879f9 # 2.2.5
 ENDIANNESS="$(/opt/python/cp39-cp39/bin/python3 -c 'import sys; print(sys.byteorder)')"
 
 if [ ! -e /opt/python/cp310-cp310/bin/python ]; then
-	if [ "$AUDITWHEEL_ARCH" = "x86_64" -o "$AUDITWHEEL_ARCH" = "i686" ]; then
-		if [ ! -e /opt/python/cp27-cp27mu ]; then
-			echo "Old build container needs python 2.7, run in manylinux2010_$AUDITWHEEL_ARCH:2021-02-06-c17986e or earlier"
-			exit 1
-		fi
-	fi
-
-	if [ ! -e /opt/python/cp35-cp35m ]; then
-		echo "Old build container needs python 3.5, your manylinux container must be too new"
+	if [ ! -e /opt/python/cp36-cp36m ]; then
+		echo "Old build container needs python 3.6, your manylinux container must be too new"
 		exit 1
 	fi
 fi

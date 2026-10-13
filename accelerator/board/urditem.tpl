@@ -21,15 +21,17 @@
 	% include('graph', mode='urd', key=key)
 	<table class="urd-table">
 		<tr><td>deps</td><td>
-			% for dep, depentry in sorted(entry.deps.items()):
-				<a href="/urd/{{ url_quote(dep) }}/{{ depentry.timestamp }}">
-					{{ dep }}/{{ ! urd_ts_html(depentry.timestamp) }}
-				</a>
-				<ol>
-					% for method, job in depentry.joblist:
-						<li>{{ method }} <a href="/job/{{ url_quote(job) }}">{{ job }}</a></li>
-					% end
-				</ol>
+			% for dep, depentries in sorted(entry.deps.items()):
+				% for depentry in depentries:
+					<a href="/urd/{{ url_quote(dep) }}/{{ depentry.timestamp }}">
+						{{ dep }}/{{ ! urd_ts_html(depentry.timestamp) }}
+					</a>
+					<ol>
+						% for method, job in depentry.joblist:
+							<li>{{ method }} <a href="/job/{{ url_quote(job) }}">{{ job }}</a></li>
+						% end
+					</ol>
+				% end
 			% end
 		</td></tr>
 		<tr><td>joblist</td><td>

@@ -3,7 +3,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -19,9 +19,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import sys
 import socket
 import traceback
@@ -36,18 +33,19 @@ from string import ascii_letters
 import random
 import atexit
 
-from accelerator.compat import unicode, monotonic
+from accelerator.compat import monotonic
 
 from accelerator.web import ThreadedHTTPServer, ThreadedUnixHTTPServer, BaseWebHandler
 
 from accelerator import autoflush
 from accelerator import control
-from accelerator.extras import json_encode, json_decode, DotDict
+from accelerator.blob import json_encode, json_decode
 from accelerator.build import JobError
 from accelerator.job import Job
 from accelerator.setupfile import load_setup
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import statmsg_sink, children, print_status_stacks, status_stacks_export
+from accelerator.types import DotDict
 from accelerator import iowrapper, board, g, __version__ as ax_version
 import accelerator
 
@@ -80,7 +78,7 @@ class XtdHandler(BaseWebHandler):
 	def encode_body(self, body):
 		if isinstance(body, bytes):
 			return body
-		if isinstance(body, unicode):
+		if isinstance(body, str):
 			return body.encode('utf-8')
 		return json_encode(body)
 
@@ -278,7 +276,10 @@ class XtdHandler(BaseWebHandler):
 												if explicit_concurrency:
 													raise JobError(jobid, 'csvimport', {'server': 'csvimport can not run with reduced concurrency'})
 												concurrency = None
-										self.ctrl.run_job(jobid, subjob_cookie=passed_cookie, parent_pid=setup.get('parent_pid', 0), concurrency=concurrency)
+										job_timeout = setup.get('job_timeout')
+										if job_timeout is not None:
+											assert isinstance(job_timeout, int) and job_timeout > 0, 'job_timeout must be a positive integer or None'
+										self.ctrl.run_job(jobid, subjob_cookie=passed_cookie, parent_pid=setup.get('parent_pid', 0), concurrency=concurrency, job_timeout=job_timeout)
 										# update database since a new jobid was just created
 										job = self.ctrl.add_single_jobid(jobid)
 										with tlock:
@@ -480,8 +481,7 @@ def main(argv, config):
 
 	signal.signal(signal.SIGUSR1, siginfo)
 	signal.siginterrupt(signal.SIGUSR1, False)
-	if hasattr(signal, 'pthread_sigmask'):
-		signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGUSR1})
+	signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGUSR1})
 	if hasattr(signal, 'SIGINFO'):
 		signal.signal(signal.SIGINFO, siginfo)
 		signal.siginterrupt(signal.SIGINFO, False)

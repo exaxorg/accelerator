@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
 description = r'''
 Take a dataset and make a checksum of one or more columns.
 
@@ -42,8 +38,7 @@ from itertools import chain
 from json import JSONEncoder
 from heapq import merge
 
-from accelerator.extras import DotDict
-from accelerator.compat import PY2
+from accelerator import DotDict
 
 options = dict(
 	columns      = set(),
@@ -52,11 +47,8 @@ options = dict(
 
 datasets = ('source',)
 
-if PY2:
-	bytesrepr = repr
-else:
-	def bytesrepr(v):
-		return repr(v).encode('utf-8')
+def bytesrepr(v):
+	return repr(v).encode('utf-8')
 
 def bytesstr(v):
 	return v.encode('utf-8')
@@ -86,7 +78,7 @@ def prepare():
 	# Same with pickle, but worse (many picklable values will break this).
 	for n in columns:
 		col = datasets.source.columns[n]
-		if col.type == 'bytes' or (col.type == 'ascii' and PY2):
+		if col.type == 'bytes':
 			# doesn't need any encoding, but might need None-handling.
 			if col.none_support:
 				translators[n] = self_none

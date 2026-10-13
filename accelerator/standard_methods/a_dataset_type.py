@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -18,10 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-from __future__ import print_function
-
 from resource import getpagesize
 from os import unlink
 from os.path import exists
@@ -29,11 +25,12 @@ from mmap import mmap
 from shutil import copyfileobj
 from struct import Struct
 
-from accelerator.compat import unicode, itervalues, PY2
+from accelerator.compat import itervalues
 
-from accelerator.extras import OptionEnum, DotDict, quote
+from accelerator.extras import quote
 from accelerator.dsutil import typed_writer, typed_reader
 from accelerator.error import NoSuchDatasetError
+from accelerator import OptionEnum, DotDict
 from . import dataset_type
 
 depend_extra = (dataset_type,)
@@ -154,20 +151,21 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		source = source.link_to_here(name='rename.%d' % (ix,), rename=just_rename)
 	if dup_rename:
 		source = source.merge(dup_ds, name='merge.%d' % (ix,))
-	none_support = set()
 	for colname, coltype in column2type.items():
 		if colname not in source.columns:
 			raise Exception("Dataset %s doesn't have a column named %r (has %r)" % (source_name, colname, set(source.columns),))
 		dc = source.columns[colname]
+		none_support = dc.none_support
 		if dc.type not in byteslike_types:
 			raise Exception("Dataset %s column %r is type %s, must be one of %r" % (source_name, colname, dc.type, byteslike_types,))
 		coltype = coltype.split(':', 1)[0]
 		if coltype.endswith('+None'):
 			coltype = coltype[:-5]
-			none_support.add(colname)
-		columns[colname] = dataset_type.typerename.get(coltype, coltype)
-		if options.defaults.get(colname, False) is None or dc.none_support:
-			none_support.add(colname)
+			none_support = True
+		if options.defaults.get(colname, False) is None:
+			none_support = True
+		coltype = dataset_type.typerename.get(coltype, coltype)
+		columns[colname] = dc.replace(type=coltype, none_support=none_support)
 	if options.hashlabel is None:
 		hashlabel_override = False
 		hashlabel = source.hashlabel
@@ -181,10 +179,8 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 		untyped_columns -= set(columns) # anything renamed over is irrelevant
 		for colname in sorted(untyped_columns):
 			dc = source.columns[colname]
-			columns[colname] = dc.type
+			columns[colname] = dc
 			column2type[colname] = dataset_type.copy_types[dc.type]
-			if dc.none_support:
-				none_support.add(colname)
 	if options.filter_bad or rehashing or options.discard_untyped:
 		parent = None
 	else:
@@ -194,10 +190,6 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 			raise Exception("Can't rehash %s on discarded column %r." % (source_name, hashlabel,))
 		hashlabel = None # it gets inherited from the parent if we're keeping it.
 		hashlabel_override = False
-	columns = {
-		colname: (typ, colname in none_support)
-		for colname, typ in columns.items()
-	}
 	dws = []
 	if previous_res:
 		# dw or last in dws[] for previous source
@@ -247,11 +239,8 @@ def prepare_one(ix, source, chain, job, slices, previous_res):
 				previous = datasets.previous.job.dataset('bad')
 			except NoSuchDatasetError:
 				previous = None
-		def best_bad_type(colname):
-			dc = source.columns[colname]
-			assert dc.type in byteslike_types
-			return (dc.type, dc.none_support)
-		bad_columns = {name: best_bad_type(name) for name in options.column2type}
+		bad_columns = {name: source.columns[name] for name in options.column2type}
+		assert all(dc.type in byteslike_types for dc in bad_columns.values())
 		dw_bad = job.datasetwriter(
 			name='bad' if ds_name == 'default' else ds_name + '.bad',
 			columns=bad_columns,
@@ -348,20 +337,7 @@ def analysis_one(sliceno, slices, prepare_res):
 	return bad_count, final_bad_count, default_count, minmax, vars.hash_lines
 
 
-# In python3 indexing into bytes gives integers (b'a'[0] == 97),
-# this gives the same behaviour on python2. (For use with mmap.)
-class IntegerBytesWrapper(object):
-	def __init__(self, inner):
-		self.inner = inner
-	def close(self):
-		self.inner.close()
-	def __getitem__(self, key):
-		return ord(self.inner[key])
-	def __setitem__(self, key, value):
-		self.inner[key] = chr(value)
-
-# But even in python3 we can only get int8 support for free,
-# and slicemap needs int16.
+# mmap objects give us int8 support for free, but slicemap needs int16.
 class Int16BytesWrapper(object):
 	_s = Struct('=H')
 	def __init__(self, inner):
@@ -373,14 +349,9 @@ class Int16BytesWrapper(object):
 	def __setitem__(self, key, value):
 		self._s.pack_into(self.inner, key * 2, value)
 	def __iter__(self):
-		if PY2:
-			def it():
-				for o in range(len(self.inner) // 2):
-					yield self[o]
-		else:
-			def it():
-				for v, in self._s.iter_unpack(self.inner):
-					yield v
+		def it():
+			for v, in self._s.iter_unpack(self.inner):
+				yield v
 		return it()
 
 
@@ -495,7 +466,7 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		else:
 			default_value_is_None = False
 			if default_value != cstuff.NULL:
-				if isinstance(default_value, unicode):
+				if isinstance(default_value, str):
 					default_value = default_value.encode("utf-8")
 				default_len = len(default_value)
 		c = getattr(cstuff.backend, 'convert_column_' + cfunc)
@@ -540,8 +511,6 @@ def one_column(vars, colname, coltype, out_fns, for_hasher=False):
 		if options.filter_bad:
 			badmap = mmap(vars.badmap_fd, vars.badmap_size)
 			vars.map_fhs.append(badmap)
-			if PY2:
-				badmap = IntegerBytesWrapper(badmap)
 		if vars.rehashing:
 			slicemap = mmap(vars.slicemap_fd, vars.slicemap_size)
 			vars.map_fhs.append(slicemap)

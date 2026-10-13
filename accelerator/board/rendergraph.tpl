@@ -20,7 +20,7 @@
 %	end
 % end
 % bbox = [bbox[0] - 50, bbox[1] - 50, max(bbox[2] - bbox[0] + 100, 200), max(bbox[3] - bbox[1] + 120, 200)]
-
+%
 % def rendernode(item, type):
 	<circle
 		id="{{ item.safename }}"
@@ -107,7 +107,7 @@
 	</text>
 	% end
 % end
-
+%
 % def renderedge(src, dst, stroke='var(--graph-edge)', width='2'):
 %	srcnode = nodes[src]
 %	dstnode = nodes[dst]
@@ -126,7 +126,7 @@
 		<polygon points="{{ dstx }},{{ dsty }} {{ x1 }},{{ y1 }} {{ x2 }},{{ y2 }}" stroke="{{ stroke }}" fill="{{ stroke }}" stroke-width="{{ width }}"/>
 %	return srcx, srcy, a
 % end
-
+%
 <svg id="svg" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="{{ ' '.join(map(str, bbox)) }}" width="100%" height="400px">
 %	# first, set some visual related attributes
 %	if type == 'job':
@@ -170,7 +170,7 @@
 %		end
 %	end
 %
-
+%
 %	# subjob edges
 %	for src, dst in subjob_edges:
 %		key = src + dst
@@ -178,7 +178,7 @@
 %		renderedge(src, dst, "var(--graph-subjobedge)", "8")
 	</g>
 %	end
-
+%
 %	# dependency edges
 %	for src, dst, relation in edges:
 %		key = src + dst
@@ -191,7 +191,7 @@
 		</text>
 	</g>
 %	end
-
+%
 %	# nodes
 %	for name, item in nodes.items():
 %		rendernode(item, type)

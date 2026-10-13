@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2024 Carl Drougge                                     #
+# Copyright (c) 2021-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -16,10 +16,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 description = r'''
 Test copy_mode in DatasetWriter, and three ways to specify the column
@@ -55,9 +51,8 @@ def analysis(sliceno, prepare_res, job):
 def synthesis(job, slices, prepare_res):
 	for name in ['synthesis_split', 'synthesis_manual', 'nonetest']:
 		dw = job.datasetwriter(name=name, copy_mode=True)
-		# (type, none_support) in .add
 		for n, c in sorted(jobs.source.dataset(name).columns.items()):
-			dw.add(n, (c.type, c.none_support))
+			dw.add(n, c)
 		for sliceno in range(slices):
 			dw.set_slice(sliceno)
 			for data in jobs.source.dataset(name).iterate(sliceno, copy_mode=True):

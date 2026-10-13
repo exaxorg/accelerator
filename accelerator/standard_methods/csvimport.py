@@ -20,10 +20,6 @@
 # This is a separate file from a_csvimport so setup.py can import
 # it and make the _csvimport module at install time.
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 from . import c_backend_support
 
 all_c_functions = r'''
@@ -39,12 +35,8 @@ all_c_functions = r'''
 #define SMALL_Z (1024 * 64)
 
 // Py_FileSystemDefaultEncoding is deprecated in Python 3.12.
-// For consistency we use NULL (utf-8) on all python3 versions.
-#if PY_MAJOR_VERSION < 3
-#  define DEFAULT_ENCODING Py_FileSystemDefaultEncoding
-#else
-#  define DEFAULT_ENCODING NULL
-#endif
+// For consistency we use NULL (utf-8) on all versions.
+#define DEFAULT_ENCODING NULL
 
 // OS X has no pthread_barrier support, so we get to do this instead.
 static struct {

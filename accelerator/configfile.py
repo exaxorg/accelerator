@@ -3,7 +3,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2021 Anders Berkeman                    #
-# Modifications copyright (c) 2019-2024 Carl Drougge                       #
+# Modifications copyright (c) 2019-2026 Carl Drougge                       #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -19,23 +19,26 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
+from functools import lru_cache
 import re
 import os
 import shlex
 
-from accelerator.compat import url_quote_more, open
+from accelerator.compat import url_quote_more
 
-from accelerator.extras import DotDict
+from accelerator.types import DotDict
 
 
 _re_var = re.compile(r'(?<!\\)\$\{([^\}=]*)(?:=([^\}]*))?\}')
-def interpolate(s):
+def interpolate(s, overrides={}):
 	"""Replace ${FOO=BAR} with os.environ.get('FOO', 'BAR')
 	(just ${FOO} is of course also supported, but not $FOO)"""
-	return _re_var.subn(lambda m: os.environ.get(m.group(1), m.group(2)), s)[0]
+	def getenv(m):
+		v = overrides.get(m.group(1), os.environ.get(m.group(1), m.group(2)))
+		if v is None: # removed by override
+			return ''
+		return v.replace('\n', ' ')
+	return _re_var.sub(getenv, s)
 
 
 class HostPortTuple(tuple):
@@ -67,10 +70,19 @@ def fixup_listen(project_directory, listen):
 def load_config(filename):
 	from accelerator.error import UserError
 
+	SKIP_KEY = object() # a unique value
 	multivalued = {'workdirs', 'method packages', 'interpreters'}
 	required = {'slices', 'workdirs', 'method packages'}
-	known = {'target workdir', 'listen', 'urd', 'board listen', 'result directory', 'input directory', 'project directory'} | required | multivalued
-	cfg = {key: [] for key in multivalued}
+	known = {
+		'target workdir', 'listen', 'urd', 'board listen', 'result directory',
+		'input directory', 'project directory',
+	} | required | multivalued
+	known = known | \
+		{k + '!' for k in known} | \
+		{k + '?' for k in known} | \
+		{'include', 'setenv', SKIP_KEY}
+	cfg = DotDict({key: [] for key in multivalued})
+	cfg.setenv = {}
 
 	def fixpath(fn, realpath=True):
 		# convert relative path to absolute wrt location of config file
@@ -144,12 +156,15 @@ def load_config(filename):
 		workdirs=check_workdirs,
 	)
 
-	with open(filename, 'r', encoding='utf-8') as fh:
-		lines = list(enumerate(fh, 1))
-	def parse(handle):
+	@lru_cache(maxsize=None)
+	def read(fn):
+		with open(fn, 'r', encoding='utf-8') as fh:
+			return list(enumerate(fh, 1))
+	def parse(filename, handle, *, depth=0):
+		nonlocal error_pos
 		key = None
-		for n, line in lines:
-			lineno[0] = n
+		for n, line in read(filename):
+			error_pos = (n, filename,)
 			line_stripped = line.strip()
 			if not line_stripped or line_stripped[0] == '#':
 				continue
@@ -159,18 +174,48 @@ def load_config(filename):
 				key, val = line.split(':', 1)
 				if key not in known:
 					raise _E('Unknown key %r' % (key,))
+				if key.endswith('!'):
+					key = key[:-1]
+					if key in multivalued:
+						cfg[key] = []
+					elif key in cfg:
+						del cfg[key]
+				elif key.endswith('?'):
+					key = key[:-1]
+					if cfg.get(key):
+						key = SKIP_KEY
 			else:
 				if not key:
 					raise _E('First line indented')
 				val = line
-			val = shlex.split(interpolate(val), posix=True, comments=True)
+			val = shlex.split(val, posix=True, comments=True)
 			if val:
-				handle(key, val)
+				val = [interpolate(v, cfg.setenv) for v in val]
+				if key == 'include':
+					if depth > 5:
+						raise _E('Too high include depth')
+					for fn in val:
+						# Included filename is relative to the including file.
+						fn = os.path.join(os.path.dirname(filename), fn)
+						try:
+							parse(fn, handle, depth=depth+1)
+						except FileNotFoundError:
+							raise _E(f'{fn} does not exist.')
+						error_pos = (n, filename,)
+				elif key == 'setenv':
+					if len(val) != 1:
+						raise _E("Only set one variable per line (maybe you meant to quote it?)")
+					name, *value = val[0].split('=', 1)
+					if not name:
+						raise _E("Can't set empty variable name")
+					cfg.setenv[name] = value[0] if value else None
+				elif key != SKIP_KEY:
+					handle(key, val)
 	def just_project_directory(key, val):
 		if key == 'project directory':
 			if len(val) != 1:
 				raise _E("%s takes a single value path (maybe you meant to quote it?)" % (key,))
-			project_directory[0] = val[0]
+			cfg[key] = val[0]
 	def everything(key, val):
 		if key in parsers:
 			args, p = parsers[key]
@@ -202,13 +247,14 @@ def load_config(filename):
 			cfg[key] = val
 
 	try:
-		project_directory = [os.path.dirname(filename)]
-		lineno = [None]
-		parse(just_project_directory)
-		lineno = [None]
-		project_directory = os.path.realpath(project_directory[0])
-		parse(everything)
-		lineno = [None]
+		error_pos = (None,)
+		parse(filename, just_project_directory)
+		error_pos = (None,)
+		project_directory = os.path.realpath(cfg.pop('project directory', os.path.dirname(filename)))
+		# Reset setenv so the expected values are interpolated (as if there was only one pass).
+		cfg.setenv = {}
+		parse(filename, everything)
+		error_pos = (None,)
 
 		missing = set()
 		for req in required:
@@ -253,11 +299,16 @@ def load_config(filename):
 		res.board_listen, _ = fixup_listen(res.project_directory, res.get('board_listen', ('.socket.dir/board', None)))
 		res.method_directories = dict(res.method_directories)
 	except _E as e:
-		if lineno[0] is None:
+		if error_pos[0] is None:
 			prefix = 'Error in %s:\n' % (filename,)
 		else:
-			prefix = 'Error on line %d of %s:\n' % (lineno[0], filename,)
+			prefix = 'Error on line %d of %s:\n' % error_pos
 		raise UserError(prefix + e.args[0])
 
 	res.config_filename = os.path.realpath(filename)
+	for k, v in res.setenv.items():
+		if v is None:
+			os.environ.pop(k, None)
+		else:
+			os.environ[k] = v
 	return res

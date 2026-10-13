@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2020-2024 Carl Drougge                                     #
+# Copyright (c) 2020-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -17,18 +17,14 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 import os
 
 from accelerator.compat import url_quote
+from accelerator.extras import fmttime
 from accelerator.unixhttp import call
 from accelerator.setupfile import load_setup
-from accelerator.build import fmttime
-from accelerator.extras import DotDict
+from accelerator.types import DotDict
 from accelerator.job import Job
 from accelerator.shell.parser import ArgumentParser
 

@@ -19,10 +19,6 @@
 ############################################################################
 
 
-from __future__ import print_function
-from __future__ import division
-
-
 a_example = r"""description = r'''
 This is just an example. It doesn't even try to do anything useful.
 
@@ -166,7 +162,7 @@ def main(argv, cfg):
 	from accelerator.shell.parser import ArgumentParser
 	from accelerator.compat import shell_quote
 	from accelerator.error import UserError
-	from accelerator.extras import DotDict
+	from accelerator.types import DotDict
 	import accelerator
 
 	parser = ArgumentParser(

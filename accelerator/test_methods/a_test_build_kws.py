@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 This method is called to test that urd.build finds the correct target for
 keywords, and also that it does not accept ambiguous keywords.

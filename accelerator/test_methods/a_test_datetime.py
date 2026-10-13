@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test the datetime types in options.
 '''
@@ -28,7 +24,7 @@ Test the datetime types in options.
 from datetime import datetime, date, time, timedelta
 
 from accelerator import subjobs
-from accelerator.extras import DotDict
+from accelerator import DotDict
 
 options = dict(
 	datetime=datetime,

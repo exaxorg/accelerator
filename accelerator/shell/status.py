@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2023-2024 Carl Drougge                                     #
+# Copyright (c) 2023-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -17,10 +17,8 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
-from accelerator.build import fmttime
 from accelerator.error import JobError
+from accelerator.extras import fmttime
 from accelerator.job import Job
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
@@ -50,4 +48,3 @@ def main(argv, cfg):
 			print('%s (%s)' % (status.current[1], t))
 		else:
 			print_status_stacks(status.status_stacks)
-

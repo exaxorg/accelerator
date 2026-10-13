@@ -20,9 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 import sys
 import datetime
@@ -32,13 +29,13 @@ from collections import defaultdict, OrderedDict
 from importlib import import_module
 
 from accelerator.compat import iteritems, itervalues, first_value
-from accelerator.compat import NoneType, unicode, long, monotonic
+from accelerator.compat import NoneType, monotonic
 
 from accelerator.colourwrapper import colour
 from accelerator.error import AcceleratorError
-from accelerator.extras import DotDict, _OptionString, OptionEnum, OptionDefault, RequiredOption
 from accelerator.runner import new_runners
 from accelerator.setupfile import _sorted_set
+from accelerator.types import DotDict, _OptionString, OptionEnum, OptionDefault, RequiredOption
 
 from accelerator import __version__ as ax_version
 
@@ -145,11 +142,8 @@ class Methods(object):
 def _reprify(o):
 	if isinstance(o, OptionDefault):
 		o = o.default
-	if isinstance(o, (bytes, str, int, float, long, bool, NoneType)):
+	if isinstance(o, (bytes, str, int, float, bool, NoneType)):
 		return repr(o)
-	if isinstance(o, unicode):
-		# not reachable in PY3, the above "str" matches
-		return repr(o.encode('utf-8'))
 	if isinstance(o, set):
 		return '[%s]' % (', '.join(map(_reprify, _sorted_set(o))),)
 	if isinstance(o, (list, tuple)):
@@ -189,7 +183,7 @@ def params2defaults(params):
 			return type(item)(l)
 		if isinstance(item, (type, OptionEnum)):
 			return None
-		assert isinstance(item, (bytes, unicode, int, float, long, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath, pathlib.PurePosixPath,)), type(item)
+		assert isinstance(item, (bytes, str, int, float, bool, OptionEnum, NoneType, datetime.datetime, datetime.date, datetime.time, datetime.timedelta, pathlib.PosixPath, pathlib.PurePosixPath,)), type(item)
 		return item
 	def fixup0(item):
 		if isinstance(item, RequiredOption):

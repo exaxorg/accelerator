@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 ############################################################################
@@ -20,15 +20,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-
 from setuptools import setup, find_packages, Extension
 from importlib import import_module
 from os.path import exists
 import os
 from datetime import datetime
 from subprocess import check_output, check_call, CalledProcessError
-from io import open
 import re
 import sys
 
@@ -138,12 +135,8 @@ setup(
 		'bottle>=0.12.7, <0.13; python_version<"3.10"',
 		'bottle>=0.13, <0.14; python_version>="3.10"',
 		'waitress>=1.0',
-		'configparser>=3.5.0, <5.0; python_version<"3"',
-		'monotonic>=1.0; python_version<"3"',
-		'selectors2>=2.0; python_version<"3"',
-		'pathlib>=1.0; python_version<"3"',
 	],
-	python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4",
+	python_requires=">=3.6, <4",
 
 	ext_modules=[dsutilmodule, dataset_typemodule, csvimportmodule],
 
@@ -172,10 +165,8 @@ setup(
 		"Operating System :: POSIX",
 		"Operating System :: POSIX :: BSD :: FreeBSD",
 		"Operating System :: POSIX :: Linux",
-		"Programming Language :: Python :: 2",
-		"Programming Language :: Python :: 2.7",
 		"Programming Language :: Python :: 3",
-		"Programming Language :: Python :: 3.5",
+		"Programming Language :: Python :: 3 :: Only",
 		"Programming Language :: Python :: 3.6",
 		"Programming Language :: Python :: 3.7",
 		"Programming Language :: Python :: 3.8",

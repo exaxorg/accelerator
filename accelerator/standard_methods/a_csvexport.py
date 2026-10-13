@@ -18,9 +18,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import division
-from __future__ import absolute_import
-
 description = r'''Dataset (or chain) to CSV file.'''
 
 from shutil import copyfileobj
@@ -32,7 +29,6 @@ from functools import partial
 from itertools import chain
 import gzip
 
-from accelerator.compat import PY3, PY2, izip, imap, long
 from accelerator import status
 
 
@@ -71,16 +67,9 @@ format = dict(
 	json=JSONEncoder(sort_keys=True, ensure_ascii=True, check_circular=False).encode,
 )
 
-if PY3:
-	enc = str
-	format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
-	format['number'] = repr
-	format['unicode'] = None
-else:
-	enc = lambda s: s.encode('utf-8')
-	format['bytes'] = None
-	format['number'] = lambda n: str(n) if isinstance(n, long) else repr(n)
-	format['unicode'] = lambda s: s.encode('utf-8')
+format['bytes'] = lambda s: s.decode('utf-8', errors='backslashreplace')
+format['number'] = repr
+format['unicode'] = None
 
 def csvexport(sliceno, filename, labelsonfirstline):
 	d = datasets.source[0]
@@ -100,10 +89,7 @@ def csvexport(sliceno, filename, labelsonfirstline):
 		open_func = partial(gzip.open, compresslevel=options.compression)
 	else:
 		open_func = open
-	if PY2:
-		open_func = partial(open_func, mode='wb')
-	else:
-		open_func = partial(open_func, mode='xt', encoding='utf-8')
+	open_func = partial(open_func, mode='xt', encoding='utf-8')
 	if options.none_as:
 		if isinstance(options.none_as, dict):
 			bad_none = set(options.none_as) - set(options.labels)
@@ -184,9 +170,9 @@ def csvexport(sliceno, filename, labelsonfirstline):
 			if needs_quoting(col.type):
 				it = (quote_func(f(v)) for v in it)
 			else:
-				it = imap(f, it)
+				it = map(f, it)
 		elif needs_quoting(col.type):
-			it = imap(quote_func, it)
+			it = map(quote_func, it)
 		return it
 	def outer_iterator(label, first):
 		return chain.from_iterable(column_iterator(d, label, first) for d in datasets.source)
@@ -195,10 +181,10 @@ def csvexport(sliceno, filename, labelsonfirstline):
 	for label in options.labels:
 		iters.append(outer_iterator(label, first))
 		first = False
-	it = izip(*iters)
+	it = zip(*iters)
 	with writer(open_func(filename)) as write:
 		if labelsonfirstline:
-			write(enc(sep.join(map(quote_func, options.labels))))
+			write(sep.join(map(quote_func, options.labels)))
 		for data in it:
 			write(sep.join(data))
 

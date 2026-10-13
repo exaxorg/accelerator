@@ -3,7 +3,7 @@
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -20,9 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import sys
 import os
 import io
@@ -33,24 +30,28 @@ import time
 import traceback
 from operator import itemgetter
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import date, datetime, timedelta
+from functools import partial
 from base64 import b64encode
 from importlib import import_module
 from argparse import RawTextHelpFormatter
 
-from accelerator.compat import unicode, str_types, PY3
+from accelerator.compat import str_types
 from accelerator.compat import urlencode
 from accelerator.compat import getarglist
 
 from accelerator import __version__ as ax_version
 from accelerator import iowrapper
 from accelerator import setupfile
+from accelerator.blob import json_encode, json_save
 from accelerator.colourwrapper import colour
-from accelerator.extras import json_encode, json_save, DotDict, _ListTypePreserver
+from accelerator.extras import fmttime
 from accelerator.job import Job, CurrentJob
 from accelerator.launch import _FinishJob
 from accelerator.shell.parser import ArgumentParser
 from accelerator.statmsg import print_status_stacks
+from accelerator.types import DotDict, _ListTypePreserver
 from accelerator.error import BuildError, JobError, ServerError, UrdPermissionError, UrdError
 from accelerator import g
 
@@ -63,7 +64,7 @@ class Automata:
 
 	method = '?' # fall-through case when we resume waiting for something
 
-	def __init__(self, server_url, verbose=False, flags=None, subjob_cookie=None, infoprints=False, print_full_jobpath=False, concurrency_map={}):
+	def __init__(self, server_url, *, verbose=False, flags=None, subjob_cookie=None, infoprints=False, print_full_jobpath=False, concurrency_map={}):
 		self.url = server_url
 		self.subjob_cookie = subjob_cookie
 		self.verbose = verbose
@@ -106,7 +107,7 @@ class Automata:
 	def config(self):
 		return self._url_json('config')
 
-	def _submit(self, method, options, datasets, jobs, caption=None, wait=True, why_build=False, force_build=False, workdir=None, concurrency=None):
+	def _submit(self, method, *, options, datasets, jobs, caption=None, wait=True, why_build=False, force_build=False, workdir=None, concurrency=None, job_timeout=None):
 		"""
 		Submit job to server and conditionaly wait for completion.
 		"""
@@ -127,6 +128,9 @@ class Automata:
 			data.concurrency = concurrency
 		if self.concurrency_map:
 			data.concurrency_map = self.concurrency_map
+		if job_timeout is not None:
+			assert isinstance(job_timeout, int) and job_timeout > 0, 'job_timeout must be a positive integer or None'
+			data.job_timeout = job_timeout
 		self.job_retur = self._server_submit(data)
 		self._last_setup = data
 		#
@@ -136,7 +140,7 @@ class Automata:
 			self.monitor.done()
 		return self.jobid(method), self.job_retur
 
-	def wait(self, ignore_old_errors=False):
+	def wait(self, *, ignore_old_errors=False):
 		idle, now, status_stacks, current, last_time = self._server_idle(0, ignore_errors=ignore_old_errors)
 		if idle:
 			return
@@ -187,7 +191,7 @@ class Automata:
 		if 'jobs' in self.job_retur:
 			return self.job_retur.jobs[method].link
 
-	def _server_idle(self, timeout=0, ignore_errors=False):
+	def _server_idle(self, timeout=0, *, ignore_errors=False):
 		"""ask server if it is idle, return (idle, status_stacks)"""
 		path = ['status']
 		if self.verbose:
@@ -237,7 +241,7 @@ class Automata:
 	def methods_info(self):
 		return self._url_json('methods')
 
-	def update_methods(self, _override_py_exe=None):
+	def update_methods(self, *, _override_py_exe=None):
 		if _override_py_exe:
 			args = urlencode({'_override_py_exe': _override_py_exe})
 		else:
@@ -252,7 +256,7 @@ class Automata:
 	def list_workdirs(self):
 		return self._url_json('list_workdirs')
 
-	def call_method(self, method, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, **kw):
+	def call_method(self, method, *, options={}, datasets={}, jobs={}, record_as=None, why_build=False, force_build=False, caption=None, workdir=None, concurrency=None, job_timeout=None, **kw):
 		if method not in self._method_info:
 			raise BuildError('Unknown method %s' % (method,))
 		info = self._method_info[method]
@@ -267,7 +271,7 @@ class Automata:
 			if len(argmap[k]) != 1:
 				raise BuildError('Keyword %s has several targets on method %s: %r' % (k, method, argmap[k],))
 			params[argmap[k][0]][k] = v
-		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, **params)
+		jid, res = self._submit(method, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, concurrency=concurrency, job_timeout=job_timeout, **params)
 		if why_build: # specified by caller
 			return res.why_build
 		if 'why_build' in res: # done by server anyway (because --flags why_build)
@@ -291,24 +295,6 @@ class Automata:
 		return jid
 
 
-def fmttime(t, short=False):
-	if t is None:
-		return None
-	if short:
-		fmts = ['%.0fs', '%.1fm', '%.2fh', '%.2fd']
-	else:
-		fmts = ['%.1f seconds', '%.1f minutes', '%.2f hours', '%.2f days']
-	sizes = [60, 60, 24, 1]
-	for fmt, size in zip(fmts, sizes):
-		if t < size * 2:
-			break
-		t /= size
-	res = fmt % (t,)
-	if res == '1.0 seconds':
-		return '1 second'
-	return res
-
-
 class JobList(_ListTypePreserver):
 	"""
 	A list of Jobs with some convenience methods.
@@ -320,6 +306,16 @@ class JobList(_ListTypePreserver):
 	"""
 
 	__slots__ = ()
+
+	def __init__(self, items=()):
+		if not isinstance(items, (list, tuple)):
+			items = list(items)
+		if items:
+			if isinstance(items[0], (list, tuple)) and len(items[0]) == 2:
+				items = (Job(e[1], e[0]) for e in items)
+			elif isinstance(items[0], str) and not isinstance(items[0], Job):
+				items = map(Job, items)
+		_ListTypePreserver.__init__(self, items)
 
 	def __getitem__(self, item):
 		if isinstance(item, slice):
@@ -376,19 +372,132 @@ class JobList(_ListTypePreserver):
 		print("Total time", fmttime(total))
 
 
+class UrdDeps(Mapping):
+	__slots__ = ('_d', '_prefix')
+
+	def __init__(self, deps, prefix=''):
+		Mapping.__init__(self)
+		self._d = {
+			path: UrdDep(**dep[0]) if len(dep) == 1 else UrdDepList(dep)
+			for path, dep in deps.items()
+		}
+		self._prefix = prefix
+
+	def __getitem__(self, key):
+		if isinstance(key, str) and '/' not in key:
+			key = self._prefix + key
+		return self._d[key]
+
+	def __iter__(self):
+		return iter(self._d)
+
+	def __len__(self):
+		return len(self._d)
+
+	def __repr__(self):
+		return self.__class__.__name__ + repr(self._d)
+
+	def __str__(self):
+		return repr(self._d)
+
+
+class UrdDepList(Mapping):
+	__slots__ = ('_d', '_items',)
+
+	def __init__(self, items):
+		Mapping.__init__(self)
+		self._items = tuple(
+			UrdDep(
+				caption=item['caption'],
+				joblist=item['joblist'],
+				timestamp=item['timestamp'],
+			)
+			for item in items
+		)
+		self._d = {item.timestamp: item for item in self._items}
+		assert len(self._d) == len(self._items), f"Duplicate timestamps in {self._items}"
+
+	def __getitem__(self, key):
+		if isinstance(key, (int, slice)):
+			return self._items[key]
+		else:
+			return self._d[key]
+
+	def __iter__(self):
+		return (item.timestamp for item in self._items)
+
+	def values(self):
+		return self._items
+
+	def __reversed__(self):
+		return (item.timestamp for item in reversed(self._items))
+
+	def __len__(self):
+		return len(self._items)
+
+	def __repr__(self, _tmpl='%s([%s,])', _sep=', '):
+		return _tmpl % (
+			self.__class__.__name__,
+			_sep.join(repr(item) for item in self._items)
+		)
+
+	def __str__(self):
+		return self.__repr__(_tmpl='%s([\n\t%s,\n])', _sep=',\n\t')
+
+
+class UrdDep(UrdDepList):
+	__slots__ = ()
+
+	def __init__(self, *, caption, joblist, timestamp):
+		Mapping.__init__(self)
+		self._items = (self,)
+		self._d = {
+			timestamp: self,
+			'caption': caption,
+			'joblist': JobList(joblist),
+			'timestamp': timestamp,
+		}
+
+	@property
+	def caption(self):
+		return self._d['caption']
+
+	@property
+	def joblist(self):
+		return self._d['joblist']
+
+	@property
+	def timestamp(self):
+		return self._d['timestamp']
+
+	def __eq__(self, other):
+		if not isinstance(other, UrdDep):
+			return NotImplemented
+		return \
+			self.timestamp == other.timestamp and \
+			self.caption == other.caption and \
+			self.joblist == other.joblist
+
+	def __repr__(self):
+		return f'{self.__class__.__name__}(timestamp={self.timestamp !r}, joblist={self.joblist !r}, caption={self.caption !r})'
+
+	__str__ = __repr__
+
+
 class UrdResponse(dict):
-	def __new__(cls, d):
+	__slots__ = ()
+
+	def __new__(cls, res, prefix=''):
 		assert cls is UrdResponse, "Always make these through UrdResponse"
-		obj = dict.__new__(UrdResponse if d else EmptyUrdResponse)
+		obj = dict.__new__(EmptyUrdResponse if res in ('{}', 'null', None, {},) else UrdResponse)
 		return obj
 
-	def __init__(self, d):
-		d = dict(d or ())
-		d.setdefault('caption', '')
-		d.setdefault('timestamp', '0')
-		d.setdefault('joblist', JobList())
-		d.setdefault('deps', {})
-		d.setdefault('build_job', None)
+	def __init__(self, res, prefix=''):
+		if isinstance(res, str):
+			d = json.loads(res)
+		d['build_job'] = Job(d.get('build_job'))
+		d['joblist'] = JobList(d['joblist'])
+		d['deps'] = UrdDeps(d.get('deps', {}), prefix=prefix)
 		dict.__init__(self, d)
 
 	__setitem__ = dict.__setitem__
@@ -403,23 +512,41 @@ class UrdResponse(dict):
 		return DotDict(timestamp=self.timestamp, joblist=self.joblist.as_tuples, caption=self.caption)
 
 class EmptyUrdResponse(UrdResponse):
+	__slots__ = ()
+
+	def __init__(self, res, prefix=''):
+		dict.__init__(
+			self,
+			build='',
+			caption='',
+			deps={},
+			joblist=JobList(),
+			key='',
+			timestamp='0',
+			user='',
+		)
+
+	def __str__(self):
+		return 'EmptyUrdResponse'
+
+	def __repr__(self):
+		return "UrdResponse(None)"
+
 	# so you can do "if urd.latest('foo'):" and similar.
-	# python2 version
-	def __nonzero__(self):
-		return False
-	# python3 version
 	def __bool__(self):
 		return False
 
 def _urd_typeify(d):
 	if isinstance(d, str):
 		d = json.loads(d)
-		if not d or isinstance(d, unicode):
+		if not d or isinstance(d, str):
 			return d
 	res = DotDict()
 	for k, v in d.items():
 		if k == 'joblist':
-			v = JobList(Job(e[1], e[0]) for e in v)
+			v = JobList(v)
+		elif k == 'build_job':
+			v = Job(v)
 		elif isinstance(v, dict):
 			v = _urd_typeify(v)
 		res[k] = v
@@ -463,15 +590,13 @@ class Urd(object):
 			assert '://' in str(info.urd), 'Bad urd URL: %s' % (info.urd,)
 		self._url = info.urd or ''
 		self._user = user
+		self._UrdResponse = partial(UrdResponse, prefix=user + '/')
 		self.info = info
 		self.flags = set(a.flags)
 		self.horizon = horizon
 		self.default_workdir = default_workdir
 		auth = '%s:%s' % (user, password,)
-		if PY3:
-			auth = b64encode(auth.encode('utf-8')).decode('ascii')
-		else:
-			auth = b64encode(auth)
+		auth = b64encode(auth.encode('utf-8')).decode('ascii')
 		self._headers = {'Content-Type': 'application/json', 'Authorization': 'Basic ' + auth}
 		self._auth_tested = False
 		self._reset()
@@ -500,20 +625,32 @@ class Urd(object):
 			path = '%s/%s' % (self._user, path,)
 		return path
 
-	def _call(self, url, data=None, fmt=_urd_typeify):
+	def _call(self, url, data=None, *, fmt=_urd_typeify):
 		from accelerator.unixhttp import call
 		assert self._url, "No urd configured for this server"
 		url = url.replace(' ', '%20')
 		return call(url, data=data, fmt=fmt, headers=self._headers, server_name='urd')
 
-	def _get(self, path, *a):
+	def get(self, path, timestamp):
 		assert self._current, "Can't record dependency with nothing running"
 		path = self._path(path)
-		assert path not in self._deps, 'Duplicate ' + path
-		url = '/'.join((self._url, path,) + a)
-		res = UrdResponse(self._call(url))
-		if res:
-			self._deps[path] = res.as_dep
+		timestamp = _tsfix(timestamp)
+		if path not in self._deps:
+			self._deps[path] = {}
+		deps = self._deps[path]
+		if timestamp not in deps:
+			url = '/'.join((self._url, path, timestamp))
+			res = self._call(url, fmt=self._UrdResponse)
+			# If timestamp is 'latest' or 'first' res.timestamp is different.
+			if res and res.timestamp != timestamp:
+				if res.timestamp in deps:
+					assert res == deps[res.timestamp], f'{path} {res.timestamp} changed when fetched as {timestamp}'
+					res = deps[res.timestamp] # Both should be the same object, not just equal.
+				else:
+					deps[res.timestamp] = res
+			deps[timestamp] = res
+		else:
+			res = deps[timestamp]
 		self._latest_joblist = res.joblist
 		return res
 
@@ -522,9 +659,6 @@ class Urd(object):
 			return '<=' + self.horizon
 		else:
 			return 'latest'
-
-	def get(self, path, timestamp):
-		return self._get(path, _tsfix(timestamp))
 
 	def latest(self, path):
 		return self.get(path, self._latest_str())
@@ -535,7 +669,7 @@ class Urd(object):
 	def peek(self, path, timestamp):
 		path = self._path(path)
 		url = '/'.join((self._url, path, _tsfix(timestamp),))
-		return UrdResponse(self._call(url))
+		return self._call(url, fmt=self._UrdResponse)
 
 	def peek_latest(self, path):
 		return self.peek(path, self._latest_str())
@@ -569,7 +703,7 @@ class Urd(object):
 		self._link_result_finished.extend((key, v) for v in self._link_result_current)
 		self._link_result_current = []
 
-	def begin(self, path, timestamp=None, caption=None, update=False):
+	def begin(self, path, timestamp=None, *, caption=None, update=False):
 		assert not self._current, 'Tried to begin %s while running %s' % (path, self._current,)
 		if not self._test_auth():
 			raise BuildError('Urd says permission denied, did you forget to set URD_AUTH?')
@@ -586,7 +720,7 @@ class Urd(object):
 		self._current = None
 		self._move_link_result()
 
-	def finish(self, path, timestamp=None, caption=None):
+	def finish(self, path, timestamp=None, *, caption=None):
 		path = self._path(path)
 		assert self._current, 'Tried to finish %s with nothing running' % (path,)
 		assert path == self._current, 'Tried to finish %s while running %s' % (path, self._current,)
@@ -600,11 +734,17 @@ class Urd(object):
 			timestamp = _tsfix(timestamp)
 		assert timestamp, 'No timestamp specified in begin or finish for %s' % (path,)
 		self._move_link_result(path + '/' + timestamp)
+		deps = {}
+		for k, v in self._deps.items():
+			# filter out dups ('latest'/'first') and empty
+			v = {vv.timestamp: vv for vv in v.values() if vv}
+			if v:
+				deps[k] = [vv.as_dep for vv in v.values()]
 		data = DotDict(
 			user=user,
 			build=build,
 			joblist=self.joblist.as_tuples,
-			deps=self._deps,
+			deps=deps,
 			caption=caption,
 			timestamp=timestamp,
 			build_job=g.job,
@@ -622,16 +762,16 @@ class Urd(object):
 		"""Build jobs in this workdir, None to restore default"""
 		self.workdir = workdir
 
-	def build(self, method, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, concurrency=None, **kw):
-		return self._a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir or self.workdir or self.default_workdir, concurrency=concurrency, **kw)
+	def build(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, concurrency=None, job_timeout=None, **kw):
+		return self._a.call_method(method, options=options, datasets=datasets, jobs=jobs, record_as=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir or self.workdir or self.default_workdir, concurrency=concurrency, job_timeout=job_timeout, **kw)
 
-	def build_chained(self, method, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, **kw):
+	def build_chained(self, method, *, options={}, datasets={}, jobs={}, name=None, caption=None, why_build=False, force_build=False, workdir=None, job_timeout=None, **kw):
 		assert 'previous' not in set(datasets) | set(jobs) | set(kw), "Don't specify previous to build_chained"
 		assert name, "build_chained must have 'name'"
 		assert self._latest_joblist is not None, "Can't build_chained without a dependency to chain from"
 		kw = dict(kw)
 		kw['previous'] = self._latest_joblist.get(name)
-		return self.build(method, options, datasets, jobs, name, caption, why_build, force_build, workdir, **kw)
+		return self.build(method, options=options, datasets=datasets, jobs=jobs, name=name, caption=caption, why_build=why_build, force_build=force_build, workdir=workdir, job_timeout=job_timeout, **kw)
 
 	def warn(self, line=''):
 		"""Add a warning message to be displayed at the end of the build"""
@@ -709,12 +849,8 @@ def find_automata(a, script):
 			module_ref = import_module(module_name)
 			return module_ref
 		except ImportError as e:
-			if PY3:
-				if not e.msg[:-1].endswith(script):
-					raise
-			else:
-				if not e.message.endswith(script):
-					raise
+			if not e.msg[:-1].endswith(script):
+				raise
 	raise BuildError('No build script "%s" found in {%s}' % (script, ', '.join(package)))
 
 
@@ -793,7 +929,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 
 	from accelerator import dataset
 	from accelerator.control import finish_job_files
-	from accelerator.extras import saved_files
+	from accelerator.blob import saved_files
 	saved_files.clear() # remove setup.json, we don't want to see it
 
 	g.job = job
@@ -844,7 +980,7 @@ def run_automata(urd, options, cfg, module_ref, main_args):
 	urd._move_link_result()
 	if urd._link_result_finished:
 		from accelerator import blob
-		blob.save((0, urd._link_result_finished), 'link_result.pickle', temp=False, _hidden=True)
+		blob.pickle_save((0, urd._link_result_finished), 'link_result.pickle', temp=False, _hidden=True)
 
 	if not res and urd.joblist_all:
 		if urd._test_auth():
@@ -936,9 +1072,6 @@ def print_user_part_traceback():
 	etype, e, tb = sys.exc_info()
 	fallback_tb = tb # everything if the skip logic fails
 	build_fn = __file__
-	if build_fn[-4:] in ('.pyc', '.pyo',):
-		# stupid python2
-		build_fn = build_fn[:-1]
 	# skip until this file
 	while tb is not None:
 		code = tb.tb_frame.f_code
@@ -971,9 +1104,6 @@ def print_user_part_traceback():
 
 def print_minimal_traceback():
 	build_fn = __file__
-	if build_fn[-4:] in ('.pyc', '.pyo',):
-		# stupid python2
-		build_fn = build_fn[:-1]
 	blacklist_fns = {build_fn}
 	_, e, tb = sys.exc_info()
 	last_interesting = tb

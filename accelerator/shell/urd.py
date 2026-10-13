@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2024 Carl Drougge                                     #
+# Copyright (c) 2021-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -17,15 +17,11 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 from os import environ
 from argparse import RawDescriptionHelpFormatter
 from accelerator.build import JobList
-from accelerator.job import Job
+from accelerator.extras import ascii_int
 from accelerator.shell.parser import ArgumentParser
 from accelerator.shell.parser import split_tildes, urd_call_w_tildes
 from accelerator.error import UrdError
@@ -95,7 +91,7 @@ def main(argv, cfg):
 				return None, None
 			path = a[0]
 			try:
-				entry = int(a[1], 10)
+				entry = ascii_int(a[1])
 			except ValueError:
 				entry = a[1] or None
 			path, tildes = split_tildes(path)
@@ -138,14 +134,14 @@ def fmt(res, entry):
 			return '\n'.join(fmt_caption(*item, indent=tlen + 3) for item in res)
 		else:
 			return '\n'.join(res)
-	joblist = JobList(Job(j, m) for m, j in res['joblist'])
+	joblist = JobList(res['joblist'])
 	if entry is not None:
 		return joblist.get(entry, '')
 	if res['deps']:
-		deps = sorted(
-			('%s/%s' % (k, v['timestamp'],), v['caption'],)
-			for k, v in res['deps'].items()
-		)
+		deps = []
+		for k, v in sorted(res['deps'].items()):
+			for dep in v:
+				deps.append((f"{k}/{dep['timestamp']}", dep['caption'],))
 		if len(deps) > 1:
 			plen = max(len(path) for path, _ in deps)
 			template = '%%-%ds : %%s' % (plen,)

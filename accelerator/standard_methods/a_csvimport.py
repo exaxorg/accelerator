@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2019-2024 Carl Drougge                                     #
+# Copyright (c) 2019-2026 Carl Drougge                                     #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 # Modifications copyright (c) 2023 Pablo Correa Gómez                      #
 #                                                                          #
@@ -18,10 +18,6 @@
 # limitations under the License.                                           #
 #                                                                          #
 ############################################################################
-
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 
 description = r'''
 CSV file to dataset.
@@ -70,6 +66,7 @@ options = dict(
 	strip_labels      = False,   # Do .strip() on all labels (happens before rename).
 	rename            = {},      # Labels to replace (if they are in the file) (happens before discard).
 	discard           = set(),   # Labels to not include (if they are in the file)
+	captions          = {},      # {'label': 'caption'}
 	lineno_label      = "",      # Label of column to store line number in (not stored if empty).
 	allow_bad         = False,   # Still succeed if some lines have too few/many fields or bad quotes
 	                             # creates a "bad" dataset containing lineno and data from the bad lines.
@@ -232,15 +229,19 @@ def prepare(job, slices):
 	labels = [options.rename.get(x, x) for x in labels]
 	assert len(labels) == len(set(labels)), "Duplicate labels: %r" % (labels,)
 
+	captions = dict(options.captions)
 	dw = job.datasetwriter(
-		columns={n: 'bytes' for n in labels if n not in options.discard},
 		filename=orig_filename,
 		caption='csvimport of ' + orig_filename,
 		previous=datasets.previous,
 		meta_only=True,
 	)
+	for n in sorted(set(labels) - options.discard):
+		dw.add(n, 'bytes', caption=captions.pop(n, None))
 	if options.lineno_label:
-		dw.add(options.lineno_label, "int64")
+		dw.add(options.lineno_label, "int64", caption=captions.pop(options.lineno_label, None))
+	if captions:
+		raise Exception(f"Captions for unknown labels: {sorted(captions)}")
 
 	def dsprevious(name):
 		if datasets.previous and datasets.previous.name == 'default':

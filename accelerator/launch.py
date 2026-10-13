@@ -2,7 +2,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2024 Carl Drougge                       #
+# Modifications copyright (c) 2018-2025 Carl Drougge                       #
 # Modifications copyright (c) 2020 Anders Berkeman                         #
 # Modifications copyright (c) 2024 Pablo Correa Gómez                      #
 #                                                                          #
@@ -20,9 +20,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-
 import os
 import signal
 import sys
@@ -32,6 +29,7 @@ from traceback import format_tb, format_exception_only
 from time import sleep
 import json
 import ctypes
+import struct
 
 from accelerator.job import CurrentJob, WORKDIRS
 from accelerator.compat import pickle, iteritems, itervalues, setproctitle, QueueEmpty
@@ -44,6 +42,7 @@ from accelerator import blob
 from accelerator import statmsg
 from accelerator import dataset
 from accelerator import iowrapper
+from accelerator import splitters
 
 
 # Raise this to finish job (successfully) without running later stages
@@ -73,6 +72,12 @@ def writeall(fd, data):
 		data = data[os.write(fd, data):]
 
 
+def write_prof(data):
+	data = json.dumps(data).encode('utf-8')
+	hdr = struct.pack('=I', len(data))
+	writeall(_prof_fd, hdr + data)
+
+
 def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, parent_pid, output_fds, **kw):
 	try:
 		q.make_writer()
@@ -88,7 +93,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		os.close(_prof_fd)
 		slicename = 'analysis(%d)' % (sliceno_,)
 		setproctitle(slicename)
-		from accelerator.extras import saved_files, _backgrounded_wait
+		from accelerator.blob import saved_files, _backgrounded_wait
 		saved_files.clear() # don't inherit (and then return) the files from prepare
 		if delayed_start:
 			os.close(delayed_start[1])
@@ -103,6 +108,7 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 		for dw in dataset._datasetwriters.values():
 			if dw._for_single_slice is None:
 				dw._set_slice(sliceno_)
+		splitters._analysis_start(sliceno_)
 		try:
 			res = analysis_func(**kw)
 			finishjob = False
@@ -132,20 +138,19 @@ def call_analysis(analysis_func, sliceno_, delayed_start, q, preserve_result, pa
 				else:
 					return d
 			def save(item, name):
-				from accelerator import extras
 				try:
-					extras._SavedFile_allow_pickle = True
-					blob.save(fixup(item), name, sliceno=sliceno_, temp=True)
+					blob._SavedFile_allow_pickle = True
+					blob.pickle_save(fixup(item), name, sliceno=sliceno_, temp=True)
 				finally:
-					extras._SavedFile_allow_pickle = False
+					blob._SavedFile_allow_pickle = False
 			if isinstance(res, tuple):
 				if sliceno_ == 0:
-					blob.save(len(res), "Analysis.tuple", temp=True)
+					blob.pickle_save(len(res), "Analysis.tuple", temp=True)
 				for ix, item in enumerate(res):
 					save(item, "Analysis.%d." % (ix,))
 			else:
 				if sliceno_ == 0:
-					blob.save(False, "Analysis.tuple", temp=True)
+					blob.pickle_save(False, "Analysis.tuple", temp=True)
 				save(res, "Analysis.")
 		dw_lens = {}
 		dw_minmax = {}
@@ -238,7 +243,7 @@ def fork_analysis(slices, concurrency, analysis_func, kw, preserve_result, outpu
 			s_tb = 'not all slices agreed about job.finish_early() in analysis'
 		if s_tb:
 			data = [{'analysis(%d)' % (s_no,): s_tb}, None]
-			writeall(_prof_fd, json.dumps(data).encode('utf-8'))
+			write_prof(data)
 			exitfunction()
 		if delayed_start_todo:
 			# Another analysis is allowed to run now
@@ -296,7 +301,7 @@ def fmt_tb(skip_level):
 
 
 def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_url=None, subjob_cookie=None, parent_pid=0):
-	from accelerator.extras import _backgrounded_wait
+	from accelerator.blob import _backgrounded_wait
 
 	WORKDIRS.update(workdirs)
 
@@ -367,7 +372,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 				analysis_func = synthesis_func = dummy
 				if finish.result is not None:
 					os.chdir(g.job.path)
-					blob.save(finish.result, temp=False)
+					blob.pickle_save(finish.result, temp=False)
 			os.chdir(g.job.path)
 			dataset.finish_datasets(final=False)
 		c_fflush()
@@ -375,7 +380,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 		prof['prepare'] = monotonic() - t
 	switch_output()
 	setproctitle('launch')
-	from accelerator.extras import saved_files
+	from accelerator.blob import saved_files
 	if analysis_func is dummy:
 		prof['per_slice'] = []
 		prof['analysis'] = 0
@@ -396,6 +401,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 	g.subjob_cookie = subjob_cookie
 	setproctitle(g.running)
 	with statmsg.status(g.running):
+		splitters._synthesis_start()
 		try:
 			synthesis_res = synthesis_func(**args_for(synthesis_func))
 		except _FinishJob as finish:
@@ -405,7 +411,7 @@ def execute_process(workdir, jobid, slices, concurrency, index=None, workdirs=No
 		if all(saved_files.values()):
 			g.job.register_files('*')
 		if synthesis_res is not None:
-			blob.save(synthesis_res, temp=False)
+			blob.pickle_save(synthesis_res, temp=False)
 		dataset.finish_datasets()
 	c_fflush()
 	_backgrounded_wait()
@@ -426,10 +432,10 @@ def run(workdir, jobid, slices, concurrency, index=None, workdirs=None, server_u
 		msg = fmt_tb(2)
 		print(msg)
 		data = [{g.running: msg}, None]
-		writeall(prof_fd, json.dumps(data).encode('utf-8'))
+		write_prof(data)
 	finally:
 		exitfunction()
-	writeall(prof_fd, json.dumps(data).encode('utf-8'))
+	write_prof(data)
 
 
 def exitfunction():

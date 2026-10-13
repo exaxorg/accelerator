@@ -17,16 +17,12 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import sys
 import hashlib
 from importlib import import_module
 from collections import namedtuple
 
-from accelerator.compat import unicode, str_types
+from accelerator.compat import str_types
 
 
 _prologue_code_template = r'''
@@ -63,10 +59,6 @@ static PyMethodDef module_methods[] = {
 	{NULL, NULL, 0, NULL}
 };
 
-#if PY_MAJOR_VERSION < 3
-#  define INITERR
-#else
-#  define INITERR 0
 static struct PyModuleDef moduledef = {
 	PyModuleDef_HEAD_INIT,
 	"_%(name)s",        /*m_name*/
@@ -78,9 +70,7 @@ static struct PyModuleDef moduledef = {
 	0,                  /*m_clear*/
 	0,                  /*m_free*/
 };
-#endif
 
-#if PY_MAJOR_VERSION >= 3
 __attribute__ ((visibility("default"))) PyMODINIT_FUNC PyInit__%(name)s(void)
 {
 	PyObject *m = PyModule_Create(&moduledef);
@@ -88,14 +78,6 @@ __attribute__ ((visibility("default"))) PyMODINIT_FUNC PyInit__%(name)s(void)
 	PyModule_AddObject(m, "source_hash", PyUnicode_FromString(source_hash));
 	return m;
 }
-#else
-__attribute__ ((visibility("default"))) PyMODINIT_FUNC init_%(name)s(void)
-{
-	PyObject *m = Py_InitModule3("_%(name)s", module_methods, NULL);
-	if (!m) return;
-	PyModule_AddObject(m, "source_hash", PyUnicode_FromString(source_hash));
-}
-#endif
 '''
 
 _method_def_template = r'''{"%s", py_%s, METH_VARARGS, 0}'''
@@ -127,7 +109,7 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return [0] * count
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return s
 	else:
@@ -139,7 +121,7 @@ def init(name, hash, protos, extra_protos, functions):
 		def mk_uint64(count=1):
 			return ffi.new('uint64_t []', [0] * count)
 		def str2c(s):
-			if isinstance(s, unicode):
+			if isinstance(s, str):
 				s = s.encode('utf-8')
 			return ffi.new('char []', s)
 

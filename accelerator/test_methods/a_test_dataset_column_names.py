@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test writing datasets with strange column names, column names whose cleaned
 names collide and column names used in the generated split_write function.

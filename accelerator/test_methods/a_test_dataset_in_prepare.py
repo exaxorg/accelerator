@@ -17,10 +17,6 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 description = r'''
 Test writing a dataset in prepare, verifying that it is usable in
 analysis and synthesis with no manual .finish()

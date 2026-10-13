@@ -3,7 +3,7 @@
 ############################################################################
 #                                                                          #
 # Copyright (c) 2017 eBay Inc.                                             #
-# Modifications copyright (c) 2018-2023 Carl Drougge                       #
+# Modifications copyright (c) 2018-2026 Carl Drougge                       #
 # Modifications copyright (c) 2019-2020 Anders Berkeman                    #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
@@ -20,12 +20,8 @@
 #                                                                          #
 ############################################################################
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 import os
-from keyword import kwlist
+from keyword import iskeyword
 from collections import namedtuple, Counter
 from itertools import compress, islice
 from functools import partial
@@ -34,24 +30,16 @@ from operator import itemgetter, not_
 from math import isnan
 import datetime
 
-from accelerator.compat import unicode, uni, ifilter, imap, iteritems, PY2
-from accelerator.compat import builtins, open, getarglist, izip, izip_longest
+from accelerator.compat import uni, ifilter, imap, iteritems
+from accelerator.compat import builtins, getarglist, izip, izip_longest
 from accelerator.compat import str_types, int_types, FileNotFoundError
 
 from accelerator import blob
-from accelerator.extras import DotDict, job_params, _ListTypePreserver, quote
+from accelerator.extras import job_params, quote
 from accelerator.job import Job, NoJob
 from accelerator.dsutil import typed_writer, _type2iter
 from accelerator.error import NoSuchDatasetError, DatasetUsageError, DatasetError
-
-kwlist = set(kwlist)
-# Add some keywords that are not in all versions
-kwlist.update({
-	'exec', 'print',                                       # only in py2
-	'False', 'None', 'True', 'nonlocal', 'async', 'await', # only in py3
-})
-
-iskeyword = frozenset(kwlist).__contains__
+from accelerator.types import DotDict, _ListTypePreserver
 
 # A dataset is defined by a pickled dict containing at least the following (all strings are unicode):
 #     version = (3, 3,),
@@ -74,6 +62,7 @@ iskeyword = frozenset(kwlist).__contains__
 #     max = maximum value in this dataset or None
 #     offsets = (offset, per, slice) or None for non-merged slices.
 #     none_support = bool # not present in version 3.0, implicitly True there except for bits-types.
+#     caption = "caption" or None
 #
 # Going from a DatasetColumn to a filename:
 #     jid, path = dc.location.split('/', 1)
@@ -113,16 +102,20 @@ def _dsid(t):
 
 # If we want to add fields to later versions, using a versioned name will
 # allow still loading the old versions without messing with the constructor.
-_dscol_3_3 = namedtuple('_DatasetColumn_3_3', 'type compression location min max offsets none_support')
-class _DatasetColumn_3_3(_dscol_3_3):
+_DatasetColumn_3_4 = namedtuple('_DatasetColumn_3_4', 'type compression location min max offsets none_support caption')
+DatasetColumn = _DatasetColumn_3_4
+
+# It's probably usually best to generate the new type so the rest of the code needs no special handling.
+class _DatasetColumn_3_3(object):
+	__slots__ = ()
 	def __new__(cls, type, compression, location, min, max, offsets, none_support):
 		# Older dataset_3_3-releases (up to 2022.6.30.dev1) can sometimes write
 		# .compression as a bytes-str on PY2, this is a workaround for that.
 		if isinstance(compression, bytes):
 			compression = compression.decode('ascii')
-		return _dscol_3_3.__new__(cls, type, compression, location, min, max, offsets, none_support)
-DatasetColumn = _DatasetColumn_3_3
-# It's probably usually best to generate the new type so the rest of the code needs no special handling.
+		if offsets:
+			offsets = tuple(offsets)
+		return _DatasetColumn_3_4(type, compression, location, min, max, offsets, none_support, None)
 class _DatasetColumn_3_2(object):
 	__slots__ = ()
 	def __new__(cls, type, backing_type, location, min, max, offsets, none_support):
@@ -138,13 +131,17 @@ class _DatasetColumn_3_0(object):
 		none_support = not backing_type.startswith('bits')
 		return _DatasetColumn_3_1(type, backing_type, name, location, min, max, offsets, none_support)
 
-class _New_dataset_marker(unicode): pass
+# namedtuple underscores _replace to avoid clashing with field names.
+# We have no replace-field, so we can expose it as a normal method.
+DatasetColumn.replace = DatasetColumn._replace
+
+class _New_dataset_marker(str): pass
 _new_dataset_marker = _New_dataset_marker('new')
 _no_override = object()
 
 _ds_cache = {}
 def _ds_load(obj):
-	n = unicode(obj)
+	n = str(obj)
 	if n not in _ds_cache:
 		fn = obj.job.filename(obj._name('pickle'))
 		if not os.path.exists(fn):
@@ -163,7 +160,7 @@ def _ds_load(obj):
 				# We don't want to accidentally give an unrelated exception
 				pass
 			raise NoSuchDatasetError('Dataset %s does not exist%s' % (obj.quoted, extra,))
-		_ds_cache[n] = blob.load(fn)
+		_ds_cache[n] = blob.pickle_load(fn)
 		_ds_cache.update(_ds_cache[n].get('cache', ()))
 	return _ds_cache[n]
 
@@ -179,7 +176,7 @@ _dir_name_blacklist['\\'] = '\\\\' # make sure names can't collide
 def _fs_name(name):
 	return 'DS/' + ''.join(_dir_name_blacklist.get(c, c) for c in name)
 
-class Dataset(unicode):
+class Dataset(str):
 	"""
 	Represents a dataset. Is also a string 'jobid/name', or just 'jobid' if
 	name is 'default' (for better backwards compatibility).
@@ -193,7 +190,7 @@ class Dataset(unicode):
 	You can also pass jobid={jid: dsname} to resolve dsname from the datasets
 	passed to jid. This gives NoDataset if that option was unset.
 
-	These decay to a (unicode) string when pickled.
+	These decay to a string when pickled.
 	"""
 
 	__slots__ = ('name', 'quoted', 'job', 'fs_name', '_data', '_cache', '_job_version',)
@@ -227,7 +224,7 @@ class Dataset(unicode):
 			fullname = job
 		else:
 			fullname = '%s/%s' % (job, name,)
-		obj = unicode.__new__(cls, fullname)
+		obj = str.__new__(cls, fullname)
 		obj.name = name
 		obj.quoted = quote('%s/%s' % (job, name,))
 		obj._job_version = 4 # hopefully
@@ -260,7 +257,7 @@ class Dataset(unicode):
 
 	# Look like a string after pickling
 	def __reduce__(self):
-		return unicode, (unicode(self),)
+		return str, (str(self),)
 
 	@property
 	def columns(self):
@@ -318,7 +315,7 @@ class Dataset(unicode):
 	def max(self, column):
 		return self._minmax(column, 'max')
 
-	def link_to_here(self, name='default', column_filter=None, rename=None, override_previous=_no_override, filename=None):
+	def link_to_here(self, name='default', *, column_filter=None, rename=None, override_previous=_no_override, filename=None, captions={}):
 		"""Use this to expose a subjob as a dataset in your job:
 		Dataset(subjid).link_to_here()
 		will allow access to the subjob dataset under your jid.
@@ -328,6 +325,7 @@ class Dataset(unicode):
 		rename.
 		Use override_previous to rechain (or unchain) the dataset.
 		You can change the filename too, or clear it by setting ''.
+		You can set column captions using captions={colname: caption}.
 		"""
 		if name in _datasetwriters or os.path.exists(_fs_name(name) + '.p'):
 			raise DatasetUsageError('Duplicate dataset name "%s"' % (name,))
@@ -356,7 +354,7 @@ class Dataset(unicode):
 				d._data.hashlabel = rename[d._data.hashlabel]
 			elif d._data.hashlabel in renamed:
 				d._data.hashlabel = None
-		if column_filter:
+		if column_filter is not None:
 			column_filter = set(column_filter)
 			if d._data.hashlabel not in column_filter:
 				d._data.hashlabel = None
@@ -367,6 +365,11 @@ class Dataset(unicode):
 			if not filtered_columns:
 				raise DatasetUsageError("Filter produced no desired columns.")
 			d._data.columns = filtered_columns
+		for colname, caption in captions.items():
+			dc = d._data.columns.get(colname)
+			if not dc:
+				raise DatasetUsageError(f"Re-captioned column {colname !r} not in dataset")
+			d._data.columns[colname] = dc.replace(caption=uni(caption))
 		from accelerator.g import job
 		if override_previous is not _no_override:
 			override_previous = _dsid(override_previous)
@@ -385,7 +388,7 @@ class Dataset(unicode):
 		_datasets_written.append(d.name)
 		return Dataset(d.job, d.name)
 
-	def merge(self, other, name='default', previous=None, allow_unrelated=False):
+	def merge(self, other, *, name='default', previous=None, allow_unrelated=False):
 		"""Merge this and other dataset. Columns from other take priority.
 		If datasets do not have a common ancestor you get an error unless
 		allow_unrelated is set. The new dataset always has the previous
@@ -435,7 +438,7 @@ class Dataset(unicode):
 		_datasets_written.append(name)
 		return job.dataset(name) # new_ds has the wrong string value, so we must make a new instance here.
 
-	def _column_iterator(self, sliceno, col, _type=None, _line_report=None, **kw):
+	def _column_iterator(self, sliceno, col, *, _type=None, _line_report=None, **kw):
 		if sliceno is not None and self.lines[sliceno] == 0:
 			return _dummy_iter
 		dc = self.columns[col]
@@ -463,7 +466,7 @@ class Dataset(unicode):
 		else:
 			return one_slice(sliceno)
 
-	def _iterator(self, sliceno, columns=None, copy_mode=False, _line_report=None):
+	def _iterator(self, sliceno, columns=None, *, copy_mode=False, _line_report=None):
 		res = []
 		not_found = []
 		for col in columns or sorted(self.columns):
@@ -505,7 +508,7 @@ class Dataset(unicode):
 			chain.reverse()
 		return chain
 
-	def chain(self, length=-1, reverse=False, stop_ds=None):
+	def chain(self, length=-1, *, reverse=False, stop_ds=None):
 		if stop_ds:
 			# resolve all formats to the same format
 			stop = Dataset(stop_ds).__eq__
@@ -518,17 +521,17 @@ class Dataset(unicode):
 			return ds.job != self.job
 		return self._chain(length, reverse, stop)
 
-	def iterate_chain(self, sliceno, columns=None, length=-1, range=None, sloppy_range=False, reverse=False, hashlabel=None, stop_ds=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
+	def iterate_chain(self, sliceno, columns=None, length=-1, *, range=None, sloppy_range=False, reverse=False, hashlabel=None, stop_ds=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate a list of datasets. See .chain and .iterate_list for details."""
-		chain = self.chain(length, reverse, stop_ds)
+		chain = self.chain(length, reverse=reverse, stop_ds=stop_ds)
 		return self.iterate_list(sliceno, columns, chain, range=range, sloppy_range=sloppy_range, hashlabel=hashlabel, pre_callback=pre_callback, post_callback=post_callback, filters=filters, translators=translators, status_reporting=status_reporting, rehash=rehash, slice=slice, copy_mode=copy_mode)
 
-	def iterate(self, sliceno, columns=None, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
+	def iterate(self, sliceno, columns=None, *, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate just this dataset. See .iterate_list for details."""
 		return self.iterate_list(sliceno, columns, [self], range=range, sloppy_range=sloppy_range, hashlabel=hashlabel, pre_callback=pre_callback, post_callback=post_callback, filters=filters, translators=translators, status_reporting=status_reporting, rehash=rehash, slice=slice, copy_mode=copy_mode)
 
 	@staticmethod
-	def iterate_list(sliceno, columns, datasets, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
+	def iterate_list(sliceno, columns, datasets, *, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterator over the specified columns from datasets
 		(iterable of dataset-specifiers, or single dataset-specifier).
 		callbacks are called before and after each dataset is iterated.
@@ -830,7 +833,7 @@ class Dataset(unicode):
 			yield update_status
 
 	@staticmethod
-	def _iterate_datasets(to_iter, columns, pre_callback, post_callback, filter_func, translation_func, translators, want_tuple, range, status_reporting, copy_mode):
+	def _iterate_datasets(to_iter, columns, *, pre_callback, post_callback, filter_func, translation_func, translators, want_tuple, range, status_reporting, copy_mode):
 		skip_ds = None
 		def argfixup(func, is_post):
 			if func:
@@ -922,9 +925,8 @@ class Dataset(unicode):
 					return
 
 	@staticmethod
-	def new(columns, filenames, compressions, lines, minmax={}, filename=None, hashlabel=None, caption=None, previous=None, name='default'):
+	def new(*, columns, filenames, compressions, lines, minmax={}, filename=None, hashlabel=None, caption=None, previous=None, name='default'):
 		"""columns = {"colname": "type"}, lines = [n, ...] or {sliceno: n}"""
-		columns = {uni(k): (uni(v[0]), bool(v[1])) if isinstance(v, tuple) else (uni(v), False) for k, v in columns.items()}
 		if hashlabel is not None:
 			hashlabel = uni(hashlabel)
 			if hashlabel not in columns:
@@ -946,7 +948,7 @@ class Dataset(unicode):
 			raise DatasetUsageError("Lines must be specified for all slices")
 		return lines
 
-	def append(self, columns, filenames, compressions, lines, minmax={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, column_filter=None, name='default'):
+	def append(self, *, columns, filenames, compressions, lines, minmax={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, column_filter=None, name='default'):
 		hashlabel = uni(hashlabel)
 		if hashlabel_override:
 			self._data.hashlabel = hashlabel
@@ -955,7 +957,14 @@ class Dataset(unicode):
 		if self._linefixup(lines) != self.lines:
 			from accelerator.g import job
 			raise DatasetUsageError("New columns don't have the same number of lines as parent columns (trying to append %s to %s, expected %r but got %r)" % (quote('%s/%s' % (job, name,)), self.quoted, self.lines, self._linefixup(lines),))
-		columns = {uni(k): (uni(v[0]), bool(v[1])) if isinstance(v, tuple) else (uni(v), False) for k, v in columns.items()}
+		def colfix(v):
+			if isinstance(v, tuple):
+				assert 1 <= len(v) <= 3, f"Bad column type {v}"
+				v = v + (None, None)
+				return (uni(v[0]), bool(v[1]), uni(v[2]))
+			else:
+				return (uni(v), False, None)
+		columns = {uni(k): colfix(v) for k, v in columns.items()}
 		self._append(columns, filenames, compressions, minmax, filename, caption, previous, column_filter, name)
 
 	def _minmax_merge(self, minmax):
@@ -1009,14 +1018,20 @@ class Dataset(unicode):
 		for n in ('cache', 'cache_distance'):
 			if n in self._data: del self._data[n]
 		minmax = self._minmax_merge(minmax)
-		if column_filter:
+		if column_filter is not None:
 			column_filter = set(column_filter)
 			filtered_columns = {k: v for k, v in self._data.columns.items() if k in column_filter}
 			left_over = column_filter - set(filtered_columns)
 			if left_over:
 				raise DatasetUsageError("Columns in filter not available in dataset: %r" % (left_over,))
 			self._data.columns = filtered_columns
-		for n, (t, none_support) in sorted(columns.items()):
+			if (
+				self._data.hashlabel is not None
+				and self._data.hashlabel not in filtered_columns
+				and self._data.hashlabel not in columns
+			):
+				self._data.hashlabel = None
+		for n, (t, none_support, caption) in sorted(columns.items()):
 			if t not in _type2iter:
 				raise DatasetUsageError('Unknown type %s on column %s' % (t, n,))
 			mm = minmax.get(n, (None, None,))
@@ -1029,6 +1044,7 @@ class Dataset(unicode):
 				max=mm[1],
 				offsets=None,
 				none_support=none_support,
+				caption=caption,
 			)
 			self._maybe_merge(n)
 		if sum(self.lines) == 0:
@@ -1055,7 +1071,7 @@ class Dataset(unicode):
 			if cache_distance == 64:
 				cache_distance = 0
 				chain = self.chain(64)
-				self._data['cache'] = tuple((unicode(d), d._data) for d in chain[:-1])
+				self._data['cache'] = tuple((str(d), d._data) for d in chain[:-1])
 			self._data['cache_distance'] = cache_distance
 
 	def _maybe_merge(self, n):
@@ -1078,7 +1094,7 @@ class Dataset(unicode):
 			return
 		if sum(bare_sizes) == 0:
 			# dataset is empty, so it needs no location
-			self._data.columns[n] = self._data.columns[n]._replace(location=None)
+			self._data.columns[n] = self._data.columns[n].replace(location=None)
 			return
 		offsets = []
 		pos = 0
@@ -1098,8 +1114,8 @@ class Dataset(unicode):
 					pos += size
 		c = self._data.columns[n]
 		location = c.location.split('/', 1) # the jobid might have % in it, so split it off
-		self._data.columns[n] = c._replace(
-			offsets=offsets,
+		self._data.columns[n] = c.replace(
+			offsets=tuple(offsets),
 			location='%s/%s' % (location[0], location[1] % ('m',)),
 		)
 
@@ -1129,15 +1145,15 @@ class Dataset(unicode):
 				assert len(data) > max(dc.offsets), '%s is too short' % (c_fn,)
 				os.unlink(c_fn)
 				pos = m_fh.tell()
-				m_offsets = [False if o is False else o + pos for o in dc.offsets]
-				self._data.columns[n] = dc._replace(location=m_location, offsets=m_offsets)
+				m_offsets = tuple(False if o is False else o + pos for o in dc.offsets)
+				self._data.columns[n] = dc.replace(location=m_location, offsets=m_offsets)
 				m_fh.write(data)
 		os.rmdir(self._name('dir'))
 
 	def _save(self):
 		if not os.path.exists('DS'):
 			os.mkdir('DS')
-		blob.save(dict(self._data), self._name('pickle'), temp=False, _hidden=True)
+		blob.pickle_save(dict(self._data), self._name('pickle'), temp=False, _hidden=True)
 
 	def _name(self, thing):
 		if self._job_version < 4:
@@ -1189,10 +1205,17 @@ class DatasetWriter(object):
 
 	If you want support for None values in a column you can pass
 	none_support=True to dw.add, or {colname: (coltype, True)} to the
-	constructor. If you pass a DatasetColumn (from ds.columns[name]) you
-	will inherit both type and None-support of that column. In dw.add the
-	none_support argument takes precedence over (tuple/DatasetColumn in)
-	the coltype argument.
+	constructor.
+
+	You can also set per-column captions, either with caption='...' to
+	dw.add or a third item in {colname: (coltype, ns, caption)}.
+
+	If you pass a DatasetColumn (from ds.columns[name]) you will inherit
+	the type, None-support and caption of that column. In dw.add the
+	none_support and caption arguments takes precedence over (the
+	tuple/DatasetColumn in) the coltype argument.
+
+	You can also use DatasetColumn.replace(...) to change inherited values.
 
 	If you set hashlabel you can use dw.hashcheck(v) to check if v
 	belongs in this slice. You can also call enable_hash_discard
@@ -1234,7 +1257,7 @@ class DatasetWriter(object):
 
 	_split = _split_dict = _split_list = _allwriters_ = None
 
-	def __new__(cls, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
+	def __new__(cls, *, columns={}, filename=None, hashlabel=None, hashlabel_override=False, caption=None, previous=None, name='default', parent=None, meta_only=False, for_single_slice=None, copy_mode=False, allow_missing_slices=False):
 		"""columns can be {'name': 'type'} or {'name': ('type', none_support)}.
 		It can also be {'name': DatasetColumn} to simplify basing your dataset on another."""
 		name = _namechk(name)
@@ -1302,32 +1325,46 @@ class DatasetWriter(object):
 			_datasetwriters[name] = obj
 			return obj
 
-	def add(self, colname, coltype, default=_nodefault, none_support=_nodefault):
+	def __repr__(self):
+		if hasattr(self, 'sliceno'):
+			extrainfo = f'slice {self.sliceno}'
+		elif self._started:
+			extrainfo = 'splitting'
+		else:
+			extrainfo = 'not started'
+		return f'<{self.__class__.__name__} for {self.quoted_ds_name} ({extrainfo})>'
+
+	def add(self, colname, coltype, *, default=_nodefault, none_support=_nodefault, caption=_nodefault):
 		from accelerator.g import running
 		if running != self._running:
 			raise DatasetUsageError("Add all columns in the same step as creation")
 		if self._started:
 			raise DatasetUsageError("Add all columns before setting slice")
+		none_support_fb = False
+		caption_fb = None
 		if isinstance(coltype, tuple):
 			if hasattr(coltype, 'type'):
-				coltype, none_support_fb = coltype.type, coltype.none_support
-			else:
+				coltype, none_support_fb, caption_fb = coltype.type, coltype.none_support, coltype.caption
+			elif len(coltype) == 2:
 				coltype, none_support_fb = coltype
-		else:
-			none_support_fb = False
+			else:
+				coltype, none_support_fb, caption_fb = coltype
 		if none_support is _nodefault:
 			none_support = none_support_fb
 		else:
 			none_support = bool(none_support)
+		if caption is _nodefault:
+			caption = caption_fb
 		colname = uni(colname)
 		coltype = uni(coltype)
+		caption = uni(caption)
 		if colname in self.columns:
 			raise DatasetUsageError("Column %s already exists" % (colname,))
 		try:
 			typed_writer(coltype) # gives error for unknown types
 		except ValueError as e:
 			raise DatasetUsageError(str(e))
-		self.columns[colname] = (coltype, default, none_support)
+		self.columns[colname] = (coltype, default, none_support, caption)
 		self._order.append(colname)
 		self._filenames[colname] = next(self._fngen)
 
@@ -1384,7 +1421,7 @@ class DatasetWriter(object):
 		if self.meta_only:
 			return
 		writers = {}
-		for colname, (coltype, default, none_support) in self.columns.items():
+		for colname, (coltype, default, none_support, _) in self.columns.items():
 			if self._copy_mode:
 				coltype = _copy_mode_overrides.get(coltype, coltype)
 			wt = typed_writer(coltype)
@@ -1565,7 +1602,7 @@ class DatasetWriter(object):
 		if self._started == 2:
 			for sliceno, writers in enumerate(self._allwriters):
 				self._close(sliceno, writers)
-			self._allwriters_[:] = ()
+			self._allwriters_.clear()
 		else:
 			if hasattr(self, 'writers'):
 				self._close(self.sliceno, self.writers)
@@ -1596,8 +1633,6 @@ class DatasetWriter(object):
 			self._compressions = dict.fromkeys(self.columns, compressions)
 		else:
 			self._compressions.update(compressions)
-		if PY2:
-			self._compressions = {uni(k): uni(v) for k, v in self._compressions.items()}
 
 	def finish(self):
 		"""Normally you don't need to call this, but if you want to
@@ -1622,7 +1657,7 @@ class DatasetWriter(object):
 			else:
 				raise DatasetUsageError("Not all slices written, missing %r" % (set(range(slices)) - set(self._lens),))
 		args = dict(
-			columns={k: (v[0].split(':')[-1], v[2]) for k, v in self.columns.items()},
+			columns={k: (v[0].split(':')[-1], v[2], v[3]) for k, v in self.columns.items()},
 			filenames=self._filenames,
 			compressions=self._compressions,
 			lines=self._lens,
@@ -1693,18 +1728,18 @@ class DatasetList(_ListTypePreserver):
 		from itertools import chain
 		return Counter(chain.from_iterable(ds.columns.keys() for ds in self))
 
-	def column_count(self, column, types=None, none_support=None):
+	def column_count(self, column, *, types=None, none_support=None):
 		"""How many datasets in this chain contain column
 		Optionally only considers column to exists if it is of a desired type,
 		and/or has/lacks none support.
 		"""
-		return len(self.with_column(column, types, none_support))
+		return len(self.with_column(column, types=types, none_support=none_support))
 
 	def filter(self, predicate):
 		"""Same list but only with datasets for which predicate(ds) is true."""
 		return self.__class__(ds for ds in self if predicate(ds))
 
-	def with_column(self, column, types=None, none_support=None):
+	def with_column(self, column, *, types=None, none_support=None):
 		"""Chain without any datasets that don't contain column.
 		Optionally only considers column to exists if it is of a desired type,
 		and/or has/lacks none support.
@@ -1720,7 +1755,7 @@ class DatasetList(_ListTypePreserver):
 		"""If any dataset in the chain has None support for this column"""
 		return any(ds.columns[column].none_support for ds in self if column in ds.columns)
 
-	def iterate(self, sliceno, columns=None, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
+	def iterate(self, sliceno, columns=None, *, range=None, sloppy_range=False, hashlabel=None, pre_callback=None, post_callback=None, filters=None, translators=None, status_reporting=True, rehash=False, slice=None, copy_mode=False):
 		"""Iterate the datasets in this chain. See Dataset.iterate_list for usage"""
 		return Dataset.iterate_list(sliceno, columns, self, range=range, sloppy_range=sloppy_range, hashlabel=hashlabel, pre_callback=pre_callback, post_callback=post_callback, filters=filters, translators=translators, status_reporting=status_reporting, rehash=rehash, slice=slice, copy_mode=copy_mode)
 
@@ -1760,7 +1795,7 @@ class NoDataset(Dataset):
 	__slots__ = ()
 
 	def __new__(cls):
-		return unicode.__new__(cls, '')
+		return str.__new__(cls, '')
 
 	# functions you shouldn't call on this
 	append = iterate = iterate_chain = iterate_list = link_to_here = merge = new = None
@@ -1786,7 +1821,7 @@ def _fmt_range_value(name, value, d):
 	else:
 		return repr(value)
 
-def range_check_function(bottom, top, none_support=False, index=None):
+def range_check_function(bottom, top, *, none_support=False, index=None):
 	"""Returns a function that checks if bottom <= arg < top, allowing bottom
 	and/or top to be None. Skips None values if none_support is true."""
 	if_l = []
@@ -1877,4 +1912,4 @@ def finish_datasets(final=True):
 				_datasetwriters[name].finish()
 
 	if final and _datasets_written:
-		blob.save(_datasets_written, 'DS/LIST', temp=False, _hidden=True)
+		blob.pickle_save(_datasets_written, 'DS/LIST', temp=False, _hidden=True)

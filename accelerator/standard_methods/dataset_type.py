@@ -21,10 +21,6 @@
 # This is a separate file from a_dataset_type so setup.py can import
 # it and make the _dataset_type module at install time.
 
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
-
 from collections import namedtuple
 from functools import partial
 import sys
@@ -181,18 +177,9 @@ _c_conv_unicode_template = r'''
 	PyObject *tmp_res = PyObject_CallFunctionObjArgs(decoder, tmp_bytes, dec_errors, 0);
 	Py_DECREF(tmp_bytes);
 	if (tmp_res) {
-#if PY_MAJOR_VERSION < 3
-		PyObject *tmp_utf8bytes = PyUnicode_AsUTF8String(PyTuple_GET_ITEM(tmp_res, 0));
-		err1(!tmp_utf8bytes);
-		Py_DECREF(tmp_res);
-		tmp_res = tmp_utf8bytes;
-		ptr = (const uint8_t *)PyBytes_AS_STRING(tmp_utf8bytes);
-		Py_ssize_t newlen = PyBytes_GET_SIZE(tmp_utf8bytes);
-#else
 		PyObject *tmp_uni = PyTuple_GET_ITEM(tmp_res, 0);
 		Py_ssize_t newlen;
 		ptr = (const uint8_t *)PyUnicode_AsUTF8AndSize(tmp_uni, &newlen);
-#endif
 		if (newlen > 0x7fffffff) {
 			ptr = 0;
 		} else {
@@ -217,17 +204,8 @@ _c_conv_unicode_specific_template = r'''
 	const uint8_t *ptr = 0;
 	PyObject *tmp_res = %(func)s(line, len, fmt_b);
 	if (tmp_res) {
-#if PY_MAJOR_VERSION < 3
-		PyObject *tmp_utf8bytes = PyUnicode_AsUTF8String(tmp_res);
-		err1(!tmp_utf8bytes);
-		Py_DECREF(tmp_res);
-		tmp_res = tmp_utf8bytes;
-		ptr = (const uint8_t *)PyBytes_AS_STRING(tmp_utf8bytes);
-		Py_ssize_t newlen = PyBytes_GET_SIZE(tmp_utf8bytes);
-#else
 		Py_ssize_t newlen;
 		ptr = (const uint8_t *)PyUnicode_AsUTF8AndSize(tmp_res, &newlen);
-#endif
 		if (newlen > 0x7fffffff) {
 			ptr = 0;
 		} else {
@@ -1485,12 +1463,8 @@ all_c_functions = r'''
 #define Z (128 * 1024)
 
 // Py_FileSystemDefaultEncoding is deprecated in Python 3.12.
-// For consistency we use NULL (utf-8) on all python3 versions.
-#if PY_MAJOR_VERSION < 3
-#  define DEFAULT_ENCODING Py_FileSystemDefaultEncoding
-#else
-#  define DEFAULT_ENCODING NULL
-#endif
+// For consistency we use NULL (utf-8) on all versions.
+#define DEFAULT_ENCODING NULL
 
 typedef struct {
 	gzFile fh;
@@ -2295,11 +2269,7 @@ static PyObject *py_strptime_i(PyObject *dummy, PyObject *args, PyObject *kwds)
 	const char *remaining;
 	PyObject *res = _py_strptime(args, kwds, &remaining);
 	if (!res) return 0;
-#if PY_MAJOR_VERSION < 3
-	return Py_BuildValue("(Ns)", res, remaining);
-#else
 	return Py_BuildValue("(Ny)", res, remaining);
-#endif
 }
 '''
 

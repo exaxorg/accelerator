@@ -56,8 +56,8 @@ if not before_install:
 	__all__.extend((NoSuchWhateverError, NoSuchJobError, NoSuchWorkdirError,))
 	__all__.extend((DatasetError, NoSuchDatasetError, DatasetUsageError,))
 	__all__.extend((JobError, ColourError, BuildError,))
-	from .extras import DotDict
-	from .extras import OptionEnum, OptionString, RequiredOption, OptionDefault
+	from .types import DotDict
+	from .types import OptionEnum, OptionString, RequiredOption, OptionDefault
 	__all__.extend((DotDict,))
 	__all__.extend((OptionEnum, OptionString, RequiredOption, OptionDefault,))
 	from .job import Job, JobWithFile

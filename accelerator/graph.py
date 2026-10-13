@@ -23,7 +23,7 @@ from collections import defaultdict
 from datetime import datetime
 from accelerator import JobWithFile, Job
 from accelerator.dataset import Dataset
-from accelerator.compat import unicode, FileNotFoundError
+from accelerator.compat import FileNotFoundError
 
 MAXANGLE = 45 * pi / 180
 
@@ -74,7 +74,7 @@ def dsdeps(ds):
 	return res
 
 
-class WrapperNode(unicode):
+class WrapperNode(str):
 	def __init__(self, payload):
 		self.payload = payload
 		self.level = 0
@@ -312,9 +312,10 @@ def graph(inp, gtype):
 	if gtype == 'urd':
 		# jobid2urddep is {jobid: "urdlist/timestamp"} for all jobids in depending urdlist
 		jobid2urddep = defaultdict(list)
-		for key, urditem in inp.deps.items():
-			for _, jid in urditem.joblist:
-				jobid2urddep[jid].append("%s/%s" % (key, urditem.timestamp))
+		for key, urditems in inp.deps.items():
+			for urditem in urditems:
+				for _, jid in urditem.joblist:
+					jobid2urddep[jid].append("%s/%s" % (key, urditem.timestamp))
 		jobid2urddep = {key: sorted(val) for key, val in jobid2urddep.items()}
 		jlist = inp.joblist
 		inp = tuple(Job(jid) for _, jid in jlist)

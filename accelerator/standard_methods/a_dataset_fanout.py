@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 ############################################################################
 #                                                                          #
-# Copyright (c) 2021-2024 Carl Drougge                                     #
+# Copyright (c) 2021-2026 Carl Drougge                                     #
 #                                                                          #
 # Licensed under the Apache License, Version 2.0 (the "License");          #
 # you may not use this file except in compliance with the License.         #
@@ -27,10 +27,9 @@ All datasets in previous get a dataset here, even if empty.
 
 from collections import defaultdict
 import itertools
-import re
 
-from accelerator.compat import unicode, izip
-from accelerator import OptionString, NoSuchDatasetError
+from accelerator.compat import izip
+from accelerator import OptionString
 from accelerator import subjobs, status
 
 
@@ -87,7 +86,8 @@ def prepare(job):
 			types = {'number'}
 		if len(types) > 1:
 			raise Exception("Column %r has incompatible types: %r" % (name, types,))
-		columns[name] = (types.pop(), none_support[name],)
+		dc = datasets.source.columns[name]
+		columns[name] = dc.replace(type=types.pop(), none_support=none_support[name])
 
 	collect = subjobs.build(
 		'dataset_fanout_collect',
@@ -123,4 +123,4 @@ def analysis(sliceno, prepare_res):
 	# we can't just use chain.iterate because of protections against changing types with copy_mode
 	values_it = itertools.chain.from_iterable(ds.iterate(sliceno, columns, copy_mode=True, status_reporting=False) for ds in chain)
 	for key, values in izip(key_it, values_it):
-		writers[unicode(key)].write(*values)
+		writers[str(key)].write(*values)

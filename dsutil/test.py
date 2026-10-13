@@ -22,8 +22,6 @@
 
 # Verify general operation and a few corner cases.
 
-from __future__ import division, print_function, unicode_literals
-
 from datetime import datetime, date, time
 from sys import version_info
 from itertools import compress

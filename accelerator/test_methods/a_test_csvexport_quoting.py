@@ -23,15 +23,13 @@ various quotes and separators.
 '''
 
 from accelerator import subjobs
-from accelerator.compat import PY3
 
 def test(job, prefix, none_support):
 	expect = [[], [], []]
 	def write(sliceno, a, b, c):
 		w(a, b, c)
 		if isinstance(c, bytes):
-			if PY3:
-				c = c.decode('utf-8', 'backslashreplace')
+			c = c.decode('utf-8', 'backslashreplace')
 		else:
 			c = repr(c)
 		expect[sliceno].append((str(a), repr(b), c,))
@@ -76,7 +74,7 @@ def verify(source, lazy_quotes, q, sep, expect, **kw):
 		separator=sep,
 		**kw
 	)
-	with j.open('result.csv', 'r' if PY3 else 'rb') as fh:
+	with j.open('result.csv', 'r') as fh:
 		got = fh.read()
 	if lazy_quotes and sep:
 		quote_func = make_lazy(sep, q)

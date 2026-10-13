@@ -34,9 +34,6 @@
 # Several built in functions will call this for you, notably dataset
 # iterators and pickle load/save functions.
 
-from __future__ import print_function
-from __future__ import division
-
 from contextlib import contextmanager
 from errno import ENOTCONN
 from functools import partial
@@ -50,6 +47,7 @@ import sys
 
 from accelerator.compat import str_types, iteritems, monotonic
 from accelerator.colourwrapper import colour
+from accelerator.types import DotDict
 from accelerator import g
 
 
@@ -194,7 +192,6 @@ def _find(pid, cookie):
 	return stack, None
 
 def statmsg_sink(sock):
-	from accelerator.extras import DotDict
 	wrong_pops = 0
 	while True:
 		data = None
